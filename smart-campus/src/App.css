@@ -1,15 +1,44 @@
-/* src/App.css */
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f0f0f0;
-  }
-  
-  h1 {
-    color: #333;
-    margin: 20px;
-  }
-  
+.app-container {
+  display: flex;
+  height: 100vh;
+  position: relative; /* Make sure other elements align properly */
+}
+
+.title {
+  position: absolute;
+  top: 20px;
+  left: 320px;  /* Adjusted for space */
+  font-size: 24px;
+  color: #333;
+}
+
+.map-container {
+  flex: 1;
+  margin-left: 320px;  /* Adjusted space for the sidebar */
+}
+
+h1 {
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 28px;
+  color: #333;
+  margin-left: 340px;
+}
+
+.hide-button {
+  position: absolute;
+  bottom: 20px;  /* Place the button at the bottom */
+  left: 50%;  /* Center the button horizontally */
+  transform: translateX(-50%);  /* Adjust for exact centering */
+  padding: 10px 20px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 1000;  /* Make sure the button is on top of other elements */
+}
+
+.hide-button:hover {
+  background-color: #0056b3;
+}
