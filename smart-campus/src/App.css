@@ -1,44 +1,82 @@
+/* General container for the entire app */
 .app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
-  position: relative; /* Make sure other elements align properly */
+  position: relative;
 }
 
-.title {
-  position: absolute;
-  top: 20px;
-  left: 320px;  /* Adjusted for space */
+/* Navbar styling */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #4daef4;
+  padding: 10px 20px;
+  position: fixed; /* Stick to the top */
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.navbar-logo {
+  height: 60px;
+  margin-right: 10px;
+}
+
+.navbar-title {
+  color: white;
   font-size: 24px;
-  color: #333;
-}
-
-.map-container {
-  flex: 1;
-  margin-left: 320px;  /* Adjusted space for the sidebar */
-}
-
-h1 {
   font-family: Arial, sans-serif;
   font-weight: bold;
-  font-size: 28px;
-  color: #333;
-  margin-left: 340px;
 }
 
+/* Hide/show button styling */
 .hide-button {
-  position: absolute;
-  bottom: 20px;  /* Place the button at the bottom */
-  left: 50%;  /* Center the button horizontally */
-  transform: translateX(-50%);  /* Adjust for exact centering */
+  position: fixed;
+  bottom: 20px; /* At the bottom of the page */
+  left: 50%; /* Center horizontally */
+  transform: translateX(-50%);
   padding: 10px 20px;
   background-color: #007BFF;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  z-index: 1000;  /* Make sure the button is on top of other elements */
+  z-index: 1000;
 }
 
 .hide-button:hover {
   background-color: #0056b3;
+}
+
+/* Content container for dashboards and map */
+.content-container {
+  display: flex;
+  flex: 1;
+  margin-top: 60px; /* Push below the navbar */
+  overflow: hidden;
+}
+
+/* Map container to fill the available space */
+.map-container {
+  flex: 1;
+  background: #f0f0f0; /* Light background for contrast */
+}
+
+/* Left and Right Dashboard styling */
+.left-dashboard,
+.right-dashboard {
+  width: 320px; /* Fixed width for sidebars */
+  background-color: #fff;
+  overflow-y: auto;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.left-dashboard {
+  position: relative;
+}
+
+.right-dashboard {
+  position: relative;
 }

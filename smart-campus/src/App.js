@@ -15,24 +15,30 @@ const App = () => {
 
   return (
     <div className="app-container">
-      <h1 className="title">Smart Campus 3D Map</h1>
+      {/* Navigation Bar */}
+      <nav className="navbar">
+        <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
+      </nav>
 
       {/* Button to hide/show dashboards */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
 
-      {/* Conditionally render the LeftDashboard and RightDashboard */}
-      {showDashboards && <LeftDashboard />}
-      
-      {/* 3D Map Canvas */}
-      <Suspense fallback={<div>Loading...</div>}>
-        <div className="map-container">
-          <Map3D />
-        </div>
-      </Suspense>
+      <div className="content-container">
+        {/* Conditionally render the LeftDashboard */}
+        {showDashboards && <LeftDashboard />}
+        
+        {/* 3D Map Canvas */}
+        <Suspense fallback={<div>Loading...</div>}>
+          <div className="map-container">
+            <Map3D />
+          </div>
+        </Suspense>
 
-      {showDashboards && <RightDashboard />}
+        {/* Conditionally render the RightDashboard */}
+        {showDashboards && <RightDashboard />}
+      </div>
     </div>
   );
 };
