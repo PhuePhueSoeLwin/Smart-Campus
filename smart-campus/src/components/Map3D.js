@@ -12,7 +12,7 @@ function Model() {
 
 const Map3D = () => {
   return (
-    <Canvas style={{ width: '100%', height: '80vh' }}>
+    <Canvas style={{ width: '100%', height: '100%' }}>
       {/* Lighting */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
