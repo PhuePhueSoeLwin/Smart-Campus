@@ -4,11 +4,11 @@
   left: 0;
   width: 320px;
   height: 100%;
-  background-color: #212121; /* Dark modern background */
+  background-color: #212121; /* Dark background */
   padding: 25px;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-  color: #eeeeee; /* Light text for good contrast */
-  font-family: 'Poppins', sans-serif; /* Modern and elegant font */
+  color: #eeeeee; /* Light text */
+  font-family: 'Poppins', sans-serif;
   overflow-y: auto;
 }
 
@@ -17,20 +17,9 @@
   font-size: 18px;
   font-weight: 600;
   color: #ffffff;
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #FF9800;
   padding-left: 10px;
   margin-bottom: 15px;
-}
-
-.left-dashboard .students-count {
-  margin-top: 20px;
-  font-size: 14px;
-  color: #cccccc;
-}
-
-.left-dashboard .students-count .highlight {
-  color: #4caf50; /* Highlight green */
-  font-weight: bold;
 }
 
 .chart-container {
@@ -43,8 +32,12 @@
   padding: 20px;
 }
 
+.rpm-style {
+  text-align: center;
+}
+
 .chart-container canvas {
-  max-width: 90%;
+  max-width: 100%;
   max-height: 100%;
 }
 
@@ -54,17 +47,12 @@
 }
 
 .left-dashboard::-webkit-scrollbar-thumb {
-  background: #4caf50;
+  background: #FF9800;
   border-radius: 10px;
 }
 
 .left-dashboard::-webkit-scrollbar-track {
   background: #2c2c2c;
-}
-
-/* Smart Color Highlight for Data Visualization */
-.chart-container canvas {
-  color: #ffffff;
 }
 
 /* Responsive Design */

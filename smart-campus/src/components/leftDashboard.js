@@ -1,95 +1,81 @@
 import React from 'react';
 import './leftDashboard.css';
-import { Line } from 'react-chartjs-2';
+import { Doughnut, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
+  ArcElement,
 } from 'chart.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const LeftDashboard = () => {
-  const waterConsumptionData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-    datasets: [
-      {
-        label: 'Water Consumption (Liters)',
-        data: [1200, 1500, 1300, 1600, 1700, 1900, 2000],
-        borderColor: '#4CAF50', // Smart green color
-        backgroundColor: 'rgba(76, 175, 80, 0.2)',
-        pointBackgroundColor: '#4CAF50',
-        pointBorderColor: '#fff',
-        tension: 0.4,
-        fill: true,
-      },
-    ],
-  };
-
+  // Electricity Usage Data for Bar Chart
   const electricityUsageData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
     datasets: [
       {
         label: 'Electricity Usage (kWh)',
         data: [250, 300, 280, 350, 400, 420, 450],
-        borderColor: '#FF9800', // Smart orange color
-        backgroundColor: 'rgba(255, 152, 0, 0.2)',
-        pointBackgroundColor: '#FF9800',
-        pointBorderColor: '#fff',
-        tension: 0.4,
-        fill: true,
+        backgroundColor: '#FF9800', // Smart orange
+        borderColor: '#FF9800',
+        borderWidth: 1,
       },
     ],
   };
 
+  // Water Consumption Data for RPM-style Doughnut Chart
+  const waterConsumptionData = {
+    labels: ['Used Water', 'Remaining Capacity'],
+    datasets: [
+      {
+        label: 'Water Consumption',
+        data: [60, 40],
+        backgroundColor: ['#36A2EB', '#e0e0e0'], // Used water in blue, remaining in gray
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  // Carbon Footprint Data for RPM-style Doughnut Chart
+  const carbonFootprintData = {
+    labels: ['Emissions (kg)', 'Offset (kg)'],
+    datasets: [
+      {
+        label: 'Carbon Footprint',
+        data: [120, 30],
+        backgroundColor: ['#FF6347', '#4CAF50'], // Emissions in red, offset in green
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  // Options for RPM-style Doughnut Chart
+  const rpmOptions = {
+    rotation: -90, // Start angle (top center)
+    circumference: 180, // Only show half-circle
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: {
+          color: '#eeeeee',
+        },
+      },
+    },
+  };
+
   return (
     <div className="left-dashboard">
-      <h3>Water Consumption</h3>
-      <div className="chart-container">
-        <Line
-          data={waterConsumptionData}
-          options={{
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false,
-              },
-              tooltip: {
-                backgroundColor: '#121212',
-                titleColor: '#ffffff',
-                bodyColor: '#b0b0b0',
-              },
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { color: '#555' },
-              },
-              y: {
-                grid: { color: 'rgba(180, 180, 180, 0.1)' },
-                ticks: { color: '#555' },
-              },
-            },
-          }}
-        />
-      </div>
-
       <h3>Electricity Usage</h3>
       <div className="chart-container">
-        <Line
+        <Bar
           data={electricityUsageData}
           options={{
             responsive: true,
@@ -106,21 +92,26 @@ const LeftDashboard = () => {
             scales: {
               x: {
                 grid: { display: false },
-                ticks: { color: '#555' },
+                ticks: { color: '#eeeeee' },
               },
               y: {
                 grid: { color: 'rgba(180, 180, 180, 0.1)' },
-                ticks: { color: '#555' },
+                ticks: { color: '#eeeeee' },
               },
             },
           }}
         />
       </div>
 
-      <h3>Students on Campus</h3>
-      <p className="students-count">
-        <strong>Connected via Wi-Fi:</strong> <span className="highlight">1,500</span>
-      </p>
+      <h3>Water Consumption</h3>
+      <div className="chart-container rpm-style">
+        <Doughnut data={waterConsumptionData} options={rpmOptions} />
+      </div>
+
+      <h3>Carbon Footprint</h3>
+      <div className="chart-container rpm-style">
+        <Doughnut data={carbonFootprintData} options={rpmOptions} />
+      </div>
     </div>
   );
 };
