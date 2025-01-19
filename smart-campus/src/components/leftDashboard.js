@@ -125,6 +125,7 @@ const LeftDashboard = () => {
             },
           }}
         />
+        <button className="calendar-button">Calendar</button>
       </div>
 
       <h3>Water Consumption</h3>

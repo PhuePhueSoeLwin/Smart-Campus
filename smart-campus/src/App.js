@@ -6,9 +6,18 @@ import RightDashboard from './components/rightDashboard';
 
 const App = () => {
   const [showDashboards, setShowDashboards] = useState(true);
+  const [showCalendarPopup, setShowCalendarPopup] = useState(false);
 
   const toggleDashboards = () => {
     setShowDashboards(!showDashboards);
+  };
+
+  const handleCalendarClick = () => {
+    setShowCalendarPopup(true);
+  };
+
+  const closeCalendarPopup = () => {
+    setShowCalendarPopup(false);
   };
 
   return (
@@ -28,6 +37,17 @@ const App = () => {
         <Suspense fallback={<div>Loading...</div>}>
           <Map3D />
         </Suspense>
+
+        {/* Calendar Popup over 3D Map */}
+        {showCalendarPopup && (
+          <div className="popup-overlay" onClick={closeCalendarPopup}>
+            <div className="popup-box" onClick={(e) => e.stopPropagation()}>
+              <h3>Calendar</h3>
+              <p>This is the calendar popup content over the 3D map.</p>
+              <button onClick={closeCalendarPopup}>Close</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Left Dashboard Overlay */}
@@ -36,7 +56,7 @@ const App = () => {
           showDashboards ? 'show' : 'hide'
         }`}
       >
-        <LeftDashboard />
+        <LeftDashboard onCalendarClick={handleCalendarClick} />
       </div>
 
       {/* Right Dashboard Overlay */}
