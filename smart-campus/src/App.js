@@ -1,14 +1,12 @@
 import React, { useState, Suspense } from 'react';
-import Map3D from './components/Map3D';  // Import Map3D component
-import './App.css';  // For additional styling
+import Map3D from './components/Map3D'; // Import Map3D component
+import './App.css'; // For additional styling
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
 
 const App = () => {
-  // State to control the visibility of the dashboards
   const [showDashboards, setShowDashboards] = useState(true);
 
-  // Function to toggle the visibility of the dashboards
   const toggleDashboards = () => {
     setShowDashboards(!showDashboards);
   };
@@ -20,24 +18,34 @@ const App = () => {
         <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
       </nav>
 
-      {/* Button to hide/show dashboards */}
+      {/* Toggle Button */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
 
-      <div className="content-container">
-        {/* Conditionally render the LeftDashboard */}
-        {showDashboards && <LeftDashboard />}
-        
-        {/* 3D Map Canvas */}
+      {/* Fullscreen Map */}
+      <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="map-container">
-            <Map3D />
-          </div>
+          <Map3D />
         </Suspense>
+      </div>
 
-        {/* Conditionally render the RightDashboard */}
-        {showDashboards && <RightDashboard />}
+      {/* Left Dashboard Overlay */}
+      <div
+        className={`dashboard-wrapper left-dashboard-wrapper ${
+          showDashboards ? 'show' : 'hide'
+        }`}
+      >
+        <LeftDashboard />
+      </div>
+
+      {/* Right Dashboard Overlay */}
+      <div
+        className={`dashboard-wrapper right-dashboard-wrapper ${
+          showDashboards ? 'show' : 'hide'
+        }`}
+      >
+        <RightDashboard />
       </div>
     </div>
   );

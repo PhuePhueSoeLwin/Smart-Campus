@@ -1,7 +1,6 @@
 /* General Left Dashboard Styles */
 .left-dashboard {
   position: fixed;
-  top: 60px;
   left: 0;
   width: 320px;
   height: 100%;
@@ -35,7 +34,7 @@
 }
 
 .chart-container {
-  width: 100%;
+  width: 90%;
   height: 250px;
   margin-bottom: 20px;
   background-color: #2c2c2c; /* Slightly lighter dark background */
@@ -45,7 +44,7 @@
 }
 
 .chart-container canvas {
-  max-width: 100%;
+  max-width: 90%;
   max-height: 100%;
 }
 
