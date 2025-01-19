@@ -84,3 +84,91 @@
     height: 200px;
   }
 }
+/* Popup Styles */
+.popup-overlay {
+  position: fixed;
+  top: 20px;
+  left: 500px;
+  width: 100%;
+  height: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-box {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%; /* Adjust width if needed */
+  max-width: 100%; /* Set a max-width to avoid the box being too large */
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.popup-box h3 {
+  margin: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  color: #212121;
+}
+
+.popup-box p {
+  font-size: 14px;
+  color: #555555;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  color: #212121;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: #ff0000;
+}
+/* Popup Chart Container Styles */
+.popup-chart-container {
+  width: 250px;
+  height: 200px;
+  margin-top: 20px;
+  background-color: #2c2c2c;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+
+/* Align Chart and Calendar */
+.popup-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.chart-wrapper {
+  width: 250px;
+}
+
+.calendar-wrapper {
+  width: 250px;
+  background-color: #f5f5f5;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Calendar container styling */
+.calendar-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
