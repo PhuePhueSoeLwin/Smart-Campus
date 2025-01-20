@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./leftDashboard.css";
 import { Pie, Bar } from "react-chartjs-2";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import GaugeChart from "react-gauge-chart"; // Importing gauge chart
 
 import {
   Chart as ChartJS,
@@ -20,8 +21,14 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 const LeftDashboard = () => {
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
-
+  const [waterUsageData, setWaterUsageData] = useState([]);
   const totalElectricityUsage = 121008.75;
+
+  // Buildings and water usage data
+  const buildings = [
+    "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
+    "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7"
+  ];
 
   // Generate mock data for multiple weeks
   const generateWeeklyData = (weeks = 4) => {
@@ -110,6 +117,24 @@ const LeftDashboard = () => {
     ],
   };
 
+  // Generate Water Consumption Data for Top 3 Buildings
+  const generateWaterUsage = () => {
+    const usageData = buildings.map((building) => ({
+      building,
+      usage: Math.random() * 1500, // Random water usage between 0 and 1500 liters
+    }));
+
+    // Sort the buildings by highest water usage
+    usageData.sort((a, b) => b.usage - a.usage);
+
+    // Take top 3 buildings with the highest water usage
+    setWaterUsageData(usageData.slice(0, 3));
+  };
+
+  useEffect(() => {
+    generateWaterUsage();
+  }, []); // Generate water usage when the component mounts (representing today's data)
+
   const waterConsumptionData = {
     labels: ["Used Water", "Remaining Capacity"],
     datasets: [
@@ -173,8 +198,22 @@ const LeftDashboard = () => {
       </div>
 
       <h3>Water Consumption</h3>
-      <div className="chart-container">
-        <Pie data={waterConsumptionData} />
+      <div className="water-consumption-speedometers">
+        {waterUsageData.map((data, index) => (
+          <div key={index} className="speedometer-container">
+            <h4>{data.building}</h4>
+            <GaugeChart
+              id={`gauge-chart-${index}`}
+              nrOfLevels={30}
+              percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
+              arcWidth={0.3}
+              textColor="#eeeeee"
+              needleColor="#ffffff"
+              colors={['#ff0000', '#ffb600', '#4daf7d']} // Red, Yellow, Green
+            />
+            <p>{data.usage.toFixed(2)} L</p>
+          </div>
+        ))}
       </div>
 
       <h3>Carbon Footprint</h3>
