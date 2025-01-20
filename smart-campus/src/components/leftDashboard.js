@@ -208,10 +208,10 @@ const LeftDashboard = () => {
               percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
               arcWidth={0.3}
               textColor="#eeeeee"
-              needleColor="#ffffff"
-              colors={['#ff0000', '#ffb600', '#4daf7d']} // Red, Yellow, Green
+              needleColor="#f42321"
+              colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
             />
-            <p>{data.usage.toFixed(2)} L</p>
+            <p>{data.usage.toFixed(2)} liter/day</p>
           </div>
         ))}
       </div>

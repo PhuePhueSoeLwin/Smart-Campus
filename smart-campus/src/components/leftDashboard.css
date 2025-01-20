@@ -189,7 +189,7 @@
 }
 
 .speedometer-container {
-  width: 25%; /* Reduced width for each speedometer */
+  width: 30%; /* Reduced width for each speedometer */
   display: flex;
   flex-direction: column;
   align-items: center;
