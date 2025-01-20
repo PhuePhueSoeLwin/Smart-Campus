@@ -163,6 +163,7 @@ const LeftDashboard = () => {
   return (
     <div className="left-dashboard">
       <h3>Electricity Usage</h3>
+      
       <div className="chart-container">
         <Bar
           data={mainElectricityUsageData}
@@ -196,12 +197,13 @@ const LeftDashboard = () => {
         <button className="calendar-button" onClick={() => setIsWeeklyPopupVisible(true)}>
           Weekly Usage
         </button>
-        <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
-          Weekly Usage
-        </button>
+        
       </div>
 
       <h3>Water Consumption</h3>
+      <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
+          Overall Campus
+        </button>
       <div className="water-consumption-speedometers">
         {waterUsageData.map((data, index) => (
           <div key={index} className="speedometer-container">
@@ -216,8 +218,10 @@ const LeftDashboard = () => {
               colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
             />
             <p>{data.usage.toFixed(2)} liters/day</p>
+            
           </div>
         ))}
+        
       </div>
 
       <h3>Carbon Footprint</h3>
@@ -277,32 +281,38 @@ const LeftDashboard = () => {
         </div>
       )}
       {isOverallPopupVisible && (
-        <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
-          <div className="popup-box" onClick={(e) => e.stopPropagation()}>
-            <button className="close-button" onClick={() => setIsOverallPopupVisible(false)}>
-              ✖
-            </button>
-            <h3>Water Usage: Overall Campus</h3>
-            <div className="overall-campus-speedometers">
-              {waterUsageData.map((data, index) => (
-                <div key={index} className="speedometer-container">
-                  <h4>{data.building}</h4>
-                  <GaugeChart
-                    id={`overall-gauge-chart-${index}`}
-                    nrOfLevels={30}
-                    percent={data.usage / 1500}
-                    arcWidth={0.3}
-                    textColor="#eeeeee"
-                    needleColor="#f42321"
-                    colors={["#3655f4", "#732cc5", "#e701bd"]}
-                  />
-                  <p>{data.usage.toFixed(2)} li/day</p>
-                </div>
-              ))}
+  <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
+    <div className="popup-box" onClick={(e) => e.stopPropagation()}>
+      <button className="close-button" onClick={() => setIsOverallPopupVisible(false)}>
+        ✖
+      </button>
+      <h3>Water Usage: Overall Campus</h3>
+      <div className="overall-campus-speedometers">
+        {buildings.map((building, index) => {
+          // Find the usage for the current building
+          const buildingData = waterUsageData.find((data) => data.building === building);
+          const usage = buildingData ? buildingData.usage : Math.random() * 1500; // Default to random value if not present
+          
+          return (
+            <div key={index} className="overall-speedometer-container">
+              <h4>{building}</h4>
+              <GaugeChart
+                id={`overall-gauge-chart-${index}`}
+                nrOfLevels={30}
+                percent={usage / 1500} // Water usage percentage
+                arcWidth={0.3}
+                textColor="#2c2c2c"
+                needleColor="#f42321"
+                colors={["#3655f4", "#732cc5", "#e701bd"]}
+              />
+              <p>{usage.toFixed(2)} liters/day</p>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
