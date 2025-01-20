@@ -1,5 +1,5 @@
 // src/components/Map3D.js
-import React, { Suspense } from 'react';
+import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';  // Import useGLTF from @react-three/drei
 
