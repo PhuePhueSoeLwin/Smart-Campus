@@ -348,7 +348,7 @@ const LeftDashboard = () => {
             <div className="custom-container-wrapper">
   <div className="custom-container">
     <h4 style={{ color: "#ffffff", textAlign: "center", margin: "10px 0" }}>
-      {selectedBuilding ? `${selectedBuilding} Water Usage` : "Campus Water Usage"}
+      {selectedBuilding ? `${selectedBuilding}` : "Campus Water Usage"}
     </h4>
     <GaugeChart
       id="building-speedometer"
