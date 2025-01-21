@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./leftDashboard.css";
-import { Pie, Bar } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import GaugeChart from "react-gauge-chart"; // Importing gauge chart
@@ -148,14 +148,24 @@ const LeftDashboard = () => {
     ],
   };
 
+  // Carbon Footprint for the overall campus (aggregated data)
   const carbonFootprintData = {
-    labels: ["Emissions (kg)", "Offset (kg)"],
+    labels: [""], // Label for the overall campus
     datasets: [
       {
-        label: "Carbon Footprint",
-        data: [100, 20],
-        backgroundColor: ["#FF9800", "#4CAF50"],
-        hoverBackgroundColor: ["#FF9800", "#4CAF50"],
+        label: "CO2 Emissions (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 500, 0)], // Sum of CO2 emissions across buildings
+        backgroundColor: "#FF9800",
+      },
+      {
+        label: "Food Waste (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 200, 0)], // Sum of food waste across buildings
+        backgroundColor: "#FF6384",
+      },
+      {
+        label: "Recycled Waste (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 300, 0)], // Sum of recycled waste across buildings
+        backgroundColor: "#36A2EB",
       },
     ],
   };
@@ -218,15 +228,35 @@ const LeftDashboard = () => {
               colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
             />
             <p>{data.usage.toFixed(2)} liters/day</p>
-            
           </div>
         ))}
-        
       </div>
 
       <h3>Carbon Footprint</h3>
       <div className="chart-container">
-        <Pie data={carbonFootprintData} />
+        <Bar
+          data={carbonFootprintData}
+          options={{
+            responsive: true,
+            indexAxis: "y", // Horizontal bar chart
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: (tooltipItem) => {
+                    const dataset = tooltipItem.dataset;
+                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                    const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
+                    return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
+              y: { ticks: { color: "#eeeeee" } },
+            },
+          }}
+        />
       </div>
 
       {isWeeklyPopupVisible && (
@@ -280,39 +310,66 @@ const LeftDashboard = () => {
           </div>
         </div>
       )}
+
       {isOverallPopupVisible && (
-  <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
-    <div className="popup-box" onClick={(e) => e.stopPropagation()}>
-      <button className="close-button" onClick={() => setIsOverallPopupVisible(false)}>
-        ✖
-      </button>
-      <h3>Water Usage: Overall Campus</h3>
-      <div className="overall-campus-speedometers">
-        {buildings.map((building, index) => {
-          // Find the usage for the current building
-          const buildingData = waterUsageData.find((data) => data.building === building);
-          const usage = buildingData ? buildingData.usage : Math.random() * 1500; // Default to random value if not present
-          
-          return (
-            <div key={index} className="overall-speedometer-container">
-              <h4>{building}</h4>
-              <GaugeChart
-                id={`overall-gauge-chart-${index}`}
-                nrOfLevels={30}
-                percent={usage / 1500} // Water usage percentage
-                arcWidth={0.3}
-                textColor="#2c2c2c"
-                needleColor="#f42321"
-                colors={["#3655f4", "#732cc5", "#e701bd"]}
-              />
-              <p>{usage.toFixed(2)} liters/day</p>
+        <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
+          <div className="popup-box" onClick={(e) => e.stopPropagation()}>
+            <button className="close-button" onClick={() => setIsOverallPopupVisible(false)}>
+              ✖
+            </button>
+            <h3>Water Usage: Overall Campus</h3>
+            <div className="total-water-usage-container">
+              <div className="total-water-usage">
+                <h4>Total Water Usage (Daily):</h4>
+                <p>
+                  {
+                    buildings.reduce((acc, building) => {
+                      const buildingData = waterUsageData.find((data) => data.building === building);
+                      const usage = buildingData ? buildingData.usage : Math.random() * 1500;
+                      return acc + usage;
+                    }, 0).toFixed(2)
+                  } liters/day
+                </p>
+              </div>
+              <div className="total-water-usage-month">
+                <h4>Total Water Usage (Monthly):</h4>
+                <p>
+                  {
+                    (buildings.reduce((acc, building) => {
+                      const buildingData = waterUsageData.find((data) => data.building === building);
+                      const usage = buildingData ? buildingData.usage : Math.random() * 1500;
+                      return acc + usage;
+                    }, 0) * 30).toFixed(2)
+                  } liters/month
+                </p>
+              </div>
             </div>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-)}
+
+            <div className="overall-campus-speedometers">
+              {buildings.map((building, index) => {
+                const buildingData = waterUsageData.find((data) => data.building === building);
+                const usage = buildingData ? buildingData.usage : Math.random() * 1500;
+                
+                return (
+                  <div key={index} className="overall-speedometer-container">
+                    <h4>{building}</h4>
+                    <GaugeChart
+                      id={`overall-gauge-chart-${index}`}
+                      nrOfLevels={30}
+                      percent={usage / 1500}
+                      arcWidth={0.3}
+                      textColor="#2c2c2c"
+                      needleColor="#f42321"
+                      colors={["#3655f4", "#732cc5", "#e701bd"]}
+                    />
+                    <p>{usage.toFixed(2)} liters/day</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

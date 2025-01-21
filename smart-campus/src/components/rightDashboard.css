@@ -3,9 +3,10 @@
   right: 0;
   width: 300px;
   height: 100%;
-  background-color: #f4f4f4;
+  background-color: #212121;
   padding: 20px;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
 }
 
 .right-dashboard h3 {
@@ -15,4 +16,69 @@
 
 .right-dashboard p {
   color: #666;
+}
+
+.ieq-monitoring {
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.ieq-monitoring h4 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.data .metric {
+  margin-bottom: 10px;
+}
+
+.data .metric p {
+  margin: 0;
+}
+
+.indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.indicator.normal {
+  background-color: #4CAF50;
+}
+
+.indicator.high {
+  background-color: #F44336;
+}
+
+.indicator.low {
+  background-color: #FF9800;
+}
+
+.comfort {
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.comfort span {
+  font-weight: bold;
+}
+
+.charts {
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.charts h4 {
+  margin-bottom: 10px;
+}
+
+.charts canvas {
+  max-height: 200px;
 }

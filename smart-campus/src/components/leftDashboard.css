@@ -237,3 +237,52 @@
   flex-direction: column;
   align-items: center;
 }
+/* Container for daily and monthly total water usage */
+.total-water-usage-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px; /* Space between daily and monthly usage */
+  margin-bottom: 20px; /* Add spacing between sections */
+}
+
+/* Daily Total Water Usage */
+.total-water-usage {
+  background-color: #fc1717; /* Similar background as other containers */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  width: 48%; /* Make it take up half the container */
+}
+
+.total-water-usage h4 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 16px;
+}
+
+.total-water-usage p {
+  color: #eeeeee;
+  font-size: 18px;
+  margin-top: 10px;
+}
+
+/* Monthly Total Water Usage */
+.total-water-usage-month {
+  background-color: #fc1717; /* Similar background as other containers */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  width: 48%; /* Make it take up half the container */
+}
+
+.total-water-usage-month h4 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 16px;
+}
+
+.total-water-usage-month p {
+  color: #eeeeee;
+  font-size: 18px;
+  margin-top: 10px;
+}
