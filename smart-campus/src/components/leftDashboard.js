@@ -24,11 +24,12 @@ const LeftDashboard = () => {
   const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
   const [waterUsageData, setWaterUsageData] = useState([]);
   const totalElectricityUsage = 121008.75;
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
 
   // Buildings and water usage data
   const buildings = [
     "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
-    "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7"
+    "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "M3"
   ];
 
   // Generate mock data for multiple weeks
@@ -118,7 +119,7 @@ const LeftDashboard = () => {
     ],
   };
 
-  // Generate Water Consumption Data for Top 3 Buildings
+  // Generate Water Consumption Data for All Buildings
   const generateWaterUsage = () => {
     const usageData = buildings.map((building) => ({
       building,
@@ -128,8 +129,8 @@ const LeftDashboard = () => {
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
 
-    // Take top 3 buildings with the highest water usage
-    setWaterUsageData(usageData.slice(0, 3));
+    // Set water usage data (top 3 will be shown initially)
+    setWaterUsageData(usageData);
   };
 
   useEffect(() => {
@@ -173,7 +174,6 @@ const LeftDashboard = () => {
   return (
     <div className="left-dashboard">
       <h3>Electricity Usage</h3>
-      
       <div className="chart-container">
         <Bar
           data={mainElectricityUsageData}
@@ -207,7 +207,6 @@ const LeftDashboard = () => {
         <button className="calendar-button" onClick={() => setIsWeeklyPopupVisible(true)}>
           Weekly Usage
         </button>
-        
       </div>
 
       <h3>Water Consumption</h3>
@@ -345,30 +344,50 @@ const LeftDashboard = () => {
               </div>
             </div>
 
-            <div className="overall-campus-speedometers">
-              {buildings.map((building, index) => {
-                const buildingData = waterUsageData.find((data) => data.building === building);
-                const usage = buildingData ? buildingData.usage : Math.random() * 1500;
-                
-                return (
-                  <div key={index} className="overall-speedometer-container">
-                    <h4>{building}</h4>
-                    <GaugeChart
-                      id={`overall-gauge-chart-${index}`}
-                      nrOfLevels={30}
-                      percent={usage / 1500}
-                      arcWidth={0.3}
-                      textColor="#2c2c2c"
-                      needleColor="#f42321"
-                      colors={["#3655f4", "#732cc5", "#e701bd"]}
-                    />
-                    <p>{usage.toFixed(2)} liters/day</p>
-                  </div>
-                );
-              })}
+            {/* New container with speedometer and dropdown */}
+            <div className="custom-container-wrapper">
+  <div className="custom-container">
+    <h4 style={{ color: "#ffffff", textAlign: "center", margin: "10px 0" }}>
+      {selectedBuilding ? `${selectedBuilding} Water Usage` : "Campus Water Usage"}
+    </h4>
+    <GaugeChart
+      id="building-speedometer"
+      nrOfLevels={30}
+      percent={
+        selectedBuilding
+          ? waterUsageData.find((data) => data.building === selectedBuilding)?.usage / 1500
+          : 0
+      }
+      arcWidth={0.3}
+      textColor="#eeeeee"
+      needleColor="#f42321"
+      colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+    />
+    {selectedBuilding && (
+      <p style={{ color: "#ffffff", textAlign: "center", marginTop: "10px" }}>
+        {" "}
+        {waterUsageData.find((data) => data.building === selectedBuilding)?.usage.toFixed(2)} liters/day
+      </p>
+    )}
+  </div>
+  <div className="dropdown-container">
+    <select
+      value={selectedBuilding || ""}
+      onChange={(e) => setSelectedBuilding(e.target.value)}
+      className="building-dropdown"
+    >
+      <option value="">Select Building</option>
+      {buildings.map((building) => (
+        <option key={building} value={building}>{building}</option>
+      ))}
+    </select>
+  </div>
+</div>
+
+
             </div>
           </div>
-        </div>
+        
       )}
     </div>
   );

@@ -286,3 +286,37 @@
   font-size: 18px;
   margin-top: 10px;
 }
+.custom-container-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* Space between the speedometer and dropdown */
+  margin-top: 20px;
+}
+
+.custom-container {
+  background-color: #2c2c2c;
+  width: 300px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.dropdown-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.building-dropdown {
+  width: 200px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: #ffffff;
+  color: #000;
+  cursor: pointer;
+}
