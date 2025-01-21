@@ -1,91 +1,141 @@
-/* General Right Dashboard Styles */
+/* Right Dashboard Styles */
 .right-dashboard {
   position: fixed;
   right: 0;
   width: 320px;
   height: 100%;
-  background-color: #212121; /* Dark background */
+  background-color: #212121;
   padding: 25px;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-  color: #eeeeee; /* Light text */
+  color: #eeeeee;
   font-family: 'Poppins', sans-serif;
   overflow-y: auto;
 }
-
 .right-dashboard h3 {
   margin-top: 0;
   font-size: 18px;
   font-weight: 600;
   color: #ffffff;
-  border-left: 4px solid #4daef4; /* Blue border for the section */
+  border-left: 4px solid #4daef4; /* Changed from orange to blue */
   padding-left: 10px;
   margin-bottom: 15px;
 }
+.comfort-good {
+  color: green;
+}
 
-.chart-container {
-  width: 90%;
-  height: 200px;
+.comfort-poor {
+  color: red;
+}
+
+/* Dropdown Styling */
+.dropdown-container {
   margin-bottom: 20px;
-  background-color: #2c2c2c; /* Slightly lighter dark background */
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-  padding: 20px;
-  position: relative; /* For button positioning */
 }
 
-.chart-container canvas {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-/* Alert Button Styling */
-.alert-button {
-  position: absolute;
-  bottom: 10px;
-  right: 15px;
-  background-color: #4daef4;
-  color: #ffffff;
+.building-dropdown {
+  width: 100%;
+  padding: 8px;
+  background-color: #333;
   border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
+  color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
 }
 
-.alert-button:hover {
-  background-color: #3691d9;
+.building-dropdown:hover {
+  background-color: #444;
 }
 
-/* Scrollbar Styling for Dashboard */
-.right-dashboard::-webkit-scrollbar {
-  width: 6px;
+/* Circular Progress Bar Styles */
+.student-count {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  animation: fadeIn 0.5s ease-out;
 }
 
-.right-dashboard::-webkit-scrollbar-thumb {
-  background: #4daef4; /* Blue color */
-  border-radius: 10px;
+.circle-progress-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
 }
 
-.right-dashboard::-webkit-scrollbar-track {
-  background: #2c2c2c;
+.circular-chart {
+  transform: rotate(-90deg);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .right-dashboard {
-    width: 100%;
-    height: auto;
-    position: relative;
-    box-shadow: none;
+.circle-bg {
+  fill: none;
+  stroke: #e6e6e6;
+}
+
+.circle-progress {
+  fill: none;
+  stroke: #4CAF50;
+  transition: stroke-dasharray 1s ease, stroke 1s ease;
+}
+
+.circle-progress.low {
+  stroke: #4CAF50;
+}
+
+.circle-progress.medium {
+  stroke: #FF9800;
+}
+
+.circle-progress.high {
+  stroke: #F44336;
+}
+
+.circle-progress.building {
+  stroke: #4CAF50;
+}
+
+.circle-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffffff;
+  text-align: center;
+}
+
+.total-amount {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.building-label {
+  font-size: 14px;
+  font-weight: normal;
+  color: #ffffff;
+  margin-top: 8px;
+}
+
+.selected-building-student-count {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #fff;
+  opacity: 0;
+  animation: fadeIn 1s forwards;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
   }
-
-  .chart-container {
-    height: 200px;
+  100% {
+    opacity: 1;
   }
 }
 
+/* IEQ Monitoring */
 .ieq-monitoring {
   background-color: #2c2c2c;
   padding: 15px;
@@ -141,90 +191,4 @@
 
 .comfort span {
   font-weight: bold;
-}
-/* Student Circular Progress Container */
-.student-count {
-  margin-top: 30px;
-  text-align: center;
-}
-
-/* Circular Progress SVG */
-.circle-progress-container {
-  position: relative;
-  width: 150px;
-  height: 150px;
-  margin: 0 auto;
-}
-
-circle {
-  transition: stroke-dasharray 1s ease;
-}
-
-text {
-  font-size: 20px;
-  font-weight: bold;
-  fill: white;
-  pointer-events: none;
-}
-
-/* Rotation Animation for Green Progress Circle */
-.rotate-progress {
-  transform-origin: center;
-  animation: rotateAnimation 10s linear infinite;
-}
-
-/* Keyframes for rotation */
-@keyframes rotateAnimation {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-/* Dropdown Button Styling */
-.dropdown-btn {
-  background-color: transparent;
-  color: #ffffff;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  margin-left: 10px;
-  padding: 5px 10px;
-}
-
-/* Dropdown Content */
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #212121;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-  z-index: 1;
-  margin-top: 10px;
-  border-radius: 8px;
-  padding: 5px 0;
-}
-
-.dropdown-content button {
-  background-color: transparent;
-  color: #fff;
-  border: none;
-  width: 100%;
-  text-align: left;
-  padding: 8px 16px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.dropdown-content button:hover {
-  background-color: #4CAF50;
-}
-
-/* Show the dropdown when the button is clicked */
-.dropdown-btn:focus + .dropdown-content,
-.dropdown-btn:hover + .dropdown-content {
-  display: block;
 }
