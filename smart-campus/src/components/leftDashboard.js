@@ -347,7 +347,7 @@ const LeftDashboard = () => {
             {/* New container with speedometer and dropdown */}
             <div className="custom-container-wrapper">
   <div className="custom-container">
-    <h4 style={{ color: "#ffffff", textAlign: "center", margin: "10px 0" }}>
+    <h4 style={{ color: "#2f2f2f", textAlign: "center", margin: "10px 0" }}>
       {selectedBuilding ? `${selectedBuilding}` : "Campus Water Usage"}
     </h4>
     <GaugeChart
@@ -359,12 +359,12 @@ const LeftDashboard = () => {
           : 0
       }
       arcWidth={0.3}
-      textColor="#eeeeee"
+      textColor="#2f2f2f"
       needleColor="#f42321"
       colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
     />
     {selectedBuilding && (
-      <p style={{ color: "#ffffff", textAlign: "center", marginTop: "10px" }}>
+      <p style={{ color: "#2f2f2f", textAlign: "center", marginTop: "10px" }}>
         {" "}
         {waterUsageData.find((data) => data.building === selectedBuilding)?.usage.toFixed(2)} liters/day
       </p>
