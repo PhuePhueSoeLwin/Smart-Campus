@@ -1,25 +1,93 @@
+/* General Right Dashboard Styles */
 .right-dashboard {
   position: fixed;
   right: 0;
-  width: 300px;
+  width: 320px;
   height: 100%;
-  background-color: #212121;
-  padding: 20px;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  background-color: #212121; /* Dark background */
+  padding: 25px;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  color: #eeeeee; /* Light text */
+  font-family: 'Poppins', sans-serif;
   overflow-y: auto;
 }
 
 .right-dashboard h3 {
   margin-top: 0;
-  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  border-left: 4px solid #4daef4; /* Blue border for the section */
+  padding-left: 10px;
+  margin-bottom: 15px;
 }
 
-.right-dashboard p {
-  color: #666;
+.chart-container {
+  width: 90%;
+  height: 200px;
+  margin-bottom: 20px;
+  background-color: #2c2c2c; /* Slightly lighter dark background */
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  padding: 20px;
+  position: relative; /* For button positioning */
+}
+
+.chart-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Alert Button Styling */
+.alert-button {
+  position: absolute;
+  bottom: 10px;
+  right: 15px;
+  background-color: #4daef4;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.alert-button:hover {
+  background-color: #3691d9;
+}
+
+/* Scrollbar Styling for Dashboard */
+.right-dashboard::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right-dashboard::-webkit-scrollbar-thumb {
+  background: #4daef4; /* Blue color */
+  border-radius: 10px;
+}
+
+.right-dashboard::-webkit-scrollbar-track {
+  background: #2c2c2c;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .right-dashboard {
+    width: 100%;
+    height: auto;
+    position: relative;
+    box-shadow: none;
+  }
+
+  .chart-container {
+    height: 200px;
+  }
 }
 
 .ieq-monitoring {
-  background-color: #fff;
+  background-color: #2c2c2c;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -28,22 +96,30 @@
 
 .ieq-monitoring h4 {
   margin-bottom: 10px;
-  color: #333;
+  color: #ffffff;
 }
 
 .data .metric {
+  display: flex;
+  align-items: center;
   margin-bottom: 10px;
 }
 
 .data .metric p {
   margin: 0;
+  margin-left: 10px;
+}
+
+.indicator-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .indicator {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  margin-top: 5px;
 }
 
 .indicator.normal {
@@ -66,19 +142,89 @@
 .comfort span {
   font-weight: bold;
 }
+/* Student Circular Progress Container */
+.student-count {
+  margin-top: 30px;
+  text-align: center;
+}
 
-.charts {
-  background-color: #fff;
-  padding: 15px;
+/* Circular Progress SVG */
+.circle-progress-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+}
+
+circle {
+  transition: stroke-dasharray 1s ease;
+}
+
+text {
+  font-size: 20px;
+  font-weight: bold;
+  fill: white;
+  pointer-events: none;
+}
+
+/* Rotation Animation for Green Progress Circle */
+.rotate-progress {
+  transform-origin: center;
+  animation: rotateAnimation 10s linear infinite;
+}
+
+/* Keyframes for rotation */
+@keyframes rotateAnimation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+/* Dropdown Button Styling */
+.dropdown-btn {
+  background-color: transparent;
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 5px 10px;
+}
+
+/* Dropdown Content */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #212121;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  margin-top: 10px;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  padding: 5px 0;
 }
 
-.charts h4 {
-  margin-bottom: 10px;
+.dropdown-content button {
+  background-color: transparent;
+  color: #fff;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 16px;
+  cursor: pointer;
 }
 
-.charts canvas {
-  max-height: 200px;
+.dropdown-content button:hover {
+  background-color: #4CAF50;
+}
+
+/* Show the dropdown when the button is clicked */
+.dropdown-btn:focus + .dropdown-content,
+.dropdown-btn:hover + .dropdown-content {
+  display: block;
 }
