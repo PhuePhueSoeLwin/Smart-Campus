@@ -10,13 +10,19 @@ const RightDashboard = () => {
     temperature: 22, // Temperature in °C
     humidity: 45, // Humidity in percentage
     windSpeed: 10, // Wind speed in km/h
-    comfort: ' Good', // Comfort level (Good, Moderate, Poor)
+    comfort: 'Good', // Comfort level (Good, Moderate, Poor)
   });
 
   // State for selected building and student count
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [studentCounts, setStudentCounts] = useState({});
   const [totalStudents, setTotalStudents] = useState(0);
+
+  // State for vehicle data (cars and motorcycles)
+  const [vehicles, setVehicles] = useState({
+    cars: 2000, // Starting number of cars
+    motorcycles: 10000, // Starting number of motorcycles
+  });
 
   // List of buildings on campus
   const buildings = [
@@ -34,22 +40,29 @@ const RightDashboard = () => {
         temperature: Math.floor(Math.random() * (25 - 18 + 1)) + 18,
         humidity: Math.floor(Math.random() * (60 - 30 + 1)) + 30,
         windSpeed: Math.floor(Math.random() * (20 - 5 + 1)) + 5, // Random wind speed between 5 and 20 km/h
-        comfort: Math.random() > 0.7 ? ' Poor' : ' Good',
+        comfort: Math.random() > 0.7 ? 'Poor' : 'Good',
       });
-    }, 5000);
-    const newStudentCounts = {};
-    buildings.forEach((building) => {
-      // Simulate a random change in student count for each building
-      newStudentCounts[building] = Math.floor(Math.random() * (1000 - 100 + 1)) + 100; // Random student count between 100 and 300
-    });
-    setStudentCounts(newStudentCounts);
 
-    // Calculate total number of students on campus
-    const total = Object.values(newStudentCounts).reduce((acc, count) => acc + count, 0);
-    setTotalStudents(total);
+      // Simulate vehicle data change every second
+      setVehicles((prevVehicles) => ({
+        cars: prevVehicles.cars + Math.floor(Math.random() * 5) - 2, // Random change between -2 and +3 cars
+        motorcycles: prevVehicles.motorcycles + Math.floor(Math.random() * 10) - 5, // Random change between -5 and +5 motorcycles
+      }));
 
-    // Cleanup on component unmount
-    return () => clearInterval(interval);
+      const newStudentCounts = {};
+      buildings.forEach((building) => {
+        // Simulate a random change in student count for each building
+        newStudentCounts[building] = Math.floor(Math.random() * (1000 - 100 + 1)) + 100; // Random student count between 100 and 300
+      });
+      setStudentCounts(newStudentCounts);
+
+      // Calculate total number of students on campus
+      const total = Object.values(newStudentCounts).reduce((acc, count) => acc + count, 0);
+      setTotalStudents(total);
+
+    }, 1000); // Update every second
+
+    return () => clearInterval(interval); // Cleanup on component unmount
   }, []);
 
   // Handle building selection
@@ -101,7 +114,7 @@ const RightDashboard = () => {
         <div className="comfort">
           <p>
             <strong>Comfort Level:</strong> 
-            <span className={ieqData.comfort === ' Good' ? 'comfort-good' : 'comfort-poor'}>
+            <span className={ieqData.comfort === 'Good' ? 'comfort-good' : 'comfort-poor'}>
               {ieqData.comfort}
             </span>
           </p>
@@ -152,6 +165,13 @@ const RightDashboard = () => {
           <p><strong>Students in {selectedBuilding}:</strong> {selectedBuildingStudentCount}</p>
         </div>
       )}
+
+      {/* Vehicle Count Section */}
+      <h3>Vehicles On Campus</h3>
+      <div className="vehicle-count">
+        <p><strong>Cars:</strong> {vehicles.cars}</p>
+        <p><strong>Motorcycles:</strong> {vehicles.motorcycles}</p>
+      </div>
     </div>
   );
 };
