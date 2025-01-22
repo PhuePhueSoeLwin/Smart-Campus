@@ -6,7 +6,7 @@
   height: 100%;
   background-color: #212121;
   padding: 25px;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 2px 0 8px rgba(0, 0.2, 0, 0);
   color: #eeeeee;
   font-family: 'Poppins', sans-serif;
   overflow-y: auto;
@@ -20,6 +20,71 @@
   padding-left: 10px;
   margin-bottom: 15px;
 }
+/* Scrollbar Styling for Dashboard */
+.right-dashboard::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right-dashboard::-webkit-scrollbar-thumb {
+  background: #4daef4; /* Changed from orange to blue */
+  border-radius: 10px;
+}
+
+.right-dashboard::-webkit-scrollbar-track {
+  background: #2c2c2c;
+}
+/* Date and Time Section Styling */
+.date-time-smart {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(90deg, #4daef4, #007bff);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  color: white;
+  font-family: 'Roboto', sans-serif;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.date-time-icon {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-time-icon i {
+  animation: rotate 10s linear infinite;
+}
+
+.date-time-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-time-content .date {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.date-time-content .time {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* Animation for Icon */
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
 .comfort-good {
   color: green;
 }
@@ -31,80 +96,6 @@
 /* Dropdown Styling */
 .dropdown-container {
   margin-bottom: 20px;
-}
-/* smartwatch */
-/* Smartwatch Rectangle Container */
-.smartwatch-rectangle {
-  width: 350px;
-  height: 120px;
-  background: linear-gradient(145deg, #1d1f23, #262a2f);
-  border-radius: 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3), 
-              -4px -4px 8px rgba(255, 255, 255, 0.05), 
-              inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
-              inset 4px 4px 8px rgba(255, 255, 255, 0.05);
-  margin: 20px auto;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Content inside the rectangle */
-.time-content {
-  text-align: center;
-  color: #ffffff;
-  font-family: 'Poppins', sans-serif;
-}
-
-.day {
-  font-size: 18px;
-  font-weight: bold;
-  margin: 0;
-  color: #a3c9ff;
-}
-
-.date {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 5px 0;
-  color: #c9c9c9;
-}
-
-.time {
-  font-size: 22px;
-  font-weight: bold;
-  margin: 0;
-  color: #ffffff;
-}
-
-/* Subtle glow effect */
-.smartwatch-rectangle:before {
-  content: '';
-  position: absolute;
-  width: 90%;
-  height: 90%;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 0;
-}
-
-.time-content {
-  z-index: 1;
-}
-
-/* Add a hover effect for interactivity */
-.smartwatch-rectangle:hover {
-  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.5), 
-              -6px -6px 12px rgba(255, 255, 255, 0.1), 
-              inset -4px -4px 10px rgba(0, 0, 0, 0.4), 
-              inset 4px 4px 10px rgba(255, 255, 255, 0.05);
-  transform: scale(1.02);
-  transition: all 0.3s ease-in-out;
 }
 
 .building-dropdown {

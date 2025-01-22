@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './rightDashboard.css'; // Custom CSS for styling
-import { FaCaretDown } from 'react-icons/fa'; // Import down arrow icon
 
 const RightDashboard = () => {
+  const [currentTime, setCurrentTime] = useState('');
+   
   // State for real-time IEQ data
   const [ieqData, setIeQData] = useState({
     co2: 400,
@@ -24,18 +25,35 @@ const RightDashboard = () => {
     motorcycles: 10000,
   });
 
-  // State for real-time date and time in Thailand
-  const [thailandTime, setThailandTime] = useState({
-    day: '',
-    date: '',
-    time: '',
-  });
   // List of buildings on campus
   const buildings = [
     "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
     "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7",
     "S1", "S2", "S3", "S4", "S5", "S6", "S7", "M3"
   ];
+
+  // Update date and time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+      const formattedTime = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+  
+      setCurrentTime(`${formattedDate}, ${formattedTime}`);
+    }, 1000);
+  
+    return () => clearInterval(interval);
+  }, []);
+  
 
   // Simulate real-time updates
   useEffect(() => {
@@ -67,29 +85,6 @@ const RightDashboard = () => {
     return () => clearInterval(interval);
   }, [buildings]);
 
-  // Update Thailand's date and time every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date().toLocaleString('en-US', {
-        timeZone: 'Asia/Bangkok',
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-      });
-
-      const [day, dateTime] = now.split(', ');
-      const [date, time] = dateTime.split(' at ');
-
-      setThailandTime({ day, date, time });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Handle building selection
   const handleBuildingChange = (event) => {
@@ -101,14 +96,14 @@ const RightDashboard = () => {
 
   return (
     <div className="right-dashboard">
-      {/* Smartwatch-style Thailand Time */}
-      <div className="smartwatch-rectangle">
-        <div className="time-content">
-          <p className="day">{thailandTime.day}</p>
-          <p className="date">{thailandTime.date}</p>
-          <p className="time">{thailandTime.time}</p>
-        </div>
-      </div>
+<div className="date-time-smart">
+  <div className="date-time-icon">
+    <i className="fas fa-clock"></i> {/* Clock Icon */}
+  </div>
+  <div className="date-time-content">
+    <p className="date-time">{currentTime}</p>
+  </div>
+</div>
 
       <h3>Campus Environmental Quality (IEQ)</h3>
 
