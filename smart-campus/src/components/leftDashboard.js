@@ -1,22 +1,50 @@
-import React, { useState, useEffect } from "react";
+//import React, { useState } from "react";
 import "./leftDashboard.css";
-import { Bar } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2"; // Importing Bar and Line chart components
 import Calendar from "react-calendar";
-import "react-calendar/dist/Calendar.css";
-import GaugeChart from "react-gauge-chart"; // Importing gauge chart
+import "react-calendar/dist/Calendar.css"; // Calendar styling
+import GaugeChart from "react-gauge-chart";
+import React, { useState, useEffect } from "react"; // Correct import
+  // Add useEffect here
+
+
 
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
   ArcElement,
 } from "chart.js";
 
+
+//import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+//import GaugeChart from "react-gauge-chart";
+
+
+//import { Line } from 'react-chartjs-2';
+
+
+// Register the elements and plugins
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+
 
 const LeftDashboard = () => {
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
@@ -26,11 +54,13 @@ const LeftDashboard = () => {
   const totalElectricityUsage = 121008.75;
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
+
   // Buildings and water usage data
   const buildings = [
     "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
     "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "M3"
   ];
+
 
   // Generate mock data for multiple weeks
   const generateWeeklyData = (weeks = 4) => {
@@ -38,10 +68,12 @@ const LeftDashboard = () => {
     const weeklyLabels = [];
     const today = new Date();
 
+
     for (let week = 0; week < weeks; week++) {
       const weekData = [];
       const labels = [];
       let totalGenerated = 0;
+
 
       for (let i = 0; i < 7; i++) {
         const avgDailyUsage = totalElectricityUsage / 7;
@@ -50,11 +82,13 @@ const LeftDashboard = () => {
         weekData.push(dailyValue);
         totalGenerated += dailyValue;
 
+
         // Create a label for each day
         const date = new Date();
         date.setDate(today.getDate() - i - week * 7);
         labels.push(date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }));
       }
+
 
       // Adjust to match total electricity usage
       const adjustmentFactor = totalElectricityUsage / totalGenerated;
@@ -62,22 +96,28 @@ const LeftDashboard = () => {
       weeklyLabels.push(labels.reverse());
     }
 
+
     return { weeklyData: weeklyData.reverse(), weeklyLabels: weeklyLabels.reverse() };
   };
 
+
   const { weeklyData, weeklyLabels } = generateWeeklyData();
+
 
   // Flatten weekly data and labels into one array for filtering
   const allLabels = weeklyLabels.flat();
   const allData = weeklyData.flat();
 
+
   // Filter data based on selected date range for the popup
   const filterDataByDateRange = () => {
     if (!selectedDateRange || selectedDateRange.length !== 2) return { labels: allLabels, data: allData };
 
+
     const [startDate, endDate] = selectedDateRange;
     const filteredLabels = [];
     const filteredData = [];
+
 
     for (let i = 0; i < allLabels.length; i++) {
       const labelDate = new Date();
@@ -88,10 +128,13 @@ const LeftDashboard = () => {
       }
     }
 
+
     return { labels: filteredLabels, data: filteredData };
   };
 
+
   const popupFilteredData = filterDataByDateRange();
+
 
   const mainElectricityUsageData = {
     labels: weeklyLabels[0], // Current week's labels
@@ -106,6 +149,7 @@ const LeftDashboard = () => {
     ],
   };
 
+
   const popupElectricityUsageData = {
     labels: popupFilteredData.labels,
     datasets: [
@@ -119,6 +163,7 @@ const LeftDashboard = () => {
     ],
   };
 
+
   // Generate Water Consumption Data for All Buildings
   const generateWaterUsage = () => {
     const usageData = buildings.map((building) => ({
@@ -126,16 +171,20 @@ const LeftDashboard = () => {
       usage: Math.random() * 1500, // Random water usage between 0 and 1500 liters
     }));
 
+
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
+
 
     // Set water usage data (top 3 will be shown initially)
     setWaterUsageData(usageData);
   };
 
-  useEffect(() => {
-    generateWaterUsage();
-  }, []); // Generate water usage when the component mounts (representing today's data)
+
+ useEffect(() => {
+  generateWaterUsage();
+ }, []); // Generate water usage when the component mounts (representing today's data)
+
 
   const waterConsumptionData = {
     labels: ["Used Water", "Remaining Capacity"],
@@ -149,28 +198,21 @@ const LeftDashboard = () => {
     ],
   };
 
+
   // Carbon Footprint for the overall campus (aggregated data)
   const carbonFootprintData = {
-    labels: [""], // Label for the overall campus
+    labels: ['CO2 Emissions', 'Food Waste', 'Recycled Waste'],
     datasets: [
       {
-        label: "CO2 Emissions (kg)",
-        data: [buildings.reduce((sum) => sum + Math.random() * 500, 0)], // Sum of CO2 emissions across buildings
-        backgroundColor: "#FF9800",
-      },
-      {
-        label: "Food Waste (kg)",
-        data: [buildings.reduce((sum) => sum + Math.random() * 200, 0)], // Sum of food waste across buildings
-        backgroundColor: "#FF6384",
-      },
-      {
-        label: "Recycled Waste (kg)",
-        data: [buildings.reduce((sum) => sum + Math.random() * 300, 0)], // Sum of recycled waste across buildings
-        backgroundColor: "#36A2EB",
+        label: 'Carbon Footprint',
+        data: [10000, 2000, 5000], // Replace with your actual data
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.4, // Optional for smoother lines
       },
     ],
   };
-
+ 
   return (
     <div className="left-dashboard">
       <h3>Electricity Usage</h3>
@@ -208,53 +250,59 @@ const LeftDashboard = () => {
           Weekly Usage
         </button>
       </div>
-        <h3>Water Consumption</h3>
-        <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
+
+
+      <h3>Water Consumption</h3>
+      <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
           Overall Campus
         </button>
       <div className="water-consumption-speedometers">
-        {waterUsageData.slice(0, 3).map((data, index) => ( // Display only the top 3 buildings
+        {waterUsageData.map((data, index) => (
           <div key={index} className="speedometer-container">
             <h4>{data.building}</h4>
-              <GaugeChart
-                id={`gauge-chart-${index}`}
-                nrOfLevels={30}
-                percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
-                arcWidth={0.3}
-                textColor="#eeeeee"
-                needleColor="#f42321"
-                colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
-              />
-              <p>{data.usage.toFixed(2)} liters/day</p>
-            </div>
-            ))}
+            <GaugeChart
+              id={`gauge-chart-${index}`}
+              nrOfLevels={30}
+              percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
+              arcWidth={0.3}
+              textColor="#eeeeee"
+              needleColor="#f42321"
+              colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+            />
+            <p>{data.usage.toFixed(2)} liters/day</p>
+          </div>
+        ))}
       </div>
+
+
       <h3>Carbon Footprint</h3>
-      <div className="chart-container">
-        <Bar
-          data={carbonFootprintData}
-          options={{
-            responsive: true,
-            indexAxis: "y", // Horizontal bar chart
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: (tooltipItem) => {
-                    const dataset = tooltipItem.dataset;
-                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
-                    const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
-                    return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
-                  },
-                },
-              },
+<div className="chart-container">
+  <Line
+    data={carbonFootprintData}
+    options={{
+      responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (tooltipItem) => {
+              const dataset = tooltipItem.dataset;
+              const total = dataset.data.reduce((sum, value) => sum + value, 0);
+              const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
+              return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
             },
-            scales: {
-              x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
-              y: { ticks: { color: "#eeeeee" } },
-            },
-          }}
-        />
-      </div>
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
+        y: { ticks: { color: "#eeeeee" } },
+      },
+    }}
+  />
+</div>
+
+
+
 
       {isWeeklyPopupVisible && (
         <div className="popup-overlay" onClick={() => setIsWeeklyPopupVisible(false)}>
@@ -263,6 +311,7 @@ const LeftDashboard = () => {
               ✖
             </button>
             <h3>Electricity Usage for Selected Dates</h3>
+
 
             <div className="popup-content">
               <div className="chart-wrapper">
@@ -308,6 +357,7 @@ const LeftDashboard = () => {
         </div>
       )}
 
+
       {isOverallPopupVisible && (
         <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
           <div className="popup-box" onClick={(e) => e.stopPropagation()}>
@@ -342,6 +392,7 @@ const LeftDashboard = () => {
               </div>
             </div>
 
+
             {/* New container with speedometer and dropdown */}
             <div className="custom-container-wrapper">
   <div className="custom-container">
@@ -361,7 +412,7 @@ const LeftDashboard = () => {
       needleColor="#f42321"
       colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
     />
-     {selectedBuilding && (
+    {selectedBuilding && (
       <p style={{ color: "#2f2f2f", textAlign: "center", marginTop: "10px" }}>
         {" "}
         {waterUsageData.find((data) => data.building === selectedBuilding)?.usage.toFixed(2)} liters/day
@@ -383,12 +434,17 @@ const LeftDashboard = () => {
 </div>
 
 
+
+
             </div>
           </div>
-        
+       
       )}
     </div>
   );
 };
 
+
 export default LeftDashboard;
+
+
