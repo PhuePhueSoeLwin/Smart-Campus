@@ -6,9 +6,14 @@ import RightDashboard from './components/rightDashboard';
 
 const App = () => {
   const [showDashboards, setShowDashboards] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // State for burger menu
 
   const toggleDashboards = () => {
     setShowDashboards(!showDashboards);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   return (
@@ -16,7 +21,24 @@ const App = () => {
       {/* Navigation Bar */}
       <nav className="navbar">
         <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
+        <div className={`burger-menu ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
+          <div className="line"></div>
+          <div className="line"></div>
+          <div className="line"></div>
+        </div>
       </nav>
+
+      {/* Dropdown Menu */}
+      {isMenuOpen && (
+        <div className="dropdown-menu">
+          <ul>
+            <li><a href="#dashboard1">Dashboard 1</a></li>
+            <li><a href="#dashboard2">Dashboard 2</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+      )}
 
       {/* Toggle Button */}
       <button className="hide-button" onClick={toggleDashboards}>
