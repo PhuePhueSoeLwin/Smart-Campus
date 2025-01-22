@@ -10,7 +10,7 @@ const RightDashboard = () => {
     temperature: 22, // Temperature in °C
     humidity: 45, // Humidity in percentage
     windSpeed: 10, // Wind speed in km/h
-    comfort: 'Good', // Comfort level (Good, Moderate, Poor)
+    comfort: ' Good', // Comfort level (Good, Moderate, Poor)
   });
 
   // State for selected building and student count
@@ -40,7 +40,7 @@ const RightDashboard = () => {
         temperature: Math.floor(Math.random() * (25 - 18 + 1)) + 18,
         humidity: Math.floor(Math.random() * (60 - 30 + 1)) + 30,
         windSpeed: Math.floor(Math.random() * (20 - 5 + 1)) + 5, // Random wind speed between 5 and 20 km/h
-        comfort: Math.random() > 0.7 ? 'Poor' : 'Good',
+        comfort: Math.random() > 0.7 ? ' Poor' : ' Good',
       });
 
       // Simulate vehicle data change every second
@@ -114,7 +114,7 @@ const RightDashboard = () => {
         <div className="comfort">
           <p>
             <strong>Comfort Level:</strong> 
-            <span className={ieqData.comfort === 'Good' ? 'comfort-good' : 'comfort-poor'}>
+            <span className={ieqData.comfort === ' Good' ? 'comfort-good' : 'comfort-poor'}>
               {ieqData.comfort}
             </span>
           </p>
@@ -167,11 +167,45 @@ const RightDashboard = () => {
       )}
 
       {/* Vehicle Count Section */}
-      <h3>Vehicles On Campus</h3>
-      <div className="vehicle-count">
-        <p><strong>Cars:</strong> {vehicles.cars}</p>
-        <p><strong>Motorcycles:</strong> {vehicles.motorcycles}</p>
-      </div>
+{/* Vehicle Count Section */}
+<h3>Vehicles On Campus</h3>
+<div className="vehicle-count-container">
+  {/* Car Container */}
+  <div className="vehicle-card car">
+    <div className="vehicle-icon">
+      🚗
+    </div>
+    <div className="vehicle-info">
+      <p className="vehicle-type">Cars</p>
+      <p className="vehicle-number">{vehicles.cars}</p>
+    </div>
+    <div className="vehicle-progress">
+      <div
+        className="progress-bar"
+        style={{ width: `${Math.min((vehicles.cars / (vehicles.cars + vehicles.motorcycles)) * 100, 100)}%` }}
+      ></div>
+    </div>
+  </div>
+
+  {/* Motorcycle Container */}
+  <div className="vehicle-card motorcycle">
+    <div className="vehicle-icon">
+      🏍️
+    </div>
+    <div className="vehicle-info">
+      <p className="vehicle-type">Motorcycles</p>
+      <p className="vehicle-number">{vehicles.motorcycles}</p>
+    </div>
+    <div className="vehicle-progress">
+      <div
+        className="progress-bar"
+        style={{ width: `${Math.min((vehicles.motorcycles / (vehicles.cars + vehicles.motorcycles)) * 100, 100)}%` }}
+      ></div>
+    </div>
+  </div>
+</div>
+
+
     </div>
   );
 };
