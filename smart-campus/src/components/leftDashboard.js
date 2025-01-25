@@ -237,27 +237,31 @@ const LeftDashboard = () => {
 
 
       <h3>Water Consumption</h3>
-      <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
-          Overall Campus
-        </button>
-      <div className="water-consumption-speedometers">
-        {waterUsageData.map((data, index) => (
-          <div key={index} className="speedometer-container">
-            <h4>{data.building}</h4>
-            <GaugeChart
-              id={`gauge-chart-${index}`}
-              nrOfLevels={30}
-              percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
-              arcWidth={0.3}
-              textColor="#eeeeee"
-              needleColor="#f42321"
-              colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
-            />
-            <p>{data.usage.toFixed(2)} liters/day</p>
-          </div>
-        ))}
-      </div>
 
+<div className="water-consumption-speedometers">
+  <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
+    Overall Campus
+  </button>
+
+  {waterUsageData
+    .sort((a, b) => b.usage - a.usage) // Sort by highest usage first
+    .slice(0, 3) // Take only the top 3 buildings
+    .map((data, index) => (
+      <div key={index} className="speedometer-container">
+        <h4>{data.building}</h4>
+        <GaugeChart
+          id={`gauge-chart-${index}`}
+          nrOfLevels={30}
+          percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
+          arcWidth={0.3}
+          textColor="#eeeeee"
+          needleColor="#f42321"
+          colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+        />
+        <p>{data.usage.toFixed(2)} liters/day</p>
+      </div>
+    ))}
+</div>
 
       <h3>Carbon Footprint</h3>
       <div className="chart-container">

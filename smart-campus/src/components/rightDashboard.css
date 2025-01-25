@@ -1,17 +1,39 @@
 /* Right Dashboard Styles */
 .right-dashboard {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 51, 1) 0%,    /* Very dark blue 100% opacity */
+    rgba(0, 0, 51, 0.99) 1%,
+    rgba(0, 0, 51, 0.98) 2%,
+    rgba(0, 0, 51, 0.97) 3%,
+    rgba(0, 0, 51, 0.96) 4%,
+    rgba(0, 0, 51, 0.95) 5%,
+    rgba(0, 0, 51, 0.05) 95%,
+    rgba(0, 0, 51, 0.04) 96%,
+    rgba(0, 0, 51, 0.03) 97%,
+    rgba(0, 0, 51, 0.02) 98%,
+    rgba(0, 0, 51, 0.01) 99%,
+    rgba(0, 0, 51, 0) 100%   /* Very dark blue 0% opacity */
+  );
   position: fixed;
   right: 0;
   width: 320px;
-  height: 100%;
-  background-color: #212121;
+  height: 100vh;
   padding: 25px;
-  box-shadow: 2px 0 8px rgba(0, 0.2, 0, 0);
-  color: #eeeeee;
-  font-family: 'Poppins', sans-serif;
-  overflow-y: auto;
-}
-.right-dashboard h3 {
+  z-index: 100;
+  overflow-y: auto; /* Enable vertical scrolling */
+  box-shadow: none;
+ }
+ 
+ 
+ .right-dashboard::-webkit-scrollbar {
+  display: none;
+  }
+ 
+ 
+ 
+ 
+ .right-dashboard h3 {
   margin-top: 0;
   font-size: 18px;
   font-weight: 600;
@@ -19,127 +41,112 @@
   border-left: 4px solid #4daef4; /* Changed from orange to blue */
   padding-left: 10px;
   margin-bottom: 15px;
-}
-/* Scrollbar Styling for Dashboard */
-.right-dashboard::-webkit-scrollbar {
-  width: 6px;
-}
-
-.right-dashboard::-webkit-scrollbar-thumb {
-  background: #4daef4; /* Changed from orange to blue */
-  border-radius: 10px;
-}
-
-.right-dashboard::-webkit-scrollbar-track {
-  background: #2c2c2c;
-}
-/* Date and Time Section Styling */
-/* Date and Time Section Styling */
-.date-time-smart {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: linear-gradient(135deg, #4daef4, #007bff);
-  padding: 1rem 1.5rem; /* Reduced padding */
-  border-radius: 12px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  color: white;
-  font-family: 'Roboto', sans-serif;
-  font-size: 1rem; /* Reduced font size */
-  margin-bottom: 1rem;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Adding creative blue box effects */
-.date-time-smart::before,
-.date-time-smart::after {
-  content: '';
-  position: absolute;
-  width: 70px; /* Smaller circles */
-  height: 70px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  z-index: 0;
-  animation: float 6s ease-in-out infinite;
-}
-
-.date-time-smart::before {
-  top: -15px;
-  left: -20px;
-}
-
-.date-time-smart::after {
-  bottom: -15px;
-  right: -20px;
-}
-
-.date-time-icon {
-  font-size: 1.8rem; /* Reduced icon size */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.date-time-icon i {
-  animation: rotate 10s linear infinite;
-}
-
-.date-time-content {
-  display: flex;
-  flex-direction: column;
-  z-index: 1;
-}
-
-.date-time-content .date {
-  font-weight: 500;
-  font-size: 0.9rem; /* Reduced font size */
-}
-
-.date-time-content .time {
-  font-weight: bold;
-  font-size: 1.2rem; /* Reduced font size */
-}
-
-/* Keyframe for floating effect */
-@keyframes float {
+ }
+ 
+ 
+ 
+ 
+ /* Keyframe for floating effect */
+ @keyframes float {
   0%, 100% {
     transform: translateY(0);
   }
   50% {
     transform: translateY(-10px);
   }
-}
-
-/* Keyframe for rotating clock icon */
-@keyframes rotate {
+ }
+ 
+ 
+ /* Keyframe for rotating clock icon */
+ @keyframes rotate {
   from {
     transform: rotate(0deg);
   }
   to {
     transform: rotate(360deg);
   }
-}
-
-
-
-
-.comfort-good {
-  color: green;
-}
-
-.comfort-poor {
-  color: red;
-}
-
-/* Dropdown Styling */
-.dropdown-container {
+ }
+ 
+ 
+ /* IEQ Monitoring */
+ .ieq-monitoring {
+  background-color: rgba(44, 44, 44, 0.5);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+ }
+ 
+ 
+ .ieq-monitoring h4 {
+  margin-bottom: 10px;
+  color: #ffffff;
+ }
+ 
+ 
+ .data .metric {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+ }
+ 
+ 
+ .data .metric p {
+  margin: 0;
+  margin-left: 10px;
+ }
+ 
+ 
+ .indicator-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+ }
+ 
+ 
+ .indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+ }
+ 
+ 
+ .indicator.normal {
+  background-color: #4CAF50;
+ }
+ 
+ 
+ .indicator.high {
+  background-color: #F44336;
+ }
+ 
+ 
+ .indicator.low {
+  background-color: #FF9800;
+ }
+ 
+ 
+ .comfort {
+  font-size: 14px;
+  margin-top: 10px;
+ }
+ 
+ 
+ .comfort span {
+  font-weight: bold;
+ }
+ 
+ 
+ /* Students On Campus */
+ .dropdown-container {
+  display: flex;
+  justify-content: flex-end; /* Aligns the dropdown button to the right */
+  margin-bottom: 20px; /* Adds spacing below the dropdown */
+  margin-top: 20px;
+  margin-left: 45%;
 }
-
 .building-dropdown {
-  width: 100%;
+  width: 150px;
   padding: 8px;
   background-color: #333;
   border: none;
@@ -147,167 +154,88 @@
   font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
-
-.building-dropdown:hover {
+ 
+ .building-dropdown:hover {
   background-color: #444;
-}
-
-/* Circular Progress Bar Styles */
-.student-count {
+ }
+ 
+ 
+ .student-count {
+  background-color: rgba(44, 44, 44, 0.5);
   display: flex;
+  border-radius: 8px;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   margin-top: 30px;
   margin-bottom: 30px;
-  animation: fadeIn 0.5s ease-out;
-}
-
-.circle-progress-container {
+ }
+ 
+ 
+ .circle-progress-container {
   position: relative;
   width: 200px;
   height: 200px;
-}
-
-.circular-chart {
+ }
+ 
+ 
+ .circular-chart {
   transform: rotate(-90deg);
-}
-
-.circle-bg {
+ }
+ 
+ 
+ .circle-bg {
   fill: none;
   stroke: #e6e6e6;
-}
-
-.circle-progress {
+ }
+ 
+ 
+ .circle-progress {
   fill: none;
   stroke: #4CAF50;
   transition: stroke-dasharray 1s ease, stroke 1s ease;
-}
-
-.circle-progress.low {
-  stroke: #4CAF50;
-}
-
-.circle-progress.medium {
-  stroke: #FF9800;
-}
-
-.circle-progress.high {
-  stroke: #F44336;
-}
-
-.circle-progress.building {
-  stroke: #4CAF50;
-}
-
-.circle-text {
+ }
+ 
+ 
+ .circle-text {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: bold;
   color: #ffffff;
   text-align: center;
-}
-
-.total-amount {
+ }
+ .text-group {
+  transform: rotate(90deg); /* Counteracts the parent rotation */
+  transform-origin: center; /* Ensures the text stays centered */
+ }
+ .total-amount {
   font-size: 24px;
   font-weight: bold;
-}
-
-.building-label {
+ }
+ 
+ 
+ .building-label {
   font-size: 14px;
   font-weight: normal;
   color: #ffffff;
-  margin-top: 8px;
-}
-
-.selected-building-student-count {
-  margin-top: 10px;
-  font-size: 16px;
-  color: #fff;
-  opacity: 0;
-  animation: fadeIn 1s forwards;
-}
-
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-/* IEQ Monitoring */
-.ieq-monitoring {
-  background-color: #2c2c2c;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-.ieq-monitoring h4 {
-  margin-bottom: 10px;
-  color: #ffffff;
-}
-
-.data .metric {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.data .metric p {
-  margin: 0;
-  margin-left: 10px;
-}
-
-.indicator-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.indicator {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-}
-
-.indicator.normal {
-  background-color: #4CAF50;
-}
-
-.indicator.high {
-  background-color: #F44336;
-}
-
-.indicator.low {
-  background-color: #FF9800;
-}
-
-.comfort {
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-.comfort span {
-  font-weight: bold;
-}
-/* Vehicles On Campus Section */
-.vehicle-count-container {
+ }
+ 
+ 
+ /* Vehicles On Campus Section */
+ .vehicle-count-container {
   display: flex;
   flex-direction: row; /* Place items in a row */
   gap: 15px; /* Add spacing between car and motorcycle containers */
   margin-top: 20px;
-  margin-bottom: 50px;
-}
-
-.vehicle-card {
+  margin-bottom: 100px;
+ }
+ 
+ 
+ .vehicle-card {
   flex: 1; /* Ensure equal width for car and motorcycle containers */
   display: flex;
   align-items: center;
@@ -317,32 +245,37 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
-}
-
-.vehicle-card .vehicle-icon {
+ }
+ 
+ 
+ .vehicle-card .vehicle-icon {
   font-size: 36px;
   margin-right: 15px;
-}
-
-.vehicle-info {
+ }
+ 
+ 
+ .vehicle-info {
   flex-grow: 1;
-}
-
-.vehicle-info .vehicle-type {
+ }
+ 
+ 
+ .vehicle-info .vehicle-type {
   font-size: 16px;
   font-weight: bold;
   color: #ffffff;
   margin: 0;
-}
-
-.vehicle-info .vehicle-number {
+ }
+ 
+ 
+ .vehicle-info .vehicle-number {
   font-size: 20px;
   font-weight: bold;
   color: #4CAF50;
   margin: 0;
-}
-
-.vehicle-card .vehicle-progress {
+ }
+ 
+ 
+ .vehicle-card .vehicle-progress {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -351,26 +284,32 @@
   width: 100%;
   border-radius: 0 0 8px 8px;
   overflow: hidden;
-}
-
-.vehicle-card .progress-bar {
+ }
+ 
+ 
+ .vehicle-card .progress-bar {
   height: 5px;
   background-color: #4CAF50;
   transition: width 0.5s ease;
-}
-
-.vehicle-card.car .progress-bar {
+ }
+ 
+ 
+ .vehicle-card.car .progress-bar {
   background-color: #4285F4; /* Blue for cars */
-}
-
-.vehicle-card.motorcycle .progress-bar {
+ }
+ 
+ 
+ .vehicle-card.motorcycle .progress-bar {
   background-color: #FB8C00; /* Orange for motorcycles */
-}
-
-.vehicle-card.car .vehicle-number {
+ }
+ 
+ 
+ .vehicle-card.car .vehicle-number {
   color: #4285F4;
-}
-
-.vehicle-card.motorcycle .vehicle-number {
+ }
+ 
+ 
+ .vehicle-card.motorcycle .vehicle-number {
   color: #FB8C00;
-}
+ }
+ 

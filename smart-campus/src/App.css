@@ -1,37 +1,80 @@
-/* General container for the entire app */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 .app-container {
-  position: relative;
+  position: fixed;
   height: 100vh;
   width: 100%;
   overflow: hidden;
   font-family: 'Poppins', sans-serif;
   color: #f1f1f1;
+  transition: background 0.5s ease-in-out;
 }
 
 /* Navbar styling */
 .navbar {
+  position: fixed;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(90deg, #4daef4, #007bff);
+  justify-content: space-between; /* Distribute space between logo and time */
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 51, 1) 0%,
+    rgba(0, 0, 51, 0) 50%,
+    rgba(0, 0, 51, 1) 100%
+  );
   padding: 10px 20px;
-  position: fixed;
   top: 0;
   width: 100%;
+  height: 50px;
   z-index: 1000;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-.navbar-logo {
+ }
+ 
+ 
+ .navbar-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* Center the logo horizontally */
   height: 50px;
-}
-
-.navbar-title {
-  font-size: 20px;
-  color: white;
-  font-weight: 600;
-}
-
+  z-index: 1001; /* Ensures the logo is on top of the gradient */
+ }
+ 
+ 
+ /* Thailand Time styling with LED digital watch design */
+ .thailand-time {
+  position: absolute;
+  right: 4%; /* Align to the right with 20px padding */
+  text-align: right;
+  color: #0ff; /* Bright cyan for LED effect */
+  font-family: 'Courier New', Courier, monospace; /* Monospaced font for digital look */
+  font-weight: bold;
+  line-height: 1.4;
+  padding: 5px 10px; /* Padding inside the LED display */
+  border-radius: 8px; /* Rounded edges for LED panel */
+ }
+ 
+ 
+ .thailand-time .date {
+  font-size: 14px;
+ }
+ 
+ 
+ .thailand-time .day {
+  font-size: 12px;
+ }
+ 
+ 
+ .thailand-time .time {
+  font-size: 18px;
+  margin-top: 4px;
+ }
+ 
 /* Button to toggle dashboards */
 .hide-button {
   position: fixed;
@@ -62,141 +105,46 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 0; /* Behind the dashboards */
-  background: #2c2c2c;
+  z-index: 0;
 }
 
-/* Dashboard Wrappers */
 .dashboard-wrapper {
   position: absolute;
-  top: 70px; /* 60px for navbar height + 10px margin */
-  bottom: 10px; /* Maintain a consistent bottom margin */
+  top: 70px;
+  bottom: 10px;
   width: 300px;
   transition: transform 0.5s ease-in-out, opacity 0.3s ease-in-out;
-  z-index: 1001; /* On top of the map */
+  z-index: 1001;
+}
+
+.dashboard-wrapper.show {
+  transform: translateX(0);
+  opacity: 1;
 }
 
 .left-dashboard-wrapper {
+  position: fixed;
   left: 0;
-  transform: translateX(-100%); /* Completely off-screen when hidden */
+  transform: translateX(-100%);
   opacity: 0;
 }
 
 .right-dashboard-wrapper {
+  position: fixed;
   right: 0;
-  transform: translateX(100%); /* Completely off-screen when hidden */
+  transform: translateX(100%);
   opacity: 0;
 }
 
-/* Show the dashboards */
-.dashboard-wrapper.show {
-  transform: translateX(0); /* Move into view */
-  opacity: 1;
-}
-
-/* Left and Right Dashboards */
 .left-dashboard, .right-dashboard {
-  background: rgba(42, 42, 61, 0.95); /* Semi-transparent background */
-  height: calc(100% - 20px); /* Adjust for the margin and navbar */
+  background: rgba(42, 42, 61, 0.95);
+  height: calc(100% - 20px);
   padding: 20px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
-  border-radius: 0 10px 10px 0; /* Rounded edges */
+  border-radius: 0 10px 10px 0;
 }
 
 .right-dashboard {
-  border-radius: 10px 0 0 10px; /* Rounded edges */
-}
-
-.left-dashboard h3, .right-dashboard h3 {
-  color: #4daef4;
-  font-size: 16px;
-  margin-bottom: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .left-dashboard-wrapper,
-  .right-dashboard-wrapper {
-    width: 100%;
-    height: calc(50% - 10px);
-  }
-
-  .map-container {
-    height: calc(50% - 10px);
-  }
-
-  .content-container {
-    flex-direction: column;
-  }
-}
-/* Burger menu styling */
-.burger-menu {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  height: 24px;
-  width: 30px;
-  cursor: pointer;
-  z-index: 1001;
-  position: absolute; /* Ensure it's positioned relative to the navbar */
-  top: 15px;
-  right: 60px; /* Move 100px to the left from the previous right: 20px */
-}
-
-.burger-menu .line {
-  height: 4px;
-  width: 100%;
-  background-color: white;
-  border-radius: 5px;
-  transition: all 0.3s ease-in-out;
-}
-
-/* Burger menu open state */
-.burger-menu.open .line:nth-child(1) {
-  transform: translateY(10px) rotate(45deg);
-}
-
-.burger-menu.open .line:nth-child(2) {
-  opacity: 0;
-}
-
-.burger-menu.open .line:nth-child(3) {
-  transform: translateY(-10px) rotate(-45deg);
-}
-
-/* Dropdown menu */
-.dropdown-menu {
-  position: absolute;
-  top: 70px;
-  right: 20px;
-  background: rgba(42, 42, 61, 0.95);
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1002;
-}
-
-.dropdown-menu ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.dropdown-menu li {
-  margin: 10px 0;
-}
-
-.dropdown-menu a {
-  text-decoration: none;
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  transition: color 0.3s ease;
-}
-
-.dropdown-menu a:hover {
-  color: #4daef4;
+  border-radius: 10px 0 0 10px;
 }

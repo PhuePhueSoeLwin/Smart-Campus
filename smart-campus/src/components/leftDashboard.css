@@ -1,16 +1,36 @@
-/* General Left Dashboard Styles */
 .left-dashboard {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 51, 1) 0%,    /* Very dark blue 100% opacity */
+    rgba(0, 0, 51, 0.99) 1%, 
+    rgba(0, 0, 51, 0.98) 2%, 
+    rgba(0, 0, 51, 0.97) 3%, 
+    rgba(0, 0, 51, 0.96) 4%,
+    rgba(0, 0, 51, 0.95) 5%,
+    /* Continue for as many steps as needed */
+    rgba(0, 0, 51, 0.05) 95%,
+    rgba(0, 0, 51, 0.04) 96%,
+    rgba(0, 0, 51, 0.03) 97%,
+    rgba(0, 0, 51, 0.02) 98%,
+    rgba(0, 0, 51, 0.01) 99%,
+    rgba(0, 0, 51, 0) 100%   /* Very dark blue 0% opacity */
+  );
+  height: 100vh; /* Full height */
+  width: 320px; /* Adjust as needed */
   position: fixed;
   left: 0;
-  width: 320px;
-  height: 100%;
-  background-color: #212121; /* Dark background */
-  padding: 25px;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-  color: #eeeeee; /* Light text */
-  font-family: 'Poppins', sans-serif;
-  overflow-y: auto;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  overflow-y: scroll; /* Allow vertical scrolling */
+  scrollbar-width: none; /* Hide scrollbar in Firefox */
+  box-shadow: none; /* Remove shadow */
+
 }
+.left-dashboard::-webkit-scrollbar {
+  display: none; /* Hide scrollbar in Chrome, Safari, and Edge */
+}
+
 
 .left-dashboard h3 {
   margin-top: 0;
@@ -26,7 +46,7 @@
   width: 90%;
   height: 200px;
   margin-bottom: 20px;
-  background-color: #2c2c2c; /* Slightly lighter dark background */
+  background-color: rgba(44, 44, 44, 0.5); /* Semi-transparent dark background */
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   padding: 20px;
@@ -58,8 +78,8 @@
 
 .overallcampus-button {
   position: absolute;
+  bottom: 10px;
   right: 15px;
-  top: 550px;
   background-color: #4daef4;
   color: #ffffff;
   border: none;
@@ -74,20 +94,6 @@
   background-color: #3691d9;
 }
 
-
-/* Scrollbar Styling for Dashboard */
-.left-dashboard::-webkit-scrollbar {
-  width: 6px;
-}
-
-.left-dashboard::-webkit-scrollbar-thumb {
-  background: #4daef4; /* Changed from orange to blue */
-  border-radius: 10px;
-}
-
-.left-dashboard::-webkit-scrollbar-track {
-  background: #2c2c2c;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -214,12 +220,24 @@
 }
 
 .speedometer-container {
-  width: 100px; /* Smaller width to fit more speedometers */
+  width: 90px; /* Smaller width to fit more speedometers */
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 100px; /* Add spacing between rows */
+  
 }
+.water-consumption-speedometers {
+  width: 90%;
+  height: 200px;
+  margin-bottom: 20px;
+  background-color: rgba(44, 44, 44, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  padding:20px;
+  position: relative; /* For button positioning */
+}
+
 
 
 .speedometer-container h4 {
