@@ -27,7 +27,9 @@ const RightDashboard = () => {
    cars: 1000,
    motorcycles: 6000,
  });
-
+// State for popup box
+const [popupVisible, setPopupVisible] = useState(false);
+  const [vehicleType, setVehicleType] = useState(''); // Default is empty
 
  // List of campus buildings
  const buildings = [
@@ -73,16 +75,25 @@ const RightDashboard = () => {
  }, []);
  // Simulate real-time vehicle data updates
  useEffect(() => {
-   const vehicleInterval = setInterval(() => {
-     setVehicles((prevVehicles) => ({
-       cars: prevVehicles.cars + Math.floor(Math.random() * 5) - 2,
-       motorcycles: prevVehicles.motorcycles + Math.floor(Math.random() * 10) - 5,
-     }));
-   }, 1000);
+  const vehicleInterval = setInterval(() => {
+    setVehicles((prevVehicles) => ({
+      cars: prevVehicles.cars + Math.floor(Math.random() * 5) - 2,
+      motorcycles: prevVehicles.motorcycles + Math.floor(Math.random() * 10) - 5,
+    }));
+  }, 1000);
 
+  return () => clearInterval(vehicleInterval);
+}, []);
 
-   return () => clearInterval(vehicleInterval);
- }, []);
+const openPopup = (type) => {
+  setVehicleType(type); // Set the vehicle type dynamically
+  setPopupVisible(true);
+};
+
+const closePopup = () => {
+  setPopupVisible(false);
+  setVehicleType(''); // Reset to default when closing
+};
 
 
  const handleBuildingChange = (event) => {
@@ -177,42 +188,56 @@ const RightDashboard = () => {
         </div>
       </div>
 
-     <h3>Vehicles On Campus</h3>
-     <div className="vehicle-count-container">
-       <div className="vehicle-card car">
-         <div className="vehicle-icon">🚗</div>
-         <div className="vehicle-info">
-           <p className="vehicle-type">Cars</p>
-           <p className="vehicle-number">{vehicles.cars}</p>
-         </div>
-         <div className="vehicle-progress">
-           <div
-             className="progress-bar"
-             style={{ width: `${Math.min((vehicles.cars / (vehicles.cars + vehicles.motorcycles)) * 100, 100)}%` }}
-           ></div>
-         </div>
-       </div>
+      <h3>Vehicles On Campus</h3>
+      <div className="vehicle-count-container">
+        <div className="vehicle-card car" onClick={() => openPopup('Cars')}>
+          <div className="vehicle-icon">🚗</div>
+          <div className="vehicle-info">
+            <p className="vehicle-type">Cars</p>
+            <p className="vehicle-number">{vehicles.cars}</p>
+          </div>
+        </div>
 
+        <div className="vehicle-card motorcycle" onClick={() => openPopup('Motorcycles')}>
+          <div className="vehicle-icon">🏍️</div>
+          <div className="vehicle-info">
+            <p className="vehicle-type">Motorcycles</p>
+            <p className="vehicle-number">{vehicles.motorcycles}</p>
+          </div>
+        </div>
+      </div>
 
-       <div className="vehicle-card motorcycle">
-         <div className="vehicle-icon">🏍️</div>
-         <div className="vehicle-info">
-           <p className="vehicle-type">Motorcycles</p>
-           <p className="vehicle-number">{vehicles.motorcycles}</p>
-         </div>
-         <div className="vehicle-progress">
-           <div
-             className="progress-bar"
-             style={{ width: `${Math.min((vehicles.motorcycles / (vehicles.cars + vehicles.motorcycles)) * 100, 100)}%` }}
-           ></div>
-         </div>
-       </div>
-     </div>
-   </div>
- );
+      {popupVisible && (
+        <div className="right-popup-overlay" onClick={closePopup}>
+          <div className="right-popup-box" onClick={(e) => e.stopPropagation()}>
+            <h3>{vehicleType} Details</h3>
+            <p>
+              Number of {vehicleType.toLowerCase()}:{' '}
+              {vehicleType === 'Cars' ? vehicles.cars : vehicles.motorcycles}
+            </p>
+            <div className="button-group">
+              <button
+                className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
+                onClick={() => setVehicleType('Cars')}
+              >
+                Cars
+              </button>
+              <button
+                className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
+                onClick={() => setVehicleType('Motorcycles')}
+              >
+                Motorcycles
+              </button>
+            </div>
+            <button className="close-button" onClick={closePopup}>
+  &times;
+</button>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-
 export default RightDashboard;
-
-
