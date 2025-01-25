@@ -29,8 +29,8 @@ const RightDashboard = () => {
  });
 // State for popup box
 const [popupVisible, setPopupVisible] = useState(false);
-  const [vehicleType, setVehicleType] = useState(''); // Default is empty
-
+const [vehicleType, setVehicleType] = useState('Cars'); // Default is Cars
+const [schedule, setSchedule] = useState([]);
  // List of campus buildings
  const buildings = [
    'Msquare', 'E1', 'E2', 'E3', 'E4', 'C1', 'C2', 'C3', 'C4', 'C5',
@@ -73,6 +73,23 @@ const [popupVisible, setPopupVisible] = useState(false);
 
    return () => clearInterval(interval);
  }, []);
+ useEffect(() => {
+  const generateSchedule = () => {
+    const times = [
+      '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
+      '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
+      '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM',
+    ];
+    return times.map((time) => ({
+      time,
+      cars: Math.floor(Math.random() * 500),
+      motorcycles: Math.floor(Math.random() * 1000),
+    }));
+  };
+
+  setSchedule(generateSchedule());
+}, []);
+
  // Simulate real-time vehicle data updates
  useEffect(() => {
   const vehicleInterval = setInterval(() => {
@@ -86,15 +103,24 @@ const [popupVisible, setPopupVisible] = useState(false);
 }, []);
 
 const openPopup = (type) => {
-  setVehicleType(type); // Set the vehicle type dynamically
+  setVehicleType(type);
   setPopupVisible(true);
 };
 
 const closePopup = () => {
   setPopupVisible(false);
-  setVehicleType(''); // Reset to default when closing
 };
 
+const getPeakTime = (type) => {
+  if (!schedule.length) return null;
+  return schedule.reduce((peak, entry) => {
+    return entry[type.toLowerCase()] > peak[type.toLowerCase()]
+      ? entry
+      : peak;
+  });
+};
+
+const peakTime = getPeakTime(vehicleType);
 
  const handleBuildingChange = (event) => {
   const building = event.target.value;
@@ -210,29 +236,51 @@ const closePopup = () => {
       {popupVisible && (
         <div className="right-popup-overlay" onClick={closePopup}>
           <div className="right-popup-box" onClick={(e) => e.stopPropagation()}>
-            <h3>{vehicleType} Details</h3>
-            <p>
-              Number of {vehicleType.toLowerCase()}:{' '}
-              {vehicleType === 'Cars' ? vehicles.cars : vehicles.motorcycles}
-            </p>
+            <button className="close-button" onClick={closePopup}>
+              &times;
+            </button>
+            <h3>{vehicleType} Schedule</h3>
             <div className="button-group">
               <button
                 className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
                 onClick={() => setVehicleType('Cars')}
               >
-                Cars
+                🚗
               </button>
               <button
                 className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
                 onClick={() => setVehicleType('Motorcycles')}
               >
-                Motorcycles
+                🏍️
               </button>
             </div>
-            <button className="close-button" onClick={closePopup}>
-  &times;
-</button>
-
+            <p>Here is the schedule for the whole day.</p>
+            <table className="schedule-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>{vehicleType}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedule.map((entry) => (
+                  <tr key={entry.time}>
+                    <td>{entry.time}</td>
+                    <td>{entry[vehicleType.toLowerCase()]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {peakTime && (
+              <div className="peak-time">
+                <p>
+                  <strong>Peak Time:</strong> {peakTime.time}
+                </p>
+                <p>
+                  <strong>Vehicles:</strong> {peakTime[vehicleType.toLowerCase()]}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

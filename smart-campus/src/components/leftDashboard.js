@@ -146,7 +146,6 @@ const LeftDashboard = () => {
       usage: Math.random() * 1500, // Random water usage between 0 and 1500 liters
     }));
 
-
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
 
@@ -244,23 +243,22 @@ const LeftDashboard = () => {
   </button>
 
   {waterUsageData
-    .sort((a, b) => b.usage - a.usage) // Sort by highest usage first
-    .slice(0, 3) // Take only the top 3 buildings
-    .map((data, index) => (
-      <div key={index} className="speedometer-container">
-        <h4>{data.building}</h4>
-        <GaugeChart
-          id={`gauge-chart-${index}`}
-          nrOfLevels={30}
-          percent={data.usage / 1500} // Water usage percentage between 0 and 1500 liters
-          arcWidth={0.3}
-          textColor="#eeeeee"
-          needleColor="#f42321"
-          colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
-        />
-        <p>{data.usage.toFixed(2)} liters/day</p>
-      </div>
-    ))}
+  .slice(0, 3) // Take only the top 3 buildings
+  .map((data, index) => (
+    <div key={index} className="speedometer-container">
+      <h4>{data.building}</h4>
+      <GaugeChart
+        id={`gauge-chart-${index}`}
+        nrOfLevels={30}
+        percent={data.usage / 1500} // Use static usage data
+        arcWidth={0.3}
+        textColor="#eeeeee"
+        needleColor="#f42321"
+        colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+      />
+      <p>{data.usage.toFixed(2)} liters/day</p>
+    </div>
+  ))}
 </div>
 
       <h3>Carbon Footprint</h3>
@@ -346,8 +344,8 @@ const LeftDashboard = () => {
 
 
       {isOverallPopupVisible && (
-        <div className="popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
-          <div className="popup-box" onClick={(e) => e.stopPropagation()}>
+        <div className="water-popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
+          <div className="water-popup-box" onClick={(e) => e.stopPropagation()}>
             <button className="close-button" onClick={() => setIsOverallPopupVisible(false)}>
               ✖
             </button>
@@ -383,7 +381,7 @@ const LeftDashboard = () => {
             {/* New container with speedometer and dropdown */}
             <div className="custom-container-wrapper">
   <div className="custom-container">
-    <h4 style={{ color: "#2f2f2f", textAlign: "center", margin: "10px 0" }}>
+    <h4 style={{ color: "#ffffff", textAlign: "center", margin: "10px 0" }}>
       {selectedBuilding ? `${selectedBuilding}` : "Campus Water Usage"}
     </h4>
     <GaugeChart
@@ -400,13 +398,13 @@ const LeftDashboard = () => {
       colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
     />
     {selectedBuilding && (
-      <p style={{ color: "#2f2f2f", textAlign: "center", marginTop: "10px" }}>
+      <p style={{ color: "#ffffff", textAlign: "center", marginTop: "10px" }}>
         {" "}
         {waterUsageData.find((data) => data.building === selectedBuilding)?.usage.toFixed(2)} liters/day
       </p>
     )}
   </div>
-  <div className="dropdown-container">
+  <div className="water-dropdown-container">
     <select
       value={selectedBuilding || ""}
       onChange={(e) => setSelectedBuilding(e.target.value)}
