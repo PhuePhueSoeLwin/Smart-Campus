@@ -1,12 +1,9 @@
-//import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./leftDashboard.css";
-import { Bar, Line } from "react-chartjs-2"; // Importing Bar and Line chart components
+import { Bar } from "react-chartjs-2";
 import Calendar from "react-calendar";
-import "react-calendar/dist/Calendar.css"; // Calendar styling
-import GaugeChart from "react-gauge-chart";
-import React, { useState, useEffect } from "react"; // Correct import
-  // Add useEffect here
-
+import "react-calendar/dist/Calendar.css";
+import GaugeChart from "react-gauge-chart"; // Importing gauge chart
 
 
 import {
@@ -14,8 +11,6 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
-  LineElement,
-  PointElement,
   Title,
   Tooltip,
   Legend,
@@ -23,26 +18,6 @@ import {
 } from "chart.js";
 
 
-//import Calendar from "react-calendar";
-import "react-calendar/dist/Calendar.css";
-//import GaugeChart from "react-gauge-chart";
-
-
-//import { Line } from 'react-chartjs-2';
-
-
-// Register the elements and plugins
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 
@@ -181,9 +156,9 @@ const LeftDashboard = () => {
   };
 
 
- useEffect(() => {
-  generateWaterUsage();
- }, []); // Generate water usage when the component mounts (representing today's data)
+  useEffect(() => {
+    generateWaterUsage();
+  }, []); // Generate water usage when the component mounts (representing today's data)
 
 
   const waterConsumptionData = {
@@ -201,18 +176,27 @@ const LeftDashboard = () => {
 
   // Carbon Footprint for the overall campus (aggregated data)
   const carbonFootprintData = {
-    labels: ['CO2 Emissions', 'Food Waste', 'Recycled Waste'],
+    labels: [""], // Label for the overall campus
     datasets: [
       {
-        label: 'Carbon Footprint',
-        data: [10000, 2000, 5000], // Replace with your actual data
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.4, // Optional for smoother lines
+        label: "CO2 Emissions (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 500, 0)], // Sum of CO2 emissions across buildings
+        backgroundColor: "#FF9800",
+      },
+      {
+        label: "Food Waste (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 200, 0)], // Sum of food waste across buildings
+        backgroundColor: "#FF6384",
+      },
+      {
+        label: "Recycled Waste (kg)",
+        data: [buildings.reduce((sum) => sum + Math.random() * 300, 0)], // Sum of recycled waste across buildings
+        backgroundColor: "#36A2EB",
       },
     ],
   };
- 
+
+
   return (
     <div className="left-dashboard">
       <h3>Electricity Usage</h3>
@@ -276,32 +260,31 @@ const LeftDashboard = () => {
 
 
       <h3>Carbon Footprint</h3>
-<div className="chart-container">
-  <Line
-    data={carbonFootprintData}
-    options={{
-      responsive: true,
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: (tooltipItem) => {
-              const dataset = tooltipItem.dataset;
-              const total = dataset.data.reduce((sum, value) => sum + value, 0);
-              const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
-              return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
+      <div className="chart-container">
+        <Bar
+          data={carbonFootprintData}
+          options={{
+            responsive: true,
+            indexAxis: "y", // Horizontal bar chart
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: (tooltipItem) => {
+                    const dataset = tooltipItem.dataset;
+                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                    const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
+                    return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
+                  },
+                },
+              },
             },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
-        y: { ticks: { color: "#eeeeee" } },
-      },
-    }}
-  />
-</div>
-
-
+            scales: {
+              x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
+              y: { ticks: { color: "#eeeeee" } },
+            },
+          }}
+        />
+      </div>
 
 
       {isWeeklyPopupVisible && (
