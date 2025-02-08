@@ -20,7 +20,7 @@ const Map3D = () => {
       {/* 3D Model */}
       <Model />
 
-      {/* Orbit Controls for interactive rotation, zoom, etc. */}
+
       <OrbitControls />
     </Canvas>
   );
