@@ -5,31 +5,28 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 
 function Model({ setOriginalColors, setBoundingBox }) {
-  const { scene } = useGLTF('/assets/testing8.glb', true); // Load GLB with Draco compression
+  const { scene } = useGLTF('/assets/testing11.glb', true);
 
-  scene.scale.set(0.1, 0.1, 0.1); // Adjust scale
-  scene.rotation.y = Math.PI / 2; // Rotate the scene 90 degrees horizontally
-  
-  // Move the object a little down on the Y-axis
-  scene.position.set(0, -10, 0); // Adjust this value as needed
+  scene.scale.set(0.1, 0.1, 0.1);
+  scene.rotation.y = Math.PI / 2;
+  scene.position.set(0, -10, 0);
 
-  const originalColors = useRef(new Map()); // Store original colors
+  const originalColors = useRef(new Map());
 
-  // Store original colors
   scene.traverse((child) => {
     if (child.isMesh) {
       if (!originalColors.current.has(child)) {
-        originalColors.current.set(child, child.material.color.clone()); // Store original color
+        originalColors.current.set(child, child.material.color.clone());
       }
-      child.material = child.material.clone(); // Clone material to prevent overriding
-      child.userData.name = child.name; // Store object name for clicks
+      child.material = child.material.clone();
+      child.userData.name = child.name;
     }
   });
 
   useEffect(() => {
     setOriginalColors(originalColors.current);
 
-    // Calculate bounding box size
+    // Calculate bounding box
     const box = new THREE.Box3().setFromObject(scene);
     setBoundingBox(box);
   }, [setOriginalColors, scene, setBoundingBox]);
@@ -41,11 +38,91 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
   const { camera, gl, scene } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
 
+  // Control Functions for drone-like movement
+  const moveForward = () => {
+    gsap.to(camera.position, {
+      z: camera.position.z - 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const moveBackward = () => {
+    gsap.to(camera.position, {
+      z: camera.position.z + 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const moveLeft = () => {
+    gsap.to(camera.position, {
+      x: camera.position.x - 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const moveRight = () => {
+    gsap.to(camera.position, {
+      x: camera.position.x + 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const flyUp = () => {
+    gsap.to(camera.position, {
+      y: camera.position.y + 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const flyDown = () => {
+    gsap.to(camera.position, {
+      y: camera.position.y - 1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const rotateLeft = () => {
+    gsap.to(camera.rotation, {
+      y: camera.rotation.y + 0.1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const rotateRight = () => {
+    gsap.to(camera.rotation, {
+      y: camera.rotation.y - 0.1,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const zoomIn = () => {
+    gsap.to(camera.position, {
+      z: camera.position.z - 10,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
+  const zoomOut = () => {
+    gsap.to(camera.position, {
+      z: camera.position.z + 10,
+      duration: 0.5,
+      ease: 'power2.out',
+    });
+  };
+
   useEffect(() => {
-    // Adjust camera position to move it further right
-    camera.position.set(80, 50, 100); // Move the camera 40 units to the right on the x-axis
-    camera.rotation.set(-Math.PI / 2, 0, 0); // Make the camera look straight down
-    camera.fov = 50; // Adjust field of view for zoomed-out effect
+    camera.position.set(80, 50, 100);
+    camera.rotation.set(-Math.PI / 2, 0, 0);
+    camera.fov = 50;
     camera.updateProjectionMatrix();
   }, [camera]);
 
@@ -55,15 +132,21 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
     parentGroup.traverse((child) => {
       if (child.isMesh) {
         if (!originalColors.has(child)) {
-          originalColors.set(child, child.material.color.clone()); // Store original color
+          originalColors.set(child, child.material.color.clone());
         }
 
-        // Animate color change to Science Blue (#0047AB)
         gsap.to(child.material.color, {
-          r: 0, g: 0.28, b: 0.67, // Science Blue (RGB: 0, 71, 171)
+          r: 0, g: 0.28, b: 0.67,
           duration: 0.5,
           ease: 'power2.out'
         });
+      }
+
+      // Hide roofs if Exbation Hall is clicked
+      if (parentGroup.userData.name === "Exbation Hall") {
+        if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
+          child.visible = false;
+        }
       }
     });
   };
@@ -113,7 +196,6 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
         if (child.isMesh) {
           const originalColor = originalColors.get(child);
           if (originalColor) {
-            // Animate back to original color
             gsap.to(child.material.color, {
               r: originalColor.r,
               g: originalColor.g,
@@ -121,6 +203,11 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
               duration: 0.5,
               ease: 'power2.out'
             });
+          }
+
+          // Restore roofs when resetting
+          if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
+            child.visible = true;
           }
         }
       });
@@ -132,15 +219,12 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
 
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.7} />  {/* Increased Ambient Light */}
-      <directionalLight position={[10, 20, 10]} intensity={1.5} />  {/* Bright Directional Light (Sunlight) */}
-      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xFFFFFF)} intensity={0.5} />  {/* Bright Sky Light */}
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[10, 20, 10]} intensity={1.5} />
+      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xFFFFFF)} intensity={0.5} />
 
-      {/* 3D Model */}
       <Model setOriginalColors={setOriginalColors} setBoundingBox={() => {}} />
 
-      {/* Orbit Controls */}
       <OrbitControls enableZoom zoomSpeed={0.5} maxPolarAngle={Math.PI / 3} minPolarAngle={Math.PI / 6} enablePan />
     </>
   );
@@ -158,7 +242,6 @@ const App = () => {
   return (
     <>
       <Canvas style={{ width: '100vw', height: '100vh' }}>
-        {/* Performance Monitor inside Canvas */}
         <PerformanceMonitor>
           <Map3D
             setPopupData={setPopupData}
@@ -199,12 +282,8 @@ const App = () => {
               right: '5px',
               cursor: 'pointer',
               fontSize: '18px',
-              color: '#FFF', // White default
-              transition: 'color 0.3s',
+              color: '#FFF',
             }}
-            onMouseEnter={(e) => (e.target.style.color = '#FF3333')} // Red on hover
-            onMouseLeave={(e) => (e.target.style.color = '#FFF')}
-            onMouseDown={(e) => (e.target.style.color = '#CC0000')} // Darker red on click
           >
             ❌
           </div>
@@ -222,10 +301,7 @@ const App = () => {
               ⚡ <b>Electricity Usage:</b> 1234 kWh  
             </p>
             <p style={{ fontSize: '12px', marginBottom: '5px' }}>
-              💧 <b>Water Consumption:</b> 4567 L  
-            </p>
-            <p style={{ fontSize: '12px' }}>
-              🧑‍🎓 <b>Students Present:</b> 789  
+              💧 <b>Water Usage:</b> 2345 L  
             </p>
           </div>
         </div>

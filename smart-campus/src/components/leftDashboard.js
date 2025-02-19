@@ -37,47 +37,41 @@ const LeftDashboard = () => {
   ];
 
 
-  // Generate mock data for multiple weeks
-  const generateWeeklyData = (weeks = 4) => {
-    const weeklyData = [];
-    const weeklyLabels = [];
-    const today = new Date();
+// Generate mock data for the last 7 days
+const generateWeeklyData = (weeks = 1) => {
+  const weeklyData = [];
+  const weeklyLabels = [];
+  const today = new Date();
+  
+  for (let week = 0; week < weeks; week++) {
+    const weekData = [];
+    const labels = [];
+    let totalGenerated = 0;
 
+    for (let i = 0; i < 7; i++) {
+      const avgDailyUsage = totalElectricityUsage / 7;
+      const variation = (Math.random() * 0.1 - 0.05) * avgDailyUsage;
+      const dailyValue = avgDailyUsage + variation;
+      weekData.push(dailyValue);
+      totalGenerated += dailyValue;
 
-    for (let week = 0; week < weeks; week++) {
-      const weekData = [];
-      const labels = [];
-      let totalGenerated = 0;
-
-
-      for (let i = 0; i < 7; i++) {
-        const avgDailyUsage = totalElectricityUsage / 7;
-        const variation = (Math.random() * 0.1 - 0.05) * avgDailyUsage;
-        const dailyValue = avgDailyUsage + variation;
-        weekData.push(dailyValue);
-        totalGenerated += dailyValue;
-
-
-        // Create a label for each day
-        const date = new Date();
-        date.setDate(today.getDate() - i - week * 7);
-        labels.push(date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }));
-      }
-
-
-      // Adjust to match total electricity usage
-      const adjustmentFactor = totalElectricityUsage / totalGenerated;
-      weeklyData.push(weekData.map((usage) => usage * adjustmentFactor));
-      weeklyLabels.push(labels.reverse());
+      // Create a label for each day, ensuring today is always the last day
+      const date = new Date();
+      date.setDate(today.getDate() - (6 - i)); // Start from 6 and go backward to 0
+      labels.push(date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }));
     }
 
+    // Adjust to match total electricity usage
+    const adjustmentFactor = totalElectricityUsage / totalGenerated;
+    weeklyData.push(weekData.map((usage) => usage * adjustmentFactor));
+    weeklyLabels.push(labels.reverse());
+  }
 
-    return { weeklyData: weeklyData.reverse(), weeklyLabels: weeklyLabels.reverse() };
-  };
+  return { weeklyData: weeklyData.reverse(), weeklyLabels: weeklyLabels.reverse() };
+};
 
-
-  const { weeklyData, weeklyLabels } = generateWeeklyData();
-
+// Ensure the weeklyData and weeklyLabels are generated correctly
+const { weeklyData, weeklyLabels } = generateWeeklyData();
 
   // Flatten weekly data and labels into one array for filtering
   const allLabels = weeklyLabels.flat();
@@ -109,14 +103,16 @@ const LeftDashboard = () => {
 
 
   const popupFilteredData = filterDataByDateRange();
-
+  const reversedLabels = weeklyLabels[0].reverse();
+  const reversedData = weeklyData[0].reverse();
+  
 
   const mainElectricityUsageData = {
-    labels: weeklyLabels[0], // Current week's labels
+    labels: reversedLabels, // Reverse labels to show today as the rightmost
     datasets: [
       {
         label: "Electricity Usage (kWh)",
-        data: weeklyData[0].map((usage) => usage.toFixed(2)), // Current week's data
+        data: reversedData.map((usage) => usage.toFixed(2)), // Reverse data accordingly
         backgroundColor: "#4daef4",
         borderColor: "#4daef4",
         borderWidth: 1,
@@ -155,9 +151,11 @@ const LeftDashboard = () => {
   };
 
 
-  useEffect(() => {
+useEffect(() => {
+  if (waterUsageData.length === 0) {
     generateWaterUsage();
-  }, []); // Generate water usage when the component mounts (representing today's data)
+  }
+}, []); // Ensures it only runs once
 
 
   const waterConsumptionData = {
