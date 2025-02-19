@@ -68,3 +68,10 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+## Download 3D Resources
+
+You can download the 3D resources from the following link:
+
+- [https://drive.google.com/drive/u/0/folders/1P-Y8e57V2x-_EZKphrCvFzBk-50o_nRZ]
