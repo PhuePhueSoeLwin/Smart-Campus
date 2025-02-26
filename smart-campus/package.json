@@ -16,6 +16,7 @@
     "react-gauge-chart": "^0.5.1",
     "react-scripts": "^5.0.1",
     "react-speedometer": "^0.1.2",
+    "smart-campus": "file:",
     "three": "^0.172.0",
     "three-mesh-bvh": "^0.7.0"
   },
