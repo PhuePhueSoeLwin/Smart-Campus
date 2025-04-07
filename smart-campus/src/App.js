@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Map3D from './components/Map3D'; // Import Map3D component
-import './App.css'; // For additional styling
+import './App.css'; // Import styles
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
 
@@ -45,7 +45,7 @@ const App = () => {
       year: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
-      second: 'numeric', // Include seconds
+      second: 'numeric',
       hour12: true,
     };
     const formatter = new Intl.DateTimeFormat('en-US', options);
@@ -86,11 +86,24 @@ const App = () => {
     };
   }, []);
 
+  const handleLiveButtonClick = () => {
+    window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
+  };
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       {/* Navigation Bar */}
       <nav className="navbar">
+        {/* Live Button */}
+        <div className="live-button" onClick={handleLiveButtonClick}>
+          <img src="/assets/live.png" alt="Live Stream" />
+          <div className="live-label">LIVE</div>
+        </div>
+
+        {/* MFU Logo */}
         <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
+
+        {/* Thailand Time */}
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
           <div className="day">{thailandTime.day}</div>
@@ -132,5 +145,3 @@ const App = () => {
 };
 
 export default App;
-
-

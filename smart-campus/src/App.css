@@ -34,20 +34,44 @@ html, body {
   height: 50px;
   z-index: 1000;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
- }
- 
- 
- .navbar-logo {
+}
+
+/* Image button styling for the live stream */
+.live-button {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;  /* Aligns image and text horizontally */
+  cursor: pointer;
+  z-index: 1001; /* Make sure it's above other elements */
+}
+
+.live-button img {
+  height: 40px; /* Adjust the size of the image */
+  margin-right: 10px; /* Space between image and text */
+}
+
+.live-button .live-label {
+  font-size: 16px;
+  color: #fff; /* White text color */
+  font-weight: bold;
+  font-family: 'Poppins', sans-serif;
+  text-transform: uppercase;
+}
+
+
+.navbar-logo {
   position: absolute;
   left: 50%;
   transform: translateX(-50%); /* Center the logo horizontally */
   height: 50px;
   z-index: 1001; /* Ensures the logo is on top of the gradient */
- }
- 
- 
- /* Thailand Time styling with LED digital watch design */
- .thailand-time {
+}
+
+/* Thailand Time styling with LED digital watch design */
+.thailand-time {
   position: absolute;
   right: 4%; /* Align to the right with 20px padding */
   text-align: right;
@@ -57,24 +81,21 @@ html, body {
   line-height: 1.4;
   padding: 5px 10px; /* Padding inside the LED display */
   border-radius: 8px; /* Rounded edges for LED panel */
- }
- 
- 
- .thailand-time .date {
+}
+
+.thailand-time .date {
   font-size: 14px;
- }
- 
- 
- .thailand-time .day {
+}
+
+.thailand-time .day {
   font-size: 12px;
- }
- 
- 
- .thailand-time .time {
+}
+
+.thailand-time .time {
   font-size: 18px;
   margin-top: 4px;
- }
- 
+}
+
 /* Button to toggle dashboards */
 .hide-button {
   position: fixed;
@@ -108,6 +129,7 @@ html, body {
   z-index: 0;
 }
 
+/* Dashboard styling */
 .dashboard-wrapper {
   position: absolute;
   top: 70px;

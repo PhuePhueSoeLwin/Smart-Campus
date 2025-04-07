@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 
 function Model({ setOriginalColors, setBoundingBox }) {
-  const { scene } = useGLTF('/assets/testing11.glb', true);
+  const { scene } = useGLTF('/assets/testing20.glb', true);
 
   scene.scale.set(0.1, 0.1, 0.1);
   scene.rotation.y = Math.PI / 2;
@@ -38,86 +38,87 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
   const { camera, gl, scene } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
 
-  // Control Functions for drone-like movement
-  const moveForward = () => {
-    gsap.to(camera.position, {
-      z: camera.position.z - 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+// Control Functions for faster and smoother drone-like movement
+const moveForward = () => {
+  gsap.to(camera.position, {
+    z: camera.position.z - 1,
+    duration: 0.3,  // Faster duration
+    ease: 'power1.out',  // Smoother easing
+  });
+};
 
-  const moveBackward = () => {
-    gsap.to(camera.position, {
-      z: camera.position.z + 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const moveBackward = () => {
+  gsap.to(camera.position, {
+    z: camera.position.z + 1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const moveLeft = () => {
-    gsap.to(camera.position, {
-      x: camera.position.x - 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const moveLeft = () => {
+  gsap.to(camera.position, {
+    x: camera.position.x - 1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const moveRight = () => {
-    gsap.to(camera.position, {
-      x: camera.position.x + 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const moveRight = () => {
+  gsap.to(camera.position, {
+    x: camera.position.x + 1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const flyUp = () => {
-    gsap.to(camera.position, {
-      y: camera.position.y + 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const flyUp = () => {
+  gsap.to(camera.position, {
+    y: camera.position.y + 1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const flyDown = () => {
-    gsap.to(camera.position, {
-      y: camera.position.y - 1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const flyDown = () => {
+  gsap.to(camera.position, {
+    y: camera.position.y - 1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const rotateLeft = () => {
-    gsap.to(camera.rotation, {
-      y: camera.rotation.y + 0.1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const rotateLeft = () => {
+  gsap.to(camera.rotation, {
+    y: camera.rotation.y + 0.1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const rotateRight = () => {
-    gsap.to(camera.rotation, {
-      y: camera.rotation.y - 0.1,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const rotateRight = () => {
+  gsap.to(camera.rotation, {
+    y: camera.rotation.y - 0.1,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
-  const zoomIn = () => {
-    gsap.to(camera.position, {
-      z: camera.position.z - 10,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+// Faster Zoom In and Zoom Out
+const zoomIn = () => {
+  gsap.to(camera.position, {
+    z: camera.position.z - 10,
+    duration: 0.3,  // Faster duration
+    ease: 'power1.out',
+  });
+};
 
-  const zoomOut = () => {
-    gsap.to(camera.position, {
-      z: camera.position.z + 10,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+const zoomOut = () => {
+  gsap.to(camera.position, {
+    z: camera.position.z + 10,
+    duration: 0.3,
+    ease: 'power1.out',
+  });
+};
 
   useEffect(() => {
     camera.position.set(80, 50, 100);
@@ -126,6 +127,7 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
     camera.updateProjectionMatrix();
   }, [camera]);
 
+  // New building selection logic
   const handleBuildingSelection = (clickedObject, parentGroup) => {
     setHighlightedGroupState(parentGroup);
 
@@ -142,11 +144,37 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
         });
       }
 
-      // Hide roofs if Exbation Hall is clicked
-      if (parentGroup.userData.name === "Exbation Hall") {
+      // Handle building-specific visibility toggles
+      if (parentGroup.userData.name === "Exabation Hall") {
         if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
           child.visible = false;
         }
+      }
+
+      // Hide buildings based on the selection of Library4, Library3, etc.
+      const hideBuildings = (buildings) => {
+        buildings.forEach((buildingName) => {
+          const building = scene.getObjectByName(buildingName);
+          if (building) {
+            building.visible = false;
+          }
+        });
+      };
+
+      if (parentGroup.userData.name === "Library5") {
+        hideBuildings(["AV"]);
+      }
+
+      if (parentGroup.userData.name === "Library4") {
+        hideBuildings(["AV", "Library5"]);
+      }
+
+      if (parentGroup.userData.name === "Library3") {
+        hideBuildings(["AV", "Library5", "Library4"]);
+      }
+
+      if (parentGroup.userData.name === "Library2") {
+        hideBuildings(["AV", "Library5", "Library4", "Library3"]);
       }
     });
   };
@@ -212,10 +240,31 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
         }
       });
 
+      // Restore visibility of hidden buildings when resetting
+      const restoreBuildings = (buildings) => {
+        buildings.forEach((buildingName) => {
+          const building = scene.getObjectByName(buildingName);
+          if (building) {
+            building.visible = true;
+          }
+        });
+      };
+
+      // Check which buildings were hidden and restore them
+      if (highlightedGroupState.userData.name === "Library2") {
+        restoreBuildings(["AV", "Library5", "Library4", "Library3"]);
+      } else if (highlightedGroupState.userData.name === "Library3") {
+        restoreBuildings(["AV", "Library5", "Library4"]);
+      } else if (highlightedGroupState.userData.name === "Library4") {
+        restoreBuildings(["AV", "Library5"]);
+      } else if (highlightedGroupState.userData.name === "Library5") {
+        restoreBuildings(["AV"]);
+      }
+
       setHighlightedGroupState(null);
       setResetColors(false);
     }
-  }, [resetColors, highlightedGroupState, originalColors, setResetColors]);
+  }, [resetColors, highlightedGroupState, originalColors, setResetColors, scene]);
 
   return (
     <>
