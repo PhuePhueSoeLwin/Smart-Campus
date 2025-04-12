@@ -1,0 +1,64 @@
+/* Transparent Black Screen */
+.black-screen {
+    position: fixed;
+    bottom: 50px;
+    left: 50px;
+    width: 200px;
+    height: 200px;
+    background-color: rgba(0, 0, 0, 0.4); /* Transparent */
+    z-index: 999;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+   }
+   
+   
+   .black-screen.hide {
+    opacity: 0;
+   }
+   
+   
+   .black-screen.show {
+    opacity: 1;
+   }
+   
+   
+   /* Controller Arrows */
+   .controller {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+   }
+   
+   
+   .middle-row {
+    display: flex;
+    justify-content: space-between;
+    width: 160px; /* Increase this for more space between arrows */
+    padding: 0 10px;
+   }
+   
+   
+   .arrow-button {
+    background-color: #333;
+    color: white;
+    border: 2px solid #666;
+    border-radius: 50%;
+    font-size: 20px;
+    width: 50px;
+    height: 50px;
+    margin: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+   }
+   
+   
+   .arrow-button:hover {
+    background-color: #555;
+    transform: scale(1.1);
+   }
+   

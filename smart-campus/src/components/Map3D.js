@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, useGLTF, PerformanceMonitor } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useGLTF, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 
 function Model({ setOriginalColors, setBoundingBox }) {
   const { scene } = useGLTF('/assets/testing20.glb', true);
+  const originalColors = useRef(new Map());
 
   scene.scale.set(0.1, 0.1, 0.1);
   scene.rotation.y = Math.PI / 2;
   scene.position.set(0, -10, 0);
-
-  const originalColors = useRef(new Map());
 
   scene.traverse((child) => {
     if (child.isMesh) {
@@ -25,8 +24,6 @@ function Model({ setOriginalColors, setBoundingBox }) {
 
   useEffect(() => {
     setOriginalColors(originalColors.current);
-
-    // Calculate bounding box
     const box = new THREE.Box3().setFromObject(scene);
     setBoundingBox(box);
   }, [setOriginalColors, scene, setBoundingBox]);
@@ -37,97 +34,107 @@ function Model({ setOriginalColors, setBoundingBox }) {
 const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setOriginalColors }) => {
   const { camera, gl, scene } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
+  const velocity = useRef(new THREE.Vector3());
+  const direction = useRef(new THREE.Vector3());
+  const keys = useRef({});
+  
+  // Mouse drag for camera rotation
+  useEffect(() => {
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
 
-// Control Functions for faster and smoother drone-like movement
-const moveForward = () => {
-  gsap.to(camera.position, {
-    z: camera.position.z - 1,
-    duration: 0.3,  // Faster duration
-    ease: 'power1.out',  // Smoother easing
-  });
-};
+    const onMouseDown = (e) => {
+      isDragging = true;
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    };
 
-const moveBackward = () => {
-  gsap.to(camera.position, {
-    z: camera.position.z + 1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
 
-const moveLeft = () => {
-  gsap.to(camera.position, {
-    x: camera.position.x - 1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      const movementX = e.clientX - previousMousePosition.x;
+      const movementY = e.clientY - previousMousePosition.y;
 
-const moveRight = () => {
-  gsap.to(camera.position, {
-    x: camera.position.x + 1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      previousMousePosition = { x: e.clientX, y: e.clientY };
 
-const flyUp = () => {
-  gsap.to(camera.position, {
-    y: camera.position.y + 1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      const yaw = movementX * 0.002; // Horizontal sensitivity
+      const pitch = movementY * 0.002; // Vertical sensitivity
 
-const flyDown = () => {
-  gsap.to(camera.position, {
-    y: camera.position.y - 1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      camera.rotation.order = 'YXZ'; // Ensures yaw (y) then pitch (x)
 
-const rotateLeft = () => {
-  gsap.to(camera.rotation, {
-    y: camera.rotation.y + 0.1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      camera.rotation.y -= yaw;
+      camera.rotation.x -= pitch;
 
-const rotateRight = () => {
-  gsap.to(camera.rotation, {
-    y: camera.rotation.y - 0.1,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+      // Clamp pitch between -90 and +90 degrees
+      camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+    };
 
-// Faster Zoom In and Zoom Out
-const zoomIn = () => {
-  gsap.to(camera.position, {
-    z: camera.position.z - 10,
-    duration: 0.3,  // Faster duration
-    ease: 'power1.out',
-  });
-};
+    const onMouseUp = () => {
+      isDragging = false;
+    };
 
-const zoomOut = () => {
-  gsap.to(camera.position, {
-    z: camera.position.z + 10,
-    duration: 0.3,
-    ease: 'power1.out',
-  });
-};
+    gl.domElement.addEventListener('mousedown', onMouseDown);
+    gl.domElement.addEventListener('mousemove', onMouseMove);
+    gl.domElement.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      gl.domElement.removeEventListener('mousedown', onMouseDown);
+      gl.domElement.removeEventListener('mousemove', onMouseMove);
+      gl.domElement.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [camera, gl]);
+
+  // Movement logic
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      keys.current[e.code] = true;
+    };
+    const handleKeyUp = (e) => {
+      keys.current[e.code] = false;
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // Update camera movement
+useFrame((_, delta) => {
+  direction.current.set(0, 0, 0);
+
+  if (keys.current['KeyW']) direction.current.z -= 1;
+  if (keys.current['KeyS']) direction.current.z += 1;
+  if (keys.current['KeyA']) direction.current.x -= 1;
+  if (keys.current['KeyD']) direction.current.x += 1;
+  if (keys.current['Space']) direction.current.y += 1;
+  if (keys.current['ShiftLeft']) direction.current.y -= 1;
+
+  direction.current.normalize();
+
+  const moveSpeed = 10; // Reduce movement speed (adjust this value to your preference)
+
+  // Create a flat rotation (ignoring pitch)
+  const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+
+  // Only apply yaw (horizontal rotation) to horizontal movement
+  const horizontalDir = new THREE.Vector3(direction.current.x, 0, direction.current.z).applyEuler(yawOnly);
+
+  // Add vertical movement (space / shift)
+  horizontalDir.y = direction.current.y;
+
+  camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
+});
+
 
   useEffect(() => {
-    camera.position.set(80, 50, 100);
-    camera.rotation.set(-Math.PI / 2, 0, 0);
-    camera.fov = 50;
+    camera.position.set(80, 20, 100);
+    camera.fov = 75;
     camera.updateProjectionMatrix();
   }, [camera]);
 
-  // New building selection logic
   const handleBuildingSelection = (clickedObject, parentGroup) => {
     setHighlightedGroupState(parentGroup);
 
@@ -144,38 +151,23 @@ const zoomOut = () => {
         });
       }
 
-      // Handle building-specific visibility toggles
       if (parentGroup.userData.name === "Exabation Hall") {
         if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
           child.visible = false;
         }
       }
 
-      // Hide buildings based on the selection of Library4, Library3, etc.
       const hideBuildings = (buildings) => {
         buildings.forEach((buildingName) => {
           const building = scene.getObjectByName(buildingName);
-          if (building) {
-            building.visible = false;
-          }
+          if (building) building.visible = false;
         });
       };
 
-      if (parentGroup.userData.name === "Library5") {
-        hideBuildings(["AV"]);
-      }
-
-      if (parentGroup.userData.name === "Library4") {
-        hideBuildings(["AV", "Library5"]);
-      }
-
-      if (parentGroup.userData.name === "Library3") {
-        hideBuildings(["AV", "Library5", "Library4"]);
-      }
-
-      if (parentGroup.userData.name === "Library2") {
-        hideBuildings(["AV", "Library5", "Library4", "Library3"]);
-      }
+      if (parentGroup.userData.name === "Library5") hideBuildings(["AV"]);
+      if (parentGroup.userData.name === "Library4") hideBuildings(["AV", "Library5"]);
+      if (parentGroup.userData.name === "Library3") hideBuildings(["AV", "Library5", "Library4"]);
+      if (parentGroup.userData.name === "Library2") hideBuildings(["AV", "Library5", "Library4", "Library3"]);
     });
   };
 
@@ -183,7 +175,6 @@ const zoomOut = () => {
     const handleClick = (event) => {
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
-
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -192,7 +183,6 @@ const zoomOut = () => {
 
       if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
-
         if (clickedObject.userData.name) {
           let parentGroup = clickedObject.parent;
           while (parentGroup && !parentGroup.userData.name) {
@@ -233,33 +223,23 @@ const zoomOut = () => {
             });
           }
 
-          // Restore roofs when resetting
           if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
             child.visible = true;
           }
         }
       });
 
-      // Restore visibility of hidden buildings when resetting
       const restoreBuildings = (buildings) => {
         buildings.forEach((buildingName) => {
           const building = scene.getObjectByName(buildingName);
-          if (building) {
-            building.visible = true;
-          }
+          if (building) building.visible = true;
         });
       };
 
-      // Check which buildings were hidden and restore them
-      if (highlightedGroupState.userData.name === "Library2") {
-        restoreBuildings(["AV", "Library5", "Library4", "Library3"]);
-      } else if (highlightedGroupState.userData.name === "Library3") {
-        restoreBuildings(["AV", "Library5", "Library4"]);
-      } else if (highlightedGroupState.userData.name === "Library4") {
-        restoreBuildings(["AV", "Library5"]);
-      } else if (highlightedGroupState.userData.name === "Library5") {
-        restoreBuildings(["AV"]);
-      }
+      if (highlightedGroupState.userData.name === "Library2") restoreBuildings(["AV", "Library5", "Library4", "Library3"]);
+      else if (highlightedGroupState.userData.name === "Library3") restoreBuildings(["AV", "Library5", "Library4"]);
+      else if (highlightedGroupState.userData.name === "Library4") restoreBuildings(["AV", "Library5"]);
+      else if (highlightedGroupState.userData.name === "Library5") restoreBuildings(["AV"]);
 
       setHighlightedGroupState(null);
       setResetColors(false);
@@ -273,8 +253,6 @@ const zoomOut = () => {
       <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xFFFFFF)} intensity={0.5} />
 
       <Model setOriginalColors={setOriginalColors} setBoundingBox={() => {}} />
-
-      <OrbitControls enableZoom zoomSpeed={0.5} maxPolarAngle={Math.PI / 3} minPolarAngle={Math.PI / 6} enablePan />
     </>
   );
 };
@@ -319,7 +297,6 @@ const App = () => {
             opacity: 1,
           }}
         >
-          {/* Close (❌) Button */}
           <div
             onClick={() => {
               setPopupData(null);
@@ -337,7 +314,6 @@ const App = () => {
             ❌
           </div>
 
-          {/* Building Information */}
           <div style={{ textAlign: 'left' }}>
             <h3 style={{ margin: '0', fontSize: '16px', color: '#1E90FF' }}>
               {popupData.name}

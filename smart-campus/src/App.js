@@ -3,9 +3,10 @@ import Map3D from './components/Map3D'; // Import Map3D component
 import './App.css'; // Import styles
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
+import Controller from './components/controller'; // Import the controller component
 
 const App = () => {
-  const [showDashboards, setShowDashboards] = useState(true);
+  const [showDashboards, setShowDashboards] = useState(true); // Initially show dashboards
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB'); // Default sky blue
   const [thailandTime, setThailandTime] = useState({
     date: '',
@@ -13,11 +14,12 @@ const App = () => {
     time: '',
   });
 
+  // Toggle the dashboards and controller visibility
   const toggleDashboards = () => {
-    setShowDashboards(!showDashboards);
+    setShowDashboards((prev) => !prev); // Toggle the dashboards state
   };
 
-  // Function to determine the background color based on the time
+  // Function to calculate the background color based on time
   const calculateSkyColor = () => {
     const hour = new Date().getHours();
     if (hour >= 6 && hour < 9) {
@@ -110,7 +112,7 @@ const App = () => {
           <div className="time">{thailandTime.time}</div>
         </div>
       </nav>
-    
+
       {/* Toggle Button */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
@@ -123,23 +125,21 @@ const App = () => {
         </Suspense>
       </div>
 
-      {/* Left Dashboard Overlay */}
-      <div
-        className={`dashboard-wrapper left-dashboard-wrapper ${
-          showDashboards ? 'show' : 'hide'
-        }`}
-      >
-        <LeftDashboard />
-      </div>
+      {/* Conditionally render the Left and Right Dashboards */}
+      {showDashboards && (
+        <>
+          <div className="dashboard-wrapper left-dashboard-wrapper show">
+            <LeftDashboard />
+          </div>
 
-      {/* Right Dashboard Overlay */}
-      <div
-        className={`dashboard-wrapper right-dashboard-wrapper ${
-          showDashboards ? 'show' : 'hide'
-        }`}
-      >
-        <RightDashboard thailandTime={thailandTime} />
-      </div>
+          <div className="dashboard-wrapper right-dashboard-wrapper show">
+            <RightDashboard thailandTime={thailandTime} />
+          </div>
+        </>
+      )}
+
+      {/* Conditionally render the Controller */}
+      {!showDashboards && <Controller />} {/* Show controller only when dashboards are hidden */}
     </div>
   );
 };
