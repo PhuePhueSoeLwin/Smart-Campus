@@ -1,43 +1,43 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import Map3D from './components/Map3D'; // Import Map3D component
-import './App.css'; // Import styles
+import { Canvas } from '@react-three/fiber';
+import { PerformanceMonitor } from '@react-three/drei';
+import Map3D from './components/Map3D'; // import Map3D
+import './App.css';
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
-import Controller from './components/controller'; // Import the controller component
+import Controller from './components/controller';
 
 const App = () => {
-  const [showDashboards, setShowDashboards] = useState(true); // Initially show dashboards
-  const [backgroundColor, setBackgroundColor] = useState('#87CEEB'); // Default sky blue
+  const [showDashboards, setShowDashboards] = useState(true);
+  const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
   const [thailandTime, setThailandTime] = useState({
     date: '',
     day: '',
     time: '',
   });
 
-  // Toggle the dashboards and controller visibility
+  const [popupData, setPopupData] = useState(null);
+  const [resetColors, setResetColors] = useState(false);
+  const [originalColors, setOriginalColors] = useState(new Map());
+  const [controllerCommand, setControllerCommand] = useState(null);
+
   const toggleDashboards = () => {
-    setShowDashboards((prev) => !prev); // Toggle the dashboards state
+    setShowDashboards((prev) => !prev);
   };
 
-  // Function to calculate the background color based on time
   const calculateSkyColor = () => {
     const hour = new Date().getHours();
     if (hour >= 6 && hour < 9) {
-      // Sunrise
       return 'linear-gradient(180deg, #FFB347, #FFD700)';
     } else if (hour >= 9 && hour < 17) {
-      // Daytime
       return '#87CEEB';
     } else if (hour >= 17 && hour < 19) {
-      // Sunset
       return 'linear-gradient(180deg, #FF4500, #FF6347)';
     } else {
-      // Night
       return '#2C3E50';
     }
   };
 
-  // Function to update the current date and time in Thailand
   const updateThailandTime = () => {
     const options = {
       timeZone: 'Asia/Bangkok',
@@ -72,7 +72,6 @@ const App = () => {
     });
   };
 
-  // Update the background color and time when the component mounts or the time changes
   useEffect(() => {
     const updateBackground = () => {
       setBackgroundColor(calculateSkyColor());
@@ -80,11 +79,11 @@ const App = () => {
 
     updateBackground();
     updateThailandTime();
-    const backgroundInterval = setInterval(updateBackground, 60000); // Update background every minute
-    const timeInterval = setInterval(updateThailandTime, 1000); // Update time every second
+    const backgroundInterval = setInterval(updateBackground, 60000);
+    const timeInterval = setInterval(updateThailandTime, 1000);
     return () => {
       clearInterval(backgroundInterval);
-      clearInterval(timeInterval); // Cleanup intervals on unmount
+      clearInterval(timeInterval);
     };
   }, []);
 
@@ -94,18 +93,15 @@ const App = () => {
 
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
-      {/* Navigation Bar */}
+      {/* Navbar */}
       <nav className="navbar">
-        {/* Live Button */}
         <div className="live-button" onClick={handleLiveButtonClick}>
           <img src="/assets/live.png" alt="Live Stream" />
           <div className="live-label">LIVE</div>
         </div>
 
-        {/* MFU Logo */}
         <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
 
-        {/* Thailand Time */}
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
           <div className="day">{thailandTime.day}</div>
@@ -113,19 +109,31 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Toggle Button */}
+      {/* Hide / Show Button */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
 
-      {/* Fullscreen Map */}
+      {/* Map Section */}
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
-          <Map3D />
+          <Canvas style={{ width: '100vw', height: '100vh' }}>
+            <PerformanceMonitor>
+              <Map3D
+                setPopupData={setPopupData}
+                originalColors={originalColors}
+                resetColors={resetColors}
+                setResetColors={setResetColors}
+                setOriginalColors={setOriginalColors}
+                controllerCommand={controllerCommand}
+                setControllerCommand={setControllerCommand}
+              />
+            </PerformanceMonitor>
+          </Canvas>
         </Suspense>
       </div>
 
-      {/* Conditionally render the Left and Right Dashboards */}
+      {/* Dashboards */}
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -138,8 +146,62 @@ const App = () => {
         </>
       )}
 
-      {/* Conditionally render the Controller */}
-      {!showDashboards && <Controller />} {/* Show controller only when dashboards are hidden */}
+      {/* Controller */}
+      {!showDashboards && (
+        <Controller setControllerCommand={setControllerCommand} />
+      )}
+
+      {/* Popup Box */}
+      {popupData && (
+        <div
+          style={{
+            position: 'absolute',
+            top: popupData.y + 10,
+            left: popupData.x + 10,
+            background: 'rgba(44, 44, 44, 0.5)',
+            padding: '15px',
+            borderRadius: '10px',
+            color: 'white',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
+            width: '220px',
+            transition: 'opacity 0.3s ease-in-out',
+            opacity: 1,
+          }}
+        >
+          <div
+            onClick={() => {
+              setPopupData(null);
+              setResetColors(true);
+            }}
+            style={{
+              position: 'absolute',
+              top: '5px',
+              right: '5px',
+              cursor: 'pointer',
+              fontSize: '18px',
+              color: '#FFF',
+            }}
+          >
+            ❌
+          </div>
+
+          <div style={{ textAlign: 'left' }}>
+            <h3 style={{ margin: '0', fontSize: '16px', color: '#1E90FF' }}>
+              {popupData.name}
+            </h3>
+            <hr style={{ border: '0.5px solid rgba(255,255,255,0.3)' }} />
+            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
+              📍 <b>Location:</b> {popupData.name}
+            </p>
+            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
+              ⚡ <b>Electricity Usage:</b> 1234 kWh
+            </p>
+            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
+              💧 <b>Water Usage:</b> 2345 L
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -30,14 +30,21 @@ function Model({ setOriginalColors, setBoundingBox }) {
 
   return <primitive object={scene} />;
 }
-
-const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setOriginalColors }) => {
+const Map3D = ({
+  setPopupData,
+  originalColors,
+  resetColors,
+  setResetColors,
+  setOriginalColors,
+  controllerCommand,        // <-- added
+  setControllerCommand      // <-- added
+}) => {
   const { camera, gl, scene } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const keys = useRef({});
-  
+
   // Mouse drag for camera rotation
   useEffect(() => {
     let isDragging = false;
@@ -53,18 +60,14 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
 
       const movementX = e.clientX - previousMousePosition.x;
       const movementY = e.clientY - previousMousePosition.y;
-
       previousMousePosition = { x: e.clientX, y: e.clientY };
 
-      const yaw = movementX * 0.002; // Horizontal sensitivity
-      const pitch = movementY * 0.002; // Vertical sensitivity
+      const yaw = movementX * 0.002;
+      const pitch = movementY * 0.002;
 
-      camera.rotation.order = 'YXZ'; // Ensures yaw (y) then pitch (x)
-
+      camera.rotation.order = 'YXZ';
       camera.rotation.y -= yaw;
       camera.rotation.x -= pitch;
-
-      // Clamp pitch between -90 and +90 degrees
       camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
     };
 
@@ -83,11 +86,12 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
     };
   }, [camera, gl]);
 
-  // Movement logic
+  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e) => {
       keys.current[e.code] = true;
     };
+
     const handleKeyUp = (e) => {
       keys.current[e.code] = false;
     };
@@ -100,34 +104,38 @@ const Map3D = ({ setPopupData, originalColors, resetColors, setResetColors, setO
       document.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
-
-  // Update camera movement
-useFrame((_, delta) => {
-  direction.current.set(0, 0, 0);
-
-  if (keys.current['KeyW']) direction.current.z -= 1;
-  if (keys.current['KeyS']) direction.current.z += 1;
-  if (keys.current['KeyA']) direction.current.x -= 1;
-  if (keys.current['KeyD']) direction.current.x += 1;
-  if (keys.current['Space']) direction.current.y += 1;
-  if (keys.current['ShiftLeft']) direction.current.y -= 1;
-
-  direction.current.normalize();
-
-  const moveSpeed = 10; // Reduce movement speed (adjust this value to your preference)
-
-  // Create a flat rotation (ignoring pitch)
-  const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
-
-  // Only apply yaw (horizontal rotation) to horizontal movement
-  const horizontalDir = new THREE.Vector3(direction.current.x, 0, direction.current.z).applyEuler(yawOnly);
-
-  // Add vertical movement (space / shift)
-  horizontalDir.y = direction.current.y;
-
-  camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
-});
-
+  // Movement (Keyboard + Controller)
+  useFrame((_, delta) => {
+    direction.current.set(0, 0, 0);
+  
+    if (keys.current['KeyW']) direction.current.z -= 1;
+    if (keys.current['KeyS']) direction.current.z += 1;
+    if (keys.current['KeyA']) direction.current.x -= 1;
+    if (keys.current['KeyD']) direction.current.x += 1;
+    if (keys.current['Space']) direction.current.y += 1;
+    if (keys.current['ShiftLeft']) direction.current.y -= 1;
+  
+    // Continuous Controller movement
+    if (controllerCommand) {
+      if (controllerCommand.moveForward) direction.current.z -= 1;
+      if (controllerCommand.moveBackward) direction.current.z += 1;
+      if (controllerCommand.moveLeft) direction.current.x -= 1;
+      if (controllerCommand.moveRight) direction.current.x += 1;
+    }
+  
+    direction.current.normalize();
+  
+    const normalSpeed = 10;
+    const fastSpeed = 30;
+    const moveSpeed = controllerCommand ? fastSpeed : normalSpeed;
+  
+    const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+    const horizontalDir = new THREE.Vector3(direction.current.x, 0, direction.current.z).applyEuler(yawOnly);
+    horizontalDir.y = direction.current.y;
+  
+    camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
+  });
+  
 
   useEffect(() => {
     camera.position.set(80, 20, 100);
@@ -145,14 +153,16 @@ useFrame((_, delta) => {
         }
 
         gsap.to(child.material.color, {
-          r: 0, g: 0.28, b: 0.67,
+          r: 0,
+          g: 0.28,
+          b: 0.67,
           duration: 0.5,
-          ease: 'power2.out'
+          ease: 'power2.out',
         });
       }
 
-      if (parentGroup.userData.name === "Exabation Hall") {
-        if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
+      if (parentGroup.userData.name === 'Exabation Hall') {
+        if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') {
           child.visible = false;
         }
       }
@@ -164,10 +174,10 @@ useFrame((_, delta) => {
         });
       };
 
-      if (parentGroup.userData.name === "Library5") hideBuildings(["AV"]);
-      if (parentGroup.userData.name === "Library4") hideBuildings(["AV", "Library5"]);
-      if (parentGroup.userData.name === "Library3") hideBuildings(["AV", "Library5", "Library4"]);
-      if (parentGroup.userData.name === "Library2") hideBuildings(["AV", "Library5", "Library4", "Library3"]);
+      if (parentGroup.userData.name === 'Library5') hideBuildings(['AV']);
+      if (parentGroup.userData.name === 'Library4') hideBuildings(['AV', 'Library5']);
+      if (parentGroup.userData.name === 'Library3') hideBuildings(['AV', 'Library5', 'Library4']);
+      if (parentGroup.userData.name === 'Library2') hideBuildings(['AV', 'Library5', 'Library4', 'Library3']);
     });
   };
 
@@ -203,6 +213,7 @@ useFrame((_, delta) => {
     };
 
     gl.domElement.addEventListener('click', handleClick);
+
     return () => {
       gl.domElement.removeEventListener('click', handleClick);
     };
@@ -219,11 +230,11 @@ useFrame((_, delta) => {
               g: originalColor.g,
               b: originalColor.b,
               duration: 0.5,
-              ease: 'power2.out'
+              ease: 'power2.out',
             });
           }
 
-          if (child.name === "ex_roof_1" || child.name === "ex_roof_2") {
+          if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') {
             child.visible = true;
           }
         }
@@ -236,10 +247,10 @@ useFrame((_, delta) => {
         });
       };
 
-      if (highlightedGroupState.userData.name === "Library2") restoreBuildings(["AV", "Library5", "Library4", "Library3"]);
-      else if (highlightedGroupState.userData.name === "Library3") restoreBuildings(["AV", "Library5", "Library4"]);
-      else if (highlightedGroupState.userData.name === "Library4") restoreBuildings(["AV", "Library5"]);
-      else if (highlightedGroupState.userData.name === "Library5") restoreBuildings(["AV"]);
+      if (highlightedGroupState.userData.name === 'Library2') restoreBuildings(['AV', 'Library5', 'Library4', 'Library3']);
+      else if (highlightedGroupState.userData.name === 'Library3') restoreBuildings(['AV', 'Library5', 'Library4']);
+      else if (highlightedGroupState.userData.name === 'Library4') restoreBuildings(['AV', 'Library5']);
+      else if (highlightedGroupState.userData.name === 'Library5') restoreBuildings(['AV']);
 
       setHighlightedGroupState(null);
       setResetColors(false);
@@ -250,89 +261,10 @@ useFrame((_, delta) => {
     <>
       <ambientLight intensity={0.7} />
       <directionalLight position={[10, 20, 10]} intensity={1.5} />
-      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xFFFFFF)} intensity={0.5} />
-
+      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xffffff)} intensity={0.5} />
       <Model setOriginalColors={setOriginalColors} setBoundingBox={() => {}} />
     </>
   );
 };
 
-const App = () => {
-  const [popupData, setPopupData] = useState(null);
-  const [resetColors, setResetColors] = useState(false);
-  const [originalColors, setOriginalColors] = useState(new Map());
-
-  useEffect(() => {
-    console.log('Popup Data:', popupData);
-  }, [popupData]);
-
-  return (
-    <>
-      <Canvas style={{ width: '100vw', height: '100vh' }}>
-        <PerformanceMonitor>
-          <Map3D
-            setPopupData={setPopupData}
-            originalColors={originalColors}
-            resetColors={resetColors}
-            setResetColors={setResetColors}
-            setOriginalColors={setOriginalColors}
-          />
-        </PerformanceMonitor>
-      </Canvas>
-
-      {/* Popup Box */}
-      {popupData && (
-        <div
-          style={{
-            position: 'absolute',
-            top: popupData.y + 10,
-            left: popupData.x + 10,
-            background: 'rgba(44, 44, 44, 0.5)',
-            padding: '15px',
-            borderRadius: '10px',
-            color: 'white',
-            boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
-            width: '220px',
-            transition: 'opacity 0.3s ease-in-out',
-            opacity: 1,
-          }}
-        >
-          <div
-            onClick={() => {
-              setPopupData(null);
-              setResetColors(true);
-            }}
-            style={{
-              position: 'absolute',
-              top: '5px',
-              right: '5px',
-              cursor: 'pointer',
-              fontSize: '18px',
-              color: '#FFF',
-            }}
-          >
-            ❌
-          </div>
-
-          <div style={{ textAlign: 'left' }}>
-            <h3 style={{ margin: '0', fontSize: '16px', color: '#1E90FF' }}>
-              {popupData.name}
-            </h3>
-            <hr style={{ border: '0.5px solid rgba(255,255,255,0.3)' }} />
-            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
-              📍 <b>Location:</b> {popupData.name}  
-            </p>
-            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
-              ⚡ <b>Electricity Usage:</b> 1234 kWh  
-            </p>
-            <p style={{ fontSize: '12px', marginBottom: '5px' }}>
-              💧 <b>Water Usage:</b> 2345 L  
-            </p>
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
-
-export default App;
+export default Map3D;

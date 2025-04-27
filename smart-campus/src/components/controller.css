@@ -3,8 +3,8 @@
     position: fixed;
     bottom: 50px;
     left: 50px;
-    width: 200px;
-    height: 200px;
+    width: 240px;
+    height: 240px;
     background-color: rgba(0, 0, 0, 0.4); /* Transparent */
     z-index: 999;
     transition: opacity 0.3s ease-in-out;
@@ -14,51 +14,54 @@
     justify-content: center;
     align-items: center;
    }
-   
-   
-   .black-screen.hide {
+  
+  .black-screen.hide {
     opacity: 0;
-   }
-   
-   
-   .black-screen.show {
+  }
+  
+  .black-screen.show {
     opacity: 1;
-   }
-   
-   
-   /* Controller Arrows */
-   .controller {
+  }
+  
+  /* Controller Layout */
+  .controller {
     display: flex;
     flex-direction: column;
     align-items: center;
-   }
-   
-   
-   .middle-row {
+  }
+  
+  .middle-row {
     display: flex;
     justify-content: space-between;
-    width: 160px; /* Increase this for more space between arrows */
-    padding: 0 10px;
+    width: 200px; /* Increase this for more space between arrows */
+    padding: 0 15px;
    }
-   
-   
-   .arrow-button {
-    background-color: #333;
+  /* Arrow Buttons */
+  .arrow-button {
+    background: radial-gradient(circle, #1e1e1e 0%, #111 100%);
     color: white;
-    border: 2px solid #666;
+    border: none;
     border-radius: 50%;
-    font-size: 20px;
-    width: 50px;
-    height: 50px;
-    margin: 4px;
+    font-size: 24px;
+    width: 60px;
+    height: 60px;
+    margin: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
     font-family: 'Poppins', sans-serif;
-   }
-   
-   
-   .arrow-button:hover {
-    background-color: #555;
-    transform: scale(1.1);
-   }
-   
+    box-shadow: 0 0 10px rgba(30, 144, 255, 0.6), 0 0 20px rgba(30, 144, 255, 0.4);
+    transition: all 0.25s ease, box-shadow 0.25s ease;
+  }
+  
+  .arrow-button:hover {
+    background: radial-gradient(circle, #222 0%, #111 100%);
+    box-shadow: 0 0 15px rgba(30, 144, 255, 0.8), 0 0 25px rgba(30, 144, 255, 0.6);
+    transform: scale(1.15);
+  }
+  
+  /* When pressing the button */
+  .arrow-button:active {
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.9), 0 0 30px rgba(0, 191, 255, 0.7) inset;
+    background: radial-gradient(circle, #333 0%, #111 100%);
+  }
+  
