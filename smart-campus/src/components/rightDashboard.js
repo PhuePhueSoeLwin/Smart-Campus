@@ -171,6 +171,10 @@ const peakTime = getPeakTime(vehicleType);
              {ieqData.comfort}
            </span>
          </p>
+         {/* Check More button */}
+          <a href="https://service-library.mfu.ac.th/pm/" target="_blank" rel="noopener noreferrer" className="check-more-button">
+            Check More
+          </a>
        </div>
      </div>
 
