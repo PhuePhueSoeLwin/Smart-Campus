@@ -43,44 +43,43 @@ html, body {
   top: 50%;
   transform: translateY(-50%);
   display: flex;
-  align-items: center;  /* Aligns image and text horizontally */
+  align-items: center;
   cursor: pointer;
-  z-index: 1001; /* Make sure it's above other elements */
+  z-index: 1001;
 }
 
 .live-button img {
-  height: 40px; /* Adjust the size of the image */
-  margin-right: 10px; /* Space between image and text */
+  height: 40px;
+  margin-right: 10px;
 }
 
 .live-button .live-label {
   font-size: 16px;
-  color: #fff; /* White text color */
+  color: #fff;
   font-weight: bold;
   font-family: 'Poppins', sans-serif;
   text-transform: uppercase;
 }
 
-
 .navbar-logo {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%); /* Center the logo horizontally */
+  transform: translateX(-50%);
   height: 50px;
-  z-index: 1001; /* Ensures the logo is on top of the gradient */
+  z-index: 1001;
+  cursor: pointer;
 }
 
-/* Thailand Time styling with LED digital watch design */
 .thailand-time {
   position: absolute;
-  right: 4%; /* Align to the right with 20px padding */
+  right: 4%;
   text-align: right;
-  color: #0ff; /* Bright cyan for LED effect */
-  font-family: 'Courier New', Courier, monospace; /* Monospaced font for digital look */
+  color: #0ff;
+  font-family: 'Courier New', Courier, monospace;
   font-weight: bold;
   line-height: 1.4;
-  padding: 5px 10px; /* Padding inside the LED display */
-  border-radius: 8px; /* Rounded edges for LED panel */
+  padding: 5px 10px;
+  border-radius: 8px;
 }
 
 .thailand-time .date {
@@ -170,3 +169,197 @@ html, body {
 .right-dashboard {
   border-radius: 10px 0 0 10px;
 }
+
+/* Popup Box for building info */
+.building-popup {
+  position: absolute;
+  background: rgba(44, 44, 44, 0.5);
+  padding: 15px;
+  border-radius: 10px;
+  color: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  width: 220px;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 1;
+  z-index: 1500;
+}
+
+.close-popup {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  cursor: pointer;
+  font-size: 18px;
+  color: #FFF;
+  user-select: none;
+}
+
+.popup-content h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1E90FF;
+}
+
+.popup-content hr {
+  border: 0.5px solid rgba(255,255,255,0.3);
+}
+
+.popup-content p {
+  font-size: 12px;
+  margin-bottom: 5px;
+  user-select: none;
+}
+
+/* Instructions Popup */
+.instructions-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  color: #fff;
+  width: 360px;
+  padding: 30px 35px;
+  z-index: 2000;
+  animation: fadeScaleIn 0.3s ease forwards;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@keyframes fadeScaleIn {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: bold;
+  font-size: 20px;
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  user-select: none;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.instruction-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 22px;
+  color: #3399FF;
+  text-align: center;
+  user-select: none;
+}
+
+.instruction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+  user-select: none;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.key-badge {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(51, 153, 255, 0.9);
+  font-weight: 700;
+  font-size: 18px;
+  color: white;
+  user-select: none;
+  box-shadow: 0 4px 10px rgba(51, 153, 255, 0.6);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tip-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  line-height: 1.5;
+  user-select: none;
+  margin-bottom: 16px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  margin-bottom: 20px;
+}
+
+.dont-show-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.3s ease;
+  width: fit-content;
+  text-align: center;
+}
+
+.dont-show-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Confirmation popup styles */
+.confirm-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  color: #fff;
+  width: 360px;
+  padding: 30px 35px;
+  z-index: 2100;
+  animation: fadeScaleIn 0.3s ease forwards;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  user-select: none;
+}
+
+.confirm-text {
+  font-size: 16px;
+  text-align: center;
+  line-height: 1.5;
+  color: #eef6ff;
+}
+
+/* Reuse fadeScaleIn and close-button from instructions popup */
+
