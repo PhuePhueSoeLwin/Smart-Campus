@@ -4,6 +4,7 @@ import { Bar } from "react-chartjs-2";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import GaugeChart from "react-gauge-chart"; // Importing gauge chart
+import { Line } from "react-chartjs-2";
 
 
 
@@ -17,21 +18,25 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
-  ArcElement,
+  ArcElement
 } from "chart.js";
 
-
-
-
-
-
-
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
-
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 
 
@@ -230,7 +235,37 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
 
   // Generate Water Consumption Data for All Buildings
   const generateWaterUsage = () => {
-    // Create an array of different ranges to ensure variety
+    // Check if we already have water usage data
+    if (waterUsageData.length > 0) {
+      // If we have existing data, just update the pointer positions
+      // by keeping the same buildings but recalculating their usage within the same ranges
+      const updatedData = waterUsageData.map(data => {
+        // Determine which range this building was in
+        let range;
+        if (data.usage <= 300) range = { min: 50, max: 300 };
+        else if (data.usage <= 600) range = { min: 350, max: 600 };
+        else if (data.usage <= 900) range = { min: 650, max: 900 };
+        else if (data.usage <= 1200) range = { min: 950, max: 1200 };
+        else range = { min: 1250, max: 1450 };
+        
+        // Generate a new usage value within the same range
+        const newUsage = range.min + Math.random() * (range.max - range.min);
+        
+        return {
+          building: data.building,
+          usage: newUsage
+        };
+      });
+      
+      // Sort the buildings by highest water usage
+      updatedData.sort((a, b) => b.usage - a.usage);
+      
+      // Update state with the new data
+      setWaterUsageData(updatedData);
+      return;
+    }
+    
+    // If no existing data (first load), create initial data
     const ranges = [
       { min: 50, max: 300 },    // Very low
       { min: 350, max: 600 },   // Low
@@ -239,13 +274,12 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       { min: 1250, max: 1450 }  // Very high
     ];
    
-    // Shuffle the ranges to randomize which buildings get which ranges
-    const shuffledRanges = [...ranges].sort(() => Math.random() - 0.5);
-   
+    // Assign ranges to buildings in a deterministic way (no random shuffling)
+    // This ensures buildings always get the same range category
     const usageData = buildings.map((building, index) => {
       // Use modulo to cycle through the ranges if there are more buildings than ranges
-      const rangeIndex = index % shuffledRanges.length;
-      const range = shuffledRanges[rangeIndex];
+      const rangeIndex = index % ranges.length;
+      const range = ranges[rangeIndex];
      
       // Generate a random value within the selected range
       const usage = range.min + Math.random() * (range.max - range.min);
@@ -256,32 +290,34 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       };
     });
 
-
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
-
 
     // Set water usage data (top 3 will be shown initially)
     setWaterUsageData(usageData);
   };
 
 
+  // Function to update just the pointer positions without shuffling buildings
+  const updateWaterUsagePointers = () => {
+    if (waterUsageData.length > 0) {
+      generateWaterUsage(); // This will now update pointers without shuffling buildings
+    }
+  };
+
   useEffect(() => {
-    // Always generate new water usage data when component mounts
+    // Generate initial water usage data when component mounts
     generateWaterUsage();
+    
+    // Set up an interval to update pointer positions every 5 seconds
+    // This simulates real-time data changes without shuffling buildings
+    const intervalId = setInterval(() => {
+      updateWaterUsagePointers();
+    }, 5000);
+    
+    // Clean up the interval when component unmounts
+    return () => clearInterval(intervalId);
   }, []); // Ensures it runs once per page load/refresh
-
-
-
-
-
-
-
-
-useEffect(() => {
-  // Always generate new water usage data when component mounts
-  generateWaterUsage();
-}, []); // Ensures it runs once per page load/refresh
 
 
 
@@ -425,32 +461,83 @@ useEffect(() => {
 
 
 
-      <h3>Carbon Footprint</h3>
-      <div className="chart-container">
-        <Bar
-          data={carbonFootprintData}
-          options={{
-            responsive: true,
-            indexAxis: "y", // Horizontal bar chart
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: (tooltipItem) => {
-                    const dataset = tooltipItem.dataset;
-                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
-                    const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
-                    return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
-                  },
-                },
-              },
-            },
-            scales: {
-              x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
-              y: { ticks: { color: "#eeeeee" } },
-            },
-          }}
-        />
-      </div>
+<h3>Carbon Footprint</h3>
+<div className="chart-container" style={{ backgroundColor: "transparent", padding: "10px" }}>
+  <Line
+    data={{
+      labels: ["524", "1047", "1570", "2093", "2616", "3139", "3662", "4185", "4708", "5231"],
+      datasets: [
+        {
+          
+          data: [90, 95, 100, 110, 160, 140, 120, 130, 110, 105],
+          borderColor: "rgba(255, 0, 0, 0.9)",
+          backgroundColor: "rgba(255, 0, 0, 0.3)",
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          
+          data: [50, 55, 60, 65, 80, 70, 68, 72, 60, 58],
+          borderColor: "rgba(0, 123, 255, 0.9)",
+          backgroundColor: "rgba(0, 123, 255, 0.3)",
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          
+          data: [30, 35, 40, 42, 50, 48, 45, 47, 44, 42],
+          borderColor: "rgba(0, 200, 83, 0.9)",
+          backgroundColor: "rgba(0, 200, 83, 0.3)",
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+      ],
+    }}
+    options={{
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#fff",
+          },
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: "#222",
+          titleColor: "#fff",
+          bodyColor: "#fff",
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            color: "rgba(200,200,200,0.15)",
+          },
+          ticks: {
+            color: "#fff",
+            font: { size: 12 },
+          },
+        },
+        y: {
+          grid: {
+            color: "rgba(200,200,200,0.15)",
+          },
+          ticks: {
+            color: "#fff",
+            font: { size: 12 },
+          },
+        },
+      },
+    }}
+  />
+</div>
 
 
 
