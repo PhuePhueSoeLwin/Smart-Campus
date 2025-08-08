@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useGLTF, PerformanceMonitor } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 
@@ -30,20 +30,25 @@ function Model({ setOriginalColors, setBoundingBox }) {
 
   return <primitive object={scene} />;
 }
+
 const Map3D = ({
   setPopupData,
   originalColors,
   resetColors,
   setResetColors,
   setOriginalColors,
-  controllerCommand,        // <-- added
-  setControllerCommand      // <-- added
+  controllerCommand,
+  setControllerCommand
 }) => {
   const { camera, gl, scene } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
-  const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const keys = useRef({});
+
+  // Slightly increase scene exposure for brightness
+  useEffect(() => {
+    gl.toneMappingExposure = 1.25; // default is 1
+  }, [gl]);
 
   // Mouse drag for camera rotation
   useEffect(() => {
@@ -91,51 +96,47 @@ const Map3D = ({
     const handleKeyDown = (e) => {
       keys.current[e.code] = true;
     };
-
     const handleKeyUp = (e) => {
       keys.current[e.code] = false;
     };
-
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
-
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
-  // Movement (Keyboard + Controller)
+
+  // Movement
   useFrame((_, delta) => {
     direction.current.set(0, 0, 0);
-  
+
     if (keys.current['KeyW']) direction.current.z -= 1;
     if (keys.current['KeyS']) direction.current.z += 1;
     if (keys.current['KeyA']) direction.current.x -= 1;
     if (keys.current['KeyD']) direction.current.x += 1;
     if (keys.current['Space']) direction.current.y += 1;
     if (keys.current['ShiftLeft']) direction.current.y -= 1;
-  
-    // Continuous Controller movement
+
     if (controllerCommand) {
       if (controllerCommand.moveForward) direction.current.z -= 1;
       if (controllerCommand.moveBackward) direction.current.z += 1;
       if (controllerCommand.moveLeft) direction.current.x -= 1;
       if (controllerCommand.moveRight) direction.current.x += 1;
     }
-  
+
     direction.current.normalize();
-  
+
     const normalSpeed = 10;
     const fastSpeed = 30;
     const moveSpeed = controllerCommand ? fastSpeed : normalSpeed;
-  
+
     const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
     const horizontalDir = new THREE.Vector3(direction.current.x, 0, direction.current.z).applyEuler(yawOnly);
     horizontalDir.y = direction.current.y;
-  
+
     camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
   });
-  
 
   useEffect(() => {
     camera.position.set(80, 20, 100);
@@ -151,7 +152,6 @@ const Map3D = ({
         if (!originalColors.has(child)) {
           originalColors.set(child, child.material.color.clone());
         }
-
         gsap.to(child.material.color, {
           r: 0,
           g: 0.28,
@@ -198,22 +198,18 @@ const Map3D = ({
           while (parentGroup && !parentGroup.userData.name) {
             parentGroup = parentGroup.parent;
           }
-
           if (parentGroup) {
             setPopupData({
               name: parentGroup.userData.name,
               x: event.clientX,
               y: event.clientY,
             });
-
             handleBuildingSelection(clickedObject, parentGroup);
           }
         }
       }
     };
-
     gl.domElement.addEventListener('click', handleClick);
-
     return () => {
       gl.domElement.removeEventListener('click', handleClick);
     };
@@ -233,7 +229,6 @@ const Map3D = ({
               ease: 'power2.out',
             });
           }
-
           if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') {
             child.visible = true;
           }
@@ -259,9 +254,15 @@ const Map3D = ({
 
   return (
     <>
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 20, 10]} intensity={1.5} />
-      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xffffff)} intensity={0.5} />
+      {/* Brighter lighting setup */}
+      <ambientLight intensity={1.0} />
+      <directionalLight position={[10, 20, 10]} intensity={2.0} />
+      <directionalLight position={[-10, 20, -10]} intensity={1.5} />
+      <hemisphereLight
+        skyColor={new THREE.Color(0x87CEEB)}
+        groundColor={new THREE.Color(0xffffff)}
+        intensity={0.8}
+      />
       <Model setOriginalColors={setOriginalColors} setBoundingBox={() => {}} />
     </>
   );
