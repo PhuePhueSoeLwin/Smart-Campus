@@ -77,22 +77,33 @@ html, body {
   color: #0ff;
   font-family: 'Courier New', Courier, monospace;
   font-weight: bold;
-  line-height: 1.4;
-  padding: 5px 10px;
+  line-height: 1.3;
+  padding: 6px 12px;
   border-radius: 8px;
-}
-
-.thailand-time .date {
-  font-size: 14px;
-}
-
-.thailand-time .day {
-  font-size: 12px;
+  user-select: none;
 }
 
 .thailand-time .time {
-  font-size: 18px;
-  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 600;
+  user-select: none;
+  cursor: pointer;
+}
+
+.period {
+  margin-left: 6px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #aaddff;
+  user-select: none;
+}
+
+.period {
+  margin-left: 6px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #aaddff;
+  user-select: none;
 }
 
 /* Button to toggle dashboards */
@@ -355,10 +366,12 @@ html, body {
 }
 
 .confirm-text {
-  font-size: 16px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
   text-align: center;
   line-height: 1.5;
-  color: #eef6ff;
+  user-select: none;
+  margin-bottom: 16px;
 }
 
 /* Reuse fadeScaleIn and close-button from instructions popup */

@@ -10,21 +10,22 @@ import Controller from './components/controller';
 const App = () => {
   const [showDashboards, setShowDashboards] = useState(true);
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
-  const [thailandTime, setThailandTime] = useState({ date: '', day: '', time: '' });
+  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
 
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
   const [originalColors, setOriginalColors] = useState(new Map());
   const [controllerCommand, setControllerCommand] = useState(null);
 
-  // Show instructions popup automatically unless user opted out
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
     return dontShow === 'true' ? false : true;
   });
 
-  // New state for confirmation popup after "Do not show me again"
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+
+  // Toggle: true = 24h, false = 12h
+  const [hour24, setHour24] = useState(true);
 
   const toggleDashboards = () => {
     setShowDashboards((prev) => !prev);
@@ -43,37 +44,47 @@ const App = () => {
     }
   };
 
+  const padZero = (num) => (num < 10 ? '0' + num : num);
+
   const updateThailandTime = () => {
-    const options = {
+    const optionsDate = {
       timeZone: 'Asia/Bangkok',
-      weekday: 'long',
       day: '2-digit',
       month: 'short',
       year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-      hour12: true,
+      weekday: 'short',
     };
-    const formatter = new Intl.DateTimeFormat('en-US', options);
-    const date = new Date();
-    const parts = formatter.formatToParts(date);
 
-    const day = parts.find((part) => part.type === 'weekday')?.value;
-    const dayNum = parts.find((part) => part.type === 'day')?.value;
-    const month = parts.find((part) => part.type === 'month')?.value;
-    const year = parts.find((part) => part.type === 'year')?.value;
-    const hour = parts.find((part) => part.type === 'hour')?.value;
-    const minute = parts.find((part) => part.type === 'minute')?.value;
-    const second = parts.find((part) => part.type === 'second')?.value;
-    const period = parts.find((part) => part.type === 'dayPeriod')?.value;
+    const formatterDate = new Intl.DateTimeFormat('en-GB', optionsDate);
+    const now = new Date();
 
-    const time = `${hour}:${minute}:${second} ${period}`;
+    const formattedDateParts = formatterDate.formatToParts(now);
+    const day = formattedDateParts.find((p) => p.type === 'day')?.value;
+    const month = formattedDateParts.find((p) => p.type === 'month')?.value;
+    const year = formattedDateParts.find((p) => p.type === 'year')?.value;
+    const weekday = formattedDateParts.find((p) => p.type === 'weekday')?.value;
+
+    const dateStr = `${day}/${month}/${year} ${weekday}`;
+
+    let h = now.getHours();
+    let m = now.getMinutes();
+    let s = now.getSeconds();
+
+    const period = h >= 12 ? 'PM' : 'AM';
+
+    let hour12 = h % 12;
+    if (hour12 === 0) hour12 = 12;
+
+    const displayHour = hour24 ? padZero(h) : hour12.toString();
+    const displayMinute = padZero(m);
+    const displaySecond = padZero(s);
 
     setThailandTime({
-      date: `${dayNum} ${month} ${year}`,
-      day,
-      time,
+      date: dateStr,
+      hour: displayHour,
+      minute: displayMinute,
+      second: displaySecond,
+      period: hour24 ? '' : period,
     });
   };
 
@@ -86,31 +97,34 @@ const App = () => {
     updateThailandTime();
     const backgroundInterval = setInterval(updateBackground, 60000);
     const timeInterval = setInterval(updateThailandTime, 1000);
+
     return () => {
       clearInterval(backgroundInterval);
       clearInterval(timeInterval);
     };
-  }, []);
+  }, [hour24]);
 
   const handleLiveButtonClick = () => {
     window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
   };
 
-  // Handler for "Do not show me again" button in instructions popup
   const handleDontShowAgain = () => {
     localStorage.setItem('dontShowInstructions', 'true');
     setShowInstructions(false);
     setShowConfirmPopup(true);
   };
 
-  // Clicking MFU logo always opens instructions popup
   const openInstructions = () => {
     setShowInstructions(true);
   };
 
+  // This toggles the entire time format between 24h and 12h
+  const toggleTimeFormat = () => {
+    setHour24((prev) => !prev);
+  };
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
-      {/* Navbar */}
       <nav className="navbar">
         <div className="live-button" onClick={handleLiveButtonClick}>
           <img src="/assets/live.png" alt="Live Stream" />
@@ -126,17 +140,17 @@ const App = () => {
 
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
-          <div className="day">{thailandTime.day}</div>
-          <div className="time">{thailandTime.time}</div>
+          <div className="time" onClick={toggleTimeFormat} title="Click to toggle 24h / 12h format" style={{ cursor: 'pointer' }}>
+            {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
+            {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
+          </div>
         </div>
       </nav>
 
-      {/* Hide / Show Dashboards Button */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
 
-      {/* Map Section */}
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
           <Canvas style={{ width: '100vw', height: '100vh' }}>
@@ -155,7 +169,6 @@ const App = () => {
         </Suspense>
       </div>
 
-      {/* Dashboards */}
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -168,12 +181,8 @@ const App = () => {
         </>
       )}
 
-      {/* Controller */}
-      {!showDashboards && (
-        <Controller setControllerCommand={setControllerCommand} />
-      )}
+      {!showDashboards && <Controller setControllerCommand={setControllerCommand} />}
 
-      {/* Popup Box for building info */}
       {popupData && (
         <div className="building-popup" style={{ top: popupData.y + 10, left: popupData.x + 10 }}>
           <div
@@ -189,14 +198,19 @@ const App = () => {
           <div className="popup-content">
             <h3>{popupData.name}</h3>
             <hr />
-            <p>📍 <b>Location:</b> {popupData.name}</p>
-            <p>⚡ <b>Electricity Usage:</b> 1234 kWh</p>
-            <p>💧 <b>Water Usage:</b> 2345 L</p>
+            <p>
+              📍 <b>Location:</b> {popupData.name}
+            </p>
+            <p>
+              ⚡ <b>Electricity Usage:</b> 1234 kWh
+            </p>
+            <p>
+              💧 <b>Water Usage:</b> 2345 L
+            </p>
           </div>
         </div>
       )}
 
-      {/* Instructions Popup */}
       {showInstructions && (
         <div className="instructions-popup">
           <div
@@ -257,7 +271,6 @@ const App = () => {
         </div>
       )}
 
-      {/* Confirmation popup after clicking 'Do not show me again' */}
       {showConfirmPopup && (
         <div className="confirm-popup">
           <div
