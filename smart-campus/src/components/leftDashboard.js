@@ -6,6 +6,12 @@ import "react-calendar/dist/Calendar.css";
 import GaugeChart from "react-gauge-chart"; // Importing gauge chart
 
 
+
+
+
+
+
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,7 +24,19 @@ import {
 } from "chart.js";
 
 
+
+
+
+
+
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+
+
+
+
+
+
 
 
 const LeftDashboard = () => {
@@ -30,6 +48,12 @@ const LeftDashboard = () => {
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
 
+
+
+
+
+
+
   // Buildings and water usage data
   const buildings = [
     "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
@@ -37,16 +61,25 @@ const LeftDashboard = () => {
   ];
 
 
+
+
+
+
+
+
 // Generate mock data for the last 7 days
 const generateWeeklyData = (weeks = 1) => {
   const weeklyData = [];
   const weeklyLabels = [];
   const today = new Date();
-  
+ 
   for (let week = 0; week < weeks; week++) {
     const weekData = [];
     const labels = [];
     let totalGenerated = 0;
+
+
+
 
     for (let i = 0; i < 7; i++) {
       const avgDailyUsage = totalElectricityUsage / 7;
@@ -55,11 +88,17 @@ const generateWeeklyData = (weeks = 1) => {
       weekData.push(dailyValue);
       totalGenerated += dailyValue;
 
+
+
+
       // Create a label for each day, ensuring today is always the last day
       const date = new Date();
       date.setDate(today.getDate() - (6 - i)); // Start from 6 and go backward to 0
       labels.push(date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }));
     }
+
+
+
 
     // Adjust to match total electricity usage
     const adjustmentFactor = totalElectricityUsage / totalGenerated;
@@ -67,15 +106,30 @@ const generateWeeklyData = (weeks = 1) => {
     weeklyLabels.push(labels.reverse());
   }
 
+
+
+
   return { weeklyData: weeklyData.reverse(), weeklyLabels: weeklyLabels.reverse() };
 };
+
+
+
 
 // Ensure the weeklyData and weeklyLabels are generated correctly
 const { weeklyData, weeklyLabels } = generateWeeklyData();
 
+
+
+
   // Flatten weekly data and labels into one array for filtering
   const allLabels = weeklyLabels.flat();
   const allData = weeklyData.flat();
+
+
+
+
+
+
 
 
   // Filter data based on selected date range for the popup
@@ -83,9 +137,21 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     if (!selectedDateRange || selectedDateRange.length !== 2) return { labels: allLabels, data: allData };
 
 
+
+
+
+
+
+
     const [startDate, endDate] = selectedDateRange;
     const filteredLabels = [];
     const filteredData = [];
+
+
+
+
+
+
 
 
     for (let i = 0; i < allLabels.length; i++) {
@@ -98,14 +164,29 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     }
 
 
+
+
+
+
+
+
     return { labels: filteredLabels, data: filteredData };
   };
+
+
+
+
+
+
 
 
   const popupFilteredData = filterDataByDateRange();
   const reversedLabels = weeklyLabels[0].reverse();
   const reversedData = weeklyData[0].reverse();
-  
+ 
+
+
+
 
   const mainElectricityUsageData = {
     labels: reversedLabels, // Reverse labels to show today as the rightmost
@@ -119,6 +200,12 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       },
     ],
   };
+
+
+
+
+
+
 
 
   const popupElectricityUsageData = {
@@ -135,12 +222,40 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
   };
 
 
+
+
+
+
+
+
   // Generate Water Consumption Data for All Buildings
   const generateWaterUsage = () => {
-    const usageData = buildings.map((building) => ({
-      building,
-      usage: Math.random() * 1500, // Random water usage between 0 and 1500 liters
-    }));
+    // Create an array of different ranges to ensure variety
+    const ranges = [
+      { min: 50, max: 300 },    // Very low
+      { min: 350, max: 600 },   // Low
+      { min: 650, max: 900 },   // Medium
+      { min: 950, max: 1200 },  // High
+      { min: 1250, max: 1450 }  // Very high
+    ];
+   
+    // Shuffle the ranges to randomize which buildings get which ranges
+    const shuffledRanges = [...ranges].sort(() => Math.random() - 0.5);
+   
+    const usageData = buildings.map((building, index) => {
+      // Use modulo to cycle through the ranges if there are more buildings than ranges
+      const rangeIndex = index % shuffledRanges.length;
+      const range = shuffledRanges[rangeIndex];
+     
+      // Generate a random value within the selected range
+      const usage = range.min + Math.random() * (range.max - range.min);
+     
+      return {
+        building,
+        usage
+      };
+    });
+
 
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
@@ -151,11 +266,28 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
   };
 
 
-useEffect(() => {
-  if (waterUsageData.length === 0) {
+  useEffect(() => {
+    // Always generate new water usage data when component mounts
     generateWaterUsage();
-  }
-}, []); // Ensures it only runs once
+  }, []); // Ensures it runs once per page load/refresh
+
+
+
+
+
+
+
+
+useEffect(() => {
+  // Always generate new water usage data when component mounts
+  generateWaterUsage();
+}, []); // Ensures it runs once per page load/refresh
+
+
+
+
+
+
 
 
   const waterConsumptionData = {
@@ -169,6 +301,12 @@ useEffect(() => {
       },
     ],
   };
+
+
+
+
+
+
 
 
   // Carbon Footprint for the overall campus (aggregated data)
@@ -192,6 +330,12 @@ useEffect(() => {
       },
     ],
   };
+
+
+
+
+
+
 
 
   return (
@@ -233,12 +377,24 @@ useEffect(() => {
       </div>
 
 
+
+
+
+
+
+
       <h3>Water Consumption</h3>
+
+
+
 
 <div className="water-consumption-speedometers">
   <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
     Overall Campus
   </button>
+
+
+
 
   {waterUsageData
   .slice(0, 3) // Take only the top 3 buildings
@@ -247,17 +403,27 @@ useEffect(() => {
       <h4>{data.building}</h4>
       <GaugeChart
         id={`gauge-chart-${index}`}
-        nrOfLevels={30}
-        percent={data.usage / 1500} // Use static usage data
+        nrOfLevels={5}
+        percent={data.usage / 1500} // Use the random usage data to position the needle
         arcWidth={0.3}
         textColor="#eeeeee"
-        needleColor="#f42321"
-        colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+        needleColor="#ff9800"
+        needleBaseColor="#e01e5a"
+        colors={['#5BE12C', '#F5CD19', '#EA4228']}
+        cornerRadius={0}
+        animate={false} // Ensure animation is disabled to prevent winking
+        animDelay={0}
+        animateDuration={0}
+        hideText={true}
+        formatTextValue={() => ''}
       />
       <p>{data.usage.toFixed(2)} liters/day</p>
     </div>
   ))}
 </div>
+
+
+
 
       <h3>Carbon Footprint</h3>
       <div className="chart-container">
@@ -287,6 +453,12 @@ useEffect(() => {
       </div>
 
 
+
+
+
+
+
+
       {isWeeklyPopupVisible && (
         <div className="popup-overlay" onClick={() => setIsWeeklyPopupVisible(false)}>
           <div className="popup-box" onClick={(e) => e.stopPropagation()}>
@@ -294,6 +466,12 @@ useEffect(() => {
               ✖
             </button>
             <h3>Electricity Usage for Selected Dates</h3>
+
+
+
+
+
+
 
 
             <div className="popup-content">
@@ -341,6 +519,12 @@ useEffect(() => {
       )}
 
 
+
+
+
+
+
+
       {isOverallPopupVisible && (
         <div className="water-popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
           <div className="water-popup-box" onClick={(e) => e.stopPropagation()}>
@@ -376,6 +560,12 @@ useEffect(() => {
             </div>
 
 
+
+
+
+
+
+
             {/* New container with speedometer and dropdown */}
             <div className="custom-container-wrapper">
   <div className="custom-container">
@@ -384,16 +574,22 @@ useEffect(() => {
     </h4>
     <GaugeChart
       id="building-speedometer"
-      nrOfLevels={30}
+      nrOfLevels={5}
       percent={
         selectedBuilding
           ? waterUsageData.find((data) => data.building === selectedBuilding)?.usage / 1500
-          : 0
+          : 0.5 // Default to middle position when no building is selected
       }
       arcWidth={0.3}
-      textColor="#2f2f2f"
-      needleColor="#f42321"
-      colors={['#3655f4', '#732cc5', '#e701bd']} // Red, Yellow, Green
+      textColor="#ffffff"
+      needleColor="#ff9800"
+      needleBaseColor="#e01e5a"
+      colors={['#5BE12C', '#F5CD19', '#EA4228']}
+      cornerRadius={0}
+      animate={false} // Disable animation to prevent winking
+      animDelay={0}
+      animateDuration={0}
+      hideText={true}
     />
     {selectedBuilding && (
       <p style={{ color: "#ffffff", textAlign: "center", marginTop: "10px" }}>
@@ -419,6 +615,18 @@ useEffect(() => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
           </div>
        
@@ -428,6 +636,29 @@ useEffect(() => {
 };
 
 
+
+
+
+
+
+
 export default LeftDashboard;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
