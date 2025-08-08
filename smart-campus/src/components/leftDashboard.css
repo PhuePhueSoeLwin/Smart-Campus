@@ -46,12 +46,16 @@
   width: 90%;
   height: 200px;
   margin-bottom: 20px;
-  background-color: rgba(44, 44, 44, 0.5); /* Semi-transparent dark background */
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  /* Update background and styling to match instruction popup */
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;                     /* same rounded corners */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
   padding: 20px;
   position: relative; /* For button positioning */
+
 }
+
 
 .chart-container canvas {
   max-width: 100%;
@@ -210,11 +214,13 @@
   width: 100%; /* Use the full width inside the popup */
   height: 200px;
   top: 0px;
-  background-color: #2c2c2c;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
   border-radius: 12px;
   padding: 20px;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+
 }
 
 
@@ -269,6 +275,7 @@
   gap: 20px;
   justify-content: center; /* Center all speedometers */
   margin-top: 20px;
+  
 }
 
 .speedometer-container {
@@ -284,11 +291,14 @@
   width: 90%;
   height: 200px;
   margin-bottom: 20px;
-  background-color: rgba(44, 44, 44, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   padding:20px;
   position: relative; /* For button positioning */
+
+
 }
 
 

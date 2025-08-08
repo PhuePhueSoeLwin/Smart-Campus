@@ -70,11 +70,14 @@
  
  /* IEQ Monitoring */
  .ieq-monitoring {
-  background-color: rgba(44, 44, 44, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+ 
  }
  
  
@@ -153,25 +156,30 @@
   margin-bottom: 20px; /* Adds spacing below the dropdown */
   margin-top: 20px;
   margin-left: 45%;
+  
 }
 .building-dropdown {
   width: 150px;
   padding: 8px;
-  background-color: #333;
   border: none;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
   color: #fff;
   font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
+
 }
  
  .building-dropdown:hover {
-  background-color: #444;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
  }
  
  
  .student-count {
-  background-color: rgba(44, 44, 44, 0.5);
+  
   display: flex;
   border-radius: 8px;
   flex-direction: column;
@@ -179,6 +187,9 @@
   align-items: center;
   margin-top: 30px;
   margin-bottom: 30px;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
  }
  
  
@@ -248,13 +259,14 @@
   flex: 1; /* Ensure equal width for car and motorcycle containers */
   display: flex;
   align-items: center;
-  background-color: #333;
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  color: #fff;
  }
  
  
@@ -442,15 +454,17 @@
   display: inline-block;
   margin-top: 8px;
   padding: 6px 12px;
-  background-color: #0074cc; /* Science Blue */
+  background-color: #4daef4;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 14px;
+  font-weight: 600;
   transition: background-color 0.2s ease-in-out;
 }
 
 .check-more-button:hover {
-  background-color: #005fa3; /* Darker Science Blue */
+  background-color: #3691d9;
 }
+

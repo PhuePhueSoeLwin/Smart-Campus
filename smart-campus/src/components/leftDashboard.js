@@ -7,12 +7,6 @@ import GaugeChart from "react-gauge-chart"; // Importing gauge chart
 import { Line } from "react-chartjs-2";
 
 
-
-
-
-
-
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,6 +20,7 @@ import {
   ArcElement
 } from "chart.js";
 
+<<<<<<< HEAD
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -43,6 +38,9 @@ ChartJS.register(
 
 
 
+=======
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+>>>>>>> c4fdc97ff0cea686f270164c25d8631149f03048
 
 const LeftDashboard = () => {
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
@@ -52,24 +50,11 @@ const LeftDashboard = () => {
   const totalElectricityUsage = 121008.75;
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
-
-
-
-
-
-
-
   // Buildings and water usage data
   const buildings = [
     "Msquare", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4", "C5", "D1", "AD1", "AD2",
     "F1", "F2", "F3", "F4", "F5", "F6", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "M3"
   ];
-
-
-
-
-
-
 
 
 // Generate mock data for the last 7 days
@@ -83,9 +68,6 @@ const generateWeeklyData = (weeks = 1) => {
     const labels = [];
     let totalGenerated = 0;
 
-
-
-
     for (let i = 0; i < 7; i++) {
       const avgDailyUsage = totalElectricityUsage / 7;
       const variation = (Math.random() * 0.1 - 0.05) * avgDailyUsage;
@@ -93,72 +75,33 @@ const generateWeeklyData = (weeks = 1) => {
       weekData.push(dailyValue);
       totalGenerated += dailyValue;
 
-
-
-
       // Create a label for each day, ensuring today is always the last day
       const date = new Date();
       date.setDate(today.getDate() - (6 - i)); // Start from 6 and go backward to 0
       labels.push(date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }));
     }
-
-
-
-
     // Adjust to match total electricity usage
     const adjustmentFactor = totalElectricityUsage / totalGenerated;
     weeklyData.push(weekData.map((usage) => usage * adjustmentFactor));
     weeklyLabels.push(labels.reverse());
   }
 
-
-
-
   return { weeklyData: weeklyData.reverse(), weeklyLabels: weeklyLabels.reverse() };
 };
 
-
-
-
 // Ensure the weeklyData and weeklyLabels are generated correctly
 const { weeklyData, weeklyLabels } = generateWeeklyData();
-
-
-
 
   // Flatten weekly data and labels into one array for filtering
   const allLabels = weeklyLabels.flat();
   const allData = weeklyData.flat();
 
-
-
-
-
-
-
-
   // Filter data based on selected date range for the popup
   const filterDataByDateRange = () => {
     if (!selectedDateRange || selectedDateRange.length !== 2) return { labels: allLabels, data: allData };
-
-
-
-
-
-
-
-
     const [startDate, endDate] = selectedDateRange;
     const filteredLabels = [];
     const filteredData = [];
-
-
-
-
-
-
-
-
     for (let i = 0; i < allLabels.length; i++) {
       const labelDate = new Date();
       labelDate.setDate(labelDate.getDate() - (allLabels.length - 1 - i));
@@ -168,31 +111,12 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       }
     }
 
-
-
-
-
-
-
-
     return { labels: filteredLabels, data: filteredData };
   };
-
-
-
-
-
-
-
 
   const popupFilteredData = filterDataByDateRange();
   const reversedLabels = weeklyLabels[0].reverse();
   const reversedData = weeklyData[0].reverse();
- 
-
-
-
-
   const mainElectricityUsageData = {
     labels: reversedLabels, // Reverse labels to show today as the rightmost
     datasets: [
@@ -205,14 +129,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       },
     ],
   };
-
-
-
-
-
-
-
-
   const popupElectricityUsageData = {
     labels: popupFilteredData.labels,
     datasets: [
@@ -225,14 +141,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       },
     ],
   };
-
-
-
-
-
-
-
-
   // Generate Water Consumption Data for All Buildings
   const generateWaterUsage = () => {
     // Check if we already have water usage data
@@ -274,6 +182,7 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       { min: 1250, max: 1450 }  // Very high
     ];
    
+<<<<<<< HEAD
     // Assign ranges to buildings in a deterministic way (no random shuffling)
     // This ensures buildings always get the same range category
     const usageData = buildings.map((building, index) => {
@@ -281,6 +190,14 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       const rangeIndex = index % ranges.length;
       const range = ranges[rangeIndex];
      
+=======
+    // Shuffle the ranges to randomize which buildings get which ranges
+    const shuffledRanges = [...ranges].sort(() => Math.random() - 0.5);
+    const usageData = buildings.map((building, index) => {
+      // Use modulo to cycle through the ranges if there are more buildings than ranges
+      const rangeIndex = index % shuffledRanges.length;
+      const range = shuffledRanges[rangeIndex];
+>>>>>>> c4fdc97ff0cea686f270164c25d8631149f03048
       // Generate a random value within the selected range
       const usage = range.min + Math.random() * (range.max - range.min);
      
@@ -289,6 +206,7 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
         usage
       };
     });
+<<<<<<< HEAD
 
     // Sort the buildings by highest water usage
     usageData.sort((a, b) => b.usage - a.usage);
@@ -305,6 +223,13 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     }
   };
 
+=======
+    // Sort the buildings by highest water usage
+    usageData.sort((a, b) => b.usage - a.usage);
+    // Set water usage data (top 3 will be shown initially)
+    setWaterUsageData(usageData);
+  };
+>>>>>>> c4fdc97ff0cea686f270164c25d8631149f03048
   useEffect(() => {
     // Generate initial water usage data when component mounts
     generateWaterUsage();
@@ -318,6 +243,7 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     // Clean up the interval when component unmounts
     return () => clearInterval(intervalId);
   }, []); // Ensures it runs once per page load/refresh
+<<<<<<< HEAD
 
 
 
@@ -326,6 +252,12 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
 
 
 
+=======
+useEffect(() => {
+  // Always generate new water usage data when component mounts
+  generateWaterUsage();
+}, []); // Ensures it runs once per page load/refresh
+>>>>>>> c4fdc97ff0cea686f270164c25d8631149f03048
   const waterConsumptionData = {
     labels: ["Used Water", "Remaining Capacity"],
     datasets: [
@@ -337,14 +269,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       },
     ],
   };
-
-
-
-
-
-
-
-
   // Carbon Footprint for the overall campus (aggregated data)
   const carbonFootprintData = {
     labels: [""], // Label for the overall campus
@@ -366,14 +290,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
       },
     ],
   };
-
-
-
-
-
-
-
-
   return (
     <div className="left-dashboard">
       <h3>Electricity Usage</h3>
@@ -411,27 +327,11 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
           Weekly Usage
         </button>
       </div>
-
-
-
-
-
-
-
-
       <h3>Water Consumption</h3>
-
-
-
-
 <div className="water-consumption-speedometers">
   <button className="overallcampus-button" onClick={() => setIsOverallPopupVisible(true)}>
     Overall Campus
   </button>
-
-
-
-
   {waterUsageData
   .slice(0, 3) // Take only the top 3 buildings
   .map((data, index) => (
@@ -457,6 +357,7 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     </div>
   ))}
 </div>
+<<<<<<< HEAD
 
 
 
@@ -546,6 +447,34 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
 
 
 
+=======
+      <h3>Carbon Footprint</h3>
+      <div className="chart-container">
+        <Bar
+          data={carbonFootprintData}
+          options={{
+            responsive: true,
+            indexAxis: "y", // Horizontal bar chart
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: (tooltipItem) => {
+                    const dataset = tooltipItem.dataset;
+                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                    const percentage = ((dataset.data[tooltipItem.dataIndex] / total) * 100).toFixed(2);
+                    return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]} kg (${percentage}%)`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: "#eeeeee" } },
+              y: { ticks: { color: "#eeeeee" } },
+            },
+          }}
+        />
+      </div>
+>>>>>>> c4fdc97ff0cea686f270164c25d8631149f03048
       {isWeeklyPopupVisible && (
         <div className="popup-overlay" onClick={() => setIsWeeklyPopupVisible(false)}>
           <div className="popup-box" onClick={(e) => e.stopPropagation()}>
@@ -553,14 +482,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
               ✖
             </button>
             <h3>Electricity Usage for Selected Dates</h3>
-
-
-
-
-
-
-
-
             <div className="popup-content">
               <div className="chart-wrapper">
                 <Bar
@@ -604,14 +525,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
           </div>
         </div>
       )}
-
-
-
-
-
-
-
-
       {isOverallPopupVisible && (
         <div className="water-popup-overlay" onClick={() => setIsOverallPopupVisible(false)}>
           <div className="water-popup-box" onClick={(e) => e.stopPropagation()}>
@@ -645,14 +558,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
                 </p>
               </div>
             </div>
-
-
-
-
-
-
-
-
             {/* New container with speedometer and dropdown */}
             <div className="custom-container-wrapper">
   <div className="custom-container">
@@ -698,22 +603,6 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     </select>
   </div>
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             </div>
           </div>
        
@@ -721,31 +610,4 @@ const { weeklyData, weeklyLabels } = generateWeeklyData();
     </div>
   );
 };
-
-
-
-
-
-
-
-
 export default LeftDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
