@@ -1,67 +1,105 @@
-/* Transparent Black Screen */
 .black-screen {
-    position: fixed;
-    bottom: 50px;
-    left: 50px;
-    width: 240px;
-    height: 240px;
-    background-color: rgba(0, 0, 0, 0.4); /* Transparent */
-    z-index: 999;
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-   }
-  
-  .black-screen.hide {
-    opacity: 0;
+  position: fixed;
+  bottom: 35px;      /* moved from bottom to top */
+  right: 35px;    /* moved from left to right */
+  width: 190px;
+  height: 190px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.30),
+    inset 0 0 6px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1.1px solid rgba(255, 255, 255, 0.15);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+
+.black-screen.hide {
+  opacity: 0;
+}
+
+.black-screen.show {
+  opacity: 1;
+}
+
+/* Controller Layout */
+.controller {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.middle-row {
+  display: flex;
+  justify-content: space-between;
+  width: 150px;
+  padding: 0 8px;
+  gap: 20px;
+}
+
+/* Arrow Buttons */
+.arrow-button {
+  background: linear-gradient(145deg, #2c3e50, #1a252f);
+  border-radius: 50%;
+  border: none;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  color: #5dade2;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  box-shadow:
+    0 0 8px #5dade2cc,
+    inset 0 0 12px #7fb3d5aa,
+    0 6px 14px rgba(93, 173, 226, 0.35);
+  transition: all 0.25s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  filter: drop-shadow(0 0 2px #5dade2aa);
+  text-shadow: 0 0 3px #5dade2aa;
+}
+
+.arrow-button:hover {
+  color: #85c1e9;
+  box-shadow:
+    0 0 16px #85c1e9ee,
+    inset 0 0 18px #aed6f1cc,
+    0 10px 20px rgba(174, 214, 241, 0.55);
+  transform: scale(1.1) rotate(3deg);
+}
+
+.arrow-button:active {
+  transform: scale(0.85) rotate(-3deg);
+  box-shadow:
+    0 0 22px #2471a3ee inset,
+    0 0 26px #2471a3cc;
+  background: linear-gradient(145deg, #172933, #1c2a37);
+  color: #aed6f1;
+}
+
+/* Subtle bounce on press */
+.arrow-button:active {
+  animation: bounce 0.14s ease forwards;
+}
+
+@keyframes bounce {
+  0% {
+    transform: scale(0.85) rotate(-3deg);
   }
-  
-  .black-screen.show {
-    opacity: 1;
+  50% {
+    transform: scale(0.9) rotate(-1.5deg);
   }
-  
-  /* Controller Layout */
-  .controller {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  100% {
+    transform: scale(0.85) rotate(-3deg);
   }
-  
-  .middle-row {
-    display: flex;
-    justify-content: space-between;
-    width: 200px; /* Increase this for more space between arrows */
-    padding: 0 15px;
-   }
-  /* Arrow Buttons */
-  .arrow-button {
-    background: radial-gradient(circle, #1e1e1e 0%, #111 100%);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 24px;
-    width: 60px;
-    height: 60px;
-    margin: 8px;
-    cursor: pointer;
-    font-family: 'Poppins', sans-serif;
-    box-shadow: 0 0 10px rgba(30, 144, 255, 0.6), 0 0 20px rgba(30, 144, 255, 0.4);
-    transition: all 0.25s ease, box-shadow 0.25s ease;
-  }
-  
-  .arrow-button:hover {
-    background: radial-gradient(circle, #222 0%, #111 100%);
-    box-shadow: 0 0 15px rgba(30, 144, 255, 0.8), 0 0 25px rgba(30, 144, 255, 0.6);
-    transform: scale(1.15);
-  }
-  
-  /* When pressing the button */
-  .arrow-button:active {
-    transform: scale(0.9);
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.9), 0 0 30px rgba(0, 191, 255, 0.7) inset;
-    background: radial-gradient(circle, #333 0%, #111 100%);
-  }
-  
+}
