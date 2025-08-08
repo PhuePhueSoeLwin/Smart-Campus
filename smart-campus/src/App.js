@@ -21,6 +21,12 @@ const App = () => {
   const [originalColors, setOriginalColors] = useState(new Map());
   const [controllerCommand, setControllerCommand] = useState(null);
 
+  // Show instructions popup automatically unless user opted out
+  const [showInstructions, setShowInstructions] = useState(() => {
+    const dontShow = localStorage.getItem('dontShowInstructions');
+    return dontShow === 'true' ? false : true;
+  });
+
   const toggleDashboards = () => {
     setShowDashboards((prev) => !prev);
   };
@@ -91,6 +97,17 @@ const App = () => {
     window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
   };
 
+  // Handler for "Do not show me again" button in instructions popup
+  const handleDontShowAgain = () => {
+    localStorage.setItem('dontShowInstructions', 'true');
+    setShowInstructions(false);
+  };
+
+  // Clicking MFU logo always opens instructions popup
+  const openInstructions = () => {
+    setShowInstructions(true);
+  };
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       {/* Navbar */}
@@ -100,7 +117,13 @@ const App = () => {
           <div className="live-label">LIVE</div>
         </div>
 
-        <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
+        <img
+          src="/assets/mfu_logo.png"
+          alt="MFU Logo"
+          className="navbar-logo"
+          style={{ cursor: 'pointer' }}
+          onClick={openInstructions} // Show instructions popup on logo click
+        />
 
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
@@ -109,7 +132,7 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Hide / Show Button */}
+      {/* Hide / Show Dashboards Button */}
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
@@ -151,7 +174,7 @@ const App = () => {
         <Controller setControllerCommand={setControllerCommand} />
       )}
 
-      {/* Popup Box */}
+      {/* Popup Box for building info */}
       {popupData && (
         <div
           style={{
@@ -166,6 +189,7 @@ const App = () => {
             width: '220px',
             transition: 'opacity 0.3s ease-in-out',
             opacity: 1,
+            zIndex: 1500,
           }}
         >
           <div
@@ -180,6 +204,7 @@ const App = () => {
               cursor: 'pointer',
               fontSize: '18px',
               color: '#FFF',
+              userSelect: 'none',
             }}
           >
             ❌
@@ -200,6 +225,180 @@ const App = () => {
               💧 <b>Water Usage:</b> 2345 L
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Instructions Popup */}
+      {showInstructions && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+            color: '#fff',
+            width: '360px',
+            padding: '30px 35px',
+            zIndex: 2000,
+            animation: 'fadeScaleIn 0.3s ease forwards',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          }}
+        >
+          <style>{`
+            @keyframes fadeScaleIn {
+              0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+              100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+            .close-button {
+              position: absolute;
+              top: 15px;
+              right: 15px;
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              background: rgba(255, 255, 255, 0.2);
+              color: #fff;
+              font-weight: bold;
+              font-size: 20px;
+              line-height: 28px;
+              text-align: center;
+              cursor: pointer;
+              transition: background 0.3s ease;
+              user-select: none;
+            }
+            .close-button:hover {
+              background: rgba(255, 255, 255, 0.4);
+            }
+            .instruction-title {
+              font-size: 24px;
+              font-weight: 700;
+              margin-bottom: 22px;
+              color: #3399FF;
+              text-align: center;
+            }
+            .instruction-list {
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              margin-bottom: 24px;
+            }
+            .instruction-item {
+              display: flex;
+              align-items: center;
+              gap: 18px;
+              font-size: 17px;
+              font-weight: 500;
+            }
+            .key-badge {
+              display: inline-flex;
+              justify-content: center;
+              align-items: center;
+              min-width: 40px;
+              height: 40px;
+              padding: 0 12px;
+              border-radius: 12px;
+              background: rgba(51, 153, 255, 0.9);
+              font-weight: 700;
+              font-size: 18px;
+              color: white;
+              user-select: none;
+              box-shadow: 0 4px 10px rgba(51, 153, 255, 0.6);
+              text-transform: uppercase;
+              white-space: nowrap;
+            }
+            .tip-text {
+              font-size: 14px;
+              color: rgba(255, 255, 255, 0.8);
+              text-align: center;
+              line-height: 1.5;
+              user-select: none;
+              margin-bottom: 16px;
+            }
+            .divider {
+              border: none;
+              border-top: 1px solid rgba(255,255,255,0.25);
+              margin-bottom: 20px;
+            }
+            .dont-show-btn {
+              display: block;
+              margin: 0 auto;
+              padding: 10px 18px;
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+              font-weight: 600;
+              font-size: 14px;
+              border-radius: 12px;
+              cursor: pointer;
+              user-select: none;
+              transition: background 0.3s ease;
+              width: fit-content;
+              text-align: center;
+            }
+            .dont-show-btn:hover {
+              background: rgba(255, 255, 255, 0.4);
+            }
+          `}</style>
+
+          <div
+            className="close-button"
+            onClick={() => setShowInstructions(false)}
+            aria-label="Close instructions"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setShowInstructions(false);
+            }}
+          >
+            ×
+          </div>
+
+          <h3 className="instruction-title">Map Controls</h3>
+
+          <div className="instruction-list">
+            <div className="instruction-item">
+              <div className="key-badge">W</div>
+              <div>Move Forward</div>
+            </div>
+            <div className="instruction-item">
+              <div className="key-badge">S</div>
+              <div>Move Backward</div>
+            </div>
+            <div className="instruction-item">
+              <div className="key-badge">A</div>
+              <div>Move Left</div>
+            </div>
+            <div className="instruction-item">
+              <div className="key-badge">D</div>
+              <div>Move Right</div>
+            </div>
+            <div className="instruction-item">
+              <div className="key-badge">Space</div>
+              <div>Move Upward</div>
+            </div>
+            <div className="instruction-item">
+              <div className="key-badge">Shift</div>
+              <div>Move Downward</div>
+            </div>
+          </div>
+
+          <hr className="divider" />
+
+          <p className="tip-text">
+            💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.
+          </p>
+
+          <button
+            className="dont-show-btn"
+            onClick={handleDontShowAgain}
+            aria-label="Do not show instructions again"
+          >
+            Do not show me again
+          </button>
         </div>
       )}
     </div>
