@@ -6,6 +6,7 @@
     "@react-three/drei": "^9.114.6",
     "@react-three/fiber": "^8.0.0",
     "chart.js": "^4.4.7",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "cra-template": "1.2.0",
     "firebase": "^11.3.1",
     "gsap": "^3.12.7",
