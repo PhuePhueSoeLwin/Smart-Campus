@@ -256,7 +256,7 @@ const LeftDashboard = () => {
       </div>
 
       <h3>Carbon Footprint</h3>
-      <div className="chart-container" style={{ backgroundColor: "transparent", padding: "10px", height: "250px" }}>
+      <div className="carbon-container" style={{ backgroundColor: "transparent", padding: "10px", height: "250px" }}>
         <Line
           data={{
             labels: ["524", "1047", "1570", "2093", "2616", "3139", "3662", "4185", "4708", "5231"],

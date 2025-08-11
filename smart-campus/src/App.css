@@ -328,22 +328,23 @@ html, body {
 .dont-show-btn {
   display: block;
   margin: 0 auto;
-  padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  padding: 8px 16px;
+  background-color: #4daef4;
+  color: #ffffff;
   font-weight: 600;
   font-size: 14px;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.3s ease;
+  transition: background-color 0.3s;
   width: fit-content;
   text-align: center;
 }
 
 .dont-show-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background-color: #3691d9;
 }
+
 
 /* Confirmation popup styles */
 .confirm-popup {
