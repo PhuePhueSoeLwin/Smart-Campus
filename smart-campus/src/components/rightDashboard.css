@@ -2,7 +2,7 @@
 .right-dashboard {
   background: linear-gradient(
     to left,
-    rgba(0, 0, 51, 1) 0%,    /* Very dark blue 100% opacity */
+    rgba(0, 0, 51, 1) 0%,
     rgba(0, 0, 51, 0.99) 1%,
     rgba(0, 0, 51, 0.98) 2%,
     rgba(0, 0, 51, 0.97) 3%,
@@ -13,7 +13,7 @@
     rgba(0, 0, 51, 0.03) 97%,
     rgba(0, 0, 51, 0.02) 98%,
     rgba(0, 0, 51, 0.01) 99%,
-    rgba(0, 0, 51, 0) 100%   /* Very dark blue 0% opacity */
+    rgba(0, 0, 51, 0) 100%
   );
   position: fixed;
   right: 0;
@@ -21,164 +21,69 @@
   height: 100vh;
   padding: 25px;
   z-index: 100;
-  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-y: auto;
   box-shadow: none;
- }
- 
- 
- .right-dashboard::-webkit-scrollbar {
-  display: none;
-  }
- 
- 
- 
- 
- .right-dashboard h3 {
+}
+.right-dashboard::-webkit-scrollbar { display: none; }
+
+.right-dashboard h3 {
   margin-top: 0;
   font-size: 18px;
   font-weight: 600;
   color: #ffffff;
-  border-left: 4px solid #4daef4; /* Changed from orange to blue */
+  border-left: 4px solid #4daef4;
   padding-left: 10px;
   margin-bottom: 15px;
- }
- 
- 
- 
- 
- /* Keyframe for floating effect */
- @keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
- }
- 
- 
- /* Keyframe for rotating clock icon */
- @keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
- }
- 
- 
- /* IEQ Monitoring */
- .ieq-monitoring {
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+}
+
+/* Keyframes */
+@keyframes ringSpin { to { transform: rotate(360deg); } }
+
+/* IEQ Monitoring */
+.ieq-monitoring {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
   color: #fff;
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   margin-bottom: 20px;
- 
- }
- 
- 
- .ieq-monitoring h4 {
-  margin-bottom: 10px;
-  color: #ffffff;
- }
- 
- 
- .data .metric {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
- }
- 
- 
- .data .metric p {
-  margin: 0;
-  margin-left: 10px;
- }
- 
- 
- .indicator-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
- }
- 
- 
- .indicator {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
- }
- 
- 
- .indicator.normal {
-  background-color: #4CAF50;
- }
- 
- 
- .indicator.high {
-  background-color: #F44336;
- }
- 
- 
- .indicator.low {
-  background-color: #FF9800;
- }
- 
- 
- .comfort {
-  font-size: 14px;
-  margin-top: 10px;
- }
- 
- 
- .comfort span {
-  font-weight: bold;
- }
- 
- .comfort-good {
-  color: green;
-  font-weight: bold;
 }
+.data .metric { display: flex; align-items: center; margin-bottom: 10px; }
+.data .metric p { margin: 0; margin-left: 10px; }
+.indicator { width: 15px; height: 15px; border-radius: 50%; }
+.indicator.normal { background-color: #4CAF50; }
+.indicator.high   { background-color: #F44336; }
+.indicator.low    { background-color: #FF9800; }
+.comfort { font-size: 14px; margin-top: 10px; }
+.comfort-good { color: green; font-weight: bold; }
+.comfort-poor { color: red; font-weight: bold; }
 
-.comfort-poor {
-  color: red;
-  font-weight: bold;
-}
-
- /* Students On Campus */
- .dropdown-container {
+/* Students On Campus */
+.dropdown-container {
   display: flex;
-  justify-content: flex-end; /* Aligns the dropdown button to the right */
-  margin-bottom: 20px; /* Adds spacing below the dropdown */
+  justify-content: flex-end;
+  margin-bottom: 20px;
   margin-top: 20px;
-  margin-left: 45%;
-  
+  margin-left: 40px;
 }
-.building-dropdown {
-  width: 150px;
-  padding: 8px;
+.right-dashboard .building-dropdown{
+  width: 120px;
+  padding: 6px 8px;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  background: rgba(255,255,255,0.15);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
   color: #fff;
-  font-size: 14px;
-  border-radius: 4px;
+  font-size: 12px;
+  border-radius: 6px;
   cursor: pointer;
-
 }
- 
- .building-dropdown:hover {
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
-  color: #000000;
- }
- 
- 
- .student-count {
-  
+.right-dashboard .building-dropdown:hover{
+  background: rgba(255,255,255,0.18);
+  color: #000;
+}
+
+/* Student card */
+.student-count{
   display: flex;
   border-radius: 8px;
   flex-direction: column;
@@ -186,283 +91,210 @@
   align-items: center;
   margin-top: 30px;
   margin-bottom: 30px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
   color: #fff;
- }
- 
- 
- .circle-progress-container {
+  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* header row inside student card */
+.student-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px;
+}
+.kpi-chip {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(77,174,244,0.15);
+  border: 1px solid rgba(77,174,244,0.25);
+  color: #fff;
+}
+
+/* ===== Student ring (scientific gauge) ===== */
+:root{
+  --ring-ok:   #2dd4bf;  /* teal-400 */
+  --ring-warn: #f59e0b;  /* amber-500 */
+  --ring-crit: #ef4444;  /* red-500  */
+  --ring-track: rgba(255,255,255,0.14);
+  --ring-tick-major: rgba(255,255,255,0.35);
+  --ring-tick-minor: rgba(255,255,255,0.18);
+}
+
+.circle-progress-container{
   position: relative;
-  width: 200px;
-  height: 200px;
- }
- 
- 
- .circular-chart {
+  width: clamp(170px, calc(100% - 32px), 210px);
+  height: clamp(170px, calc(100% - 32px), 210px);
+  margin: 8px auto 10px auto;
+}
+
+/* SVG container rotated so 0% is at 12 o’clock */
+.gauge{
+  width:100%; height:100%; display:block;
   transform: rotate(-90deg);
- }
- 
- 
- .circle-bg {
-  fill: none;
-  stroke: #e6e6e6;
- }
- 
- 
- .circle-progress {
-  fill: none;
-  stroke: #4CAF50;
-  transition: stroke-dasharray 1s ease, stroke 1s ease;
- }
- 
- 
- .circle-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+}
+
+/* track */
+.gauge-track{
+  fill:none;
+  stroke: var(--ring-track);
+  stroke-width: 8;
+}
+
+/* ticks built from dash patterns; pathLength=100 for percentage mapping */
+.gauge-ticks-major{
+  fill:none;
+  stroke: var(--ring-tick-major);
+  stroke-width: 2.4;
+  stroke-dasharray: 1 9; /* 10 major ticks */
+}
+.gauge-ticks-minor{
+  fill:none;
+  stroke: var(--ring-tick-minor);
+  stroke-width: 1.25;
+  stroke-dasharray: 0.5 1.5; /* small ticks ~ every 2% */
+}
+
+/* progress arc: color set by modifier class; smooth easing */
+.gauge-progress{
+  fill:none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .7s cubic-bezier(.22,.61,.36,1),
+              stroke .25s ease, opacity .25s ease;
+  filter: drop-shadow(0 0 10px rgba(0,0,0,.35));
+}
+
+/* head dot that rides the arc */
+.gauge-head{
+  transform-origin: 60px 60px; /* center of viewBox */
+  transition: transform .7s cubic-bezier(.22,.61,.36,1);
+}
+.gauge-head-dot{
+  fill: currentColor;
+  stroke: rgba(255,255,255,0.9);
+  stroke-width: 1;
+}
+
+/* color states */
+.gauge--ok  { color: var(--ring-ok); }
+.gauge--warn{ color: var(--ring-warn); }
+.gauge--crit{ color: var(--ring-crit); }
+
+.gauge--ok  .gauge-progress { stroke: var(--ring-ok);   filter: drop-shadow(0 0 12px rgba(45,212,191,.35)); }
+.gauge--warn.gauge .gauge-progress { stroke: var(--ring-warn); filter: drop-shadow(0 0 12px rgba(245,158,11,.35)); }
+.gauge--crit.gauge .gauge-progress { stroke: var(--ring-crit); filter: drop-shadow(0 0 12px rgba(239,68,68,.35)); }
+
+/* center readout */
+.circle-text{
+  position:absolute; top:50%; left:50%;
   transform: translate(-50%, -50%);
-  font-size: 15px;
-  font-weight: bold;
-  color: #ffffff;
-  text-align: center;
- }
- .text-group {
-  transform: rotate(90deg); /* Counteracts the parent rotation */
-  transform-origin: center; /* Ensures the text stays centered */
- }
- .total-amount {
-  font-size: 24px;
-  font-weight: bold;
- }
- 
- 
- .building-label {
-  font-size: 14px;
-  font-weight: normal;
-  color: #ffffff;
- }
- 
- 
- /* Vehicles On Campus Section */
- .vehicle-count-container {
-  display: flex;
-  flex-direction: row; /* Place items in a row */
-  gap: 15px; /* Add spacing between car and motorcycle containers */
-  margin-top: 20px;
-  margin-bottom: 100px;
- }
- 
- 
- .vehicle-card {
-  flex: 1; /* Ensure equal width for car and motorcycle containers */
-  display: flex;
-  align-items: center;
-  border-radius: 8px;
-  padding: 15px;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* same shadow as popup */
-  color: #fff;
- }
- 
- 
- .vehicle-card .vehicle-icon {
-  font-size: 36px;
-  margin-right: 15px;
- }
- 
- 
- .vehicle-info {
-  flex-grow: 1;
- }
- 
- 
- .vehicle-info .vehicle-type {
-  font-size: 16px;
-  font-weight: bold;
-  color: #ffffff;
-  margin: 0;
- }
- 
- 
- .vehicle-info .vehicle-number {
-  font-size: 20px;
-  font-weight: bold;
-  color: #4CAF50;
-  margin: 0;
- }
- 
- 
- .vehicle-card .vehicle-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 5px;
-  background-color: #444;
-  width: 100%;
-  border-radius: 0 0 8px 8px;
-  overflow: hidden;
- }
- 
- 
- .vehicle-card .progress-bar {
-  height: 5px;
-  background-color: #4CAF50;
-  transition: width 0.5s ease;
- }
- 
- 
- .vehicle-card.car .progress-bar {
-  background-color: #4285F4; /* Blue for cars */
- }
- 
- 
- .vehicle-card.motorcycle .progress-bar {
-  background-color: #FB8C00; /* Orange for motorcycles */
- }
- 
- 
- .vehicle-card.car .vehicle-number {
-  color: #4285F4;
- }
- 
- 
- .vehicle-card.motorcycle .vehicle-number {
-  color: #FB8C00;
- }
-/* Popup Overlay */
+  text-align:center; color:#fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  line-height: 1.15;
+  z-index: 2;
+}
+.total-amount{ font-size: 30px; font-weight: 800; letter-spacing: .2px; }
+.building-label{ font-size: 12.5px; font-weight: 600; color: #eaf6ff; opacity: .95; padding-top: 4px; }
+.percent-label{ margin-top: 4px; font-size: 11px; font-weight: 600; opacity: .85; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .gauge-progress,
+  .gauge-head { transition: none; }
+}
+
+/* legend */
+.scale-legend{
+  display:flex; align-items:center; justify-content:center;
+  gap: 10px; margin: 4px 0 10px 0; font-size: 11.5px; opacity: .9;
+}
+.legend-item{ display:flex; align-items:center; gap:6px; }
+.dot{ width:10px; height:10px; border-radius:50%; display:inline-block; box-shadow: 0 0 8px rgba(255,255,255,.15); }
+.dot-green{ background:#5BE12C; }
+.dot-yellow{ background:#F5CD19; }
+.dot-red{ background:#EA4228; }
+
+/* compact stats row */
+.student-stats{
+  width:100%; display:grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; padding: 0 4px 6px;
+}
+.stat{
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.stat-label{ font-size: 11px; opacity: .85; }
+.stat-value{ font-size: 14px; font-weight: 700; }
+
+/* Vehicles */
+.vehicle-count-container {
+  display: flex; flex-direction: row; gap: 15px;
+  margin-top: 20px; margin-bottom: 100px;
+}
+.vehicle-card {
+  flex: 1; display: flex; align-items: center; border-radius: 8px; padding: 15px;
+  position: relative; overflow: hidden; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); box-shadow: 0 4px 15px rgba(0,0,0,0.2); color: #fff;
+}
+.vehicle-card .vehicle-icon { font-size: 36px; margin-right: 15px; }
+.vehicle-info { flex-grow: 1; }
+.vehicle-info .vehicle-type { font-size: 16px; font-weight: bold; color: #ffffff; margin: 0; }
+.vehicle-info .vehicle-number { font-size: 20px; font-weight: bold; color: #4CAF50; margin: 0; }
+
+/* Popup */
 .right-popup-overlay {
-  position: fixed;
-  top: 100px;
-  right: 400px;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 200;
+  position: fixed; top: 100px; right: 400px; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center; z-index: 200;
 }
-
-/* Popup Box */
 .right-popup-box {
-  position: relative;
-  background-color: rgba(44, 44, 44, 0.5);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  width: 800px;
-  height: 300px; /* Set height to 300px */
-  overflow-y: auto; /* Enable scrolling for content if it overflows */
+  position: relative; background-color: rgba(44, 44, 44, 0.5);
+  padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center; width: 800px; height: 300px; overflow-y: auto;
 }
-
-/* Close Button */
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  font-weight: bold;
-  color: #ffffff;
-  cursor: pointer;
+.close-button{
+  position: absolute; top: 10px; right: 10px; background: transparent; border: none;
+  font-size: 20px; font-weight: bold; color: #ffffff; cursor: pointer;
   transition: transform 0.2s, color 0.2s;
 }
+.close-button:hover { color: #f44336; transform: scale(1.2); }
 
-.close-button:hover {
-  color: #f44336;
-  transform: scale(1.2);
-}
-
-/* Schedule Table */
-.schedule-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-
-.schedule-table th,
-.schedule-table td {
+.schedule-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+.schedule-table th, .schedule-table td {
   background-color: rgba(44, 44, 44, 0.5);
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: center;
+  border: 1px solid #ddd; padding: 8px; text-align: center;
 }
+.schedule-table th { background-color: #4285F4; color: white; font-weight: bold; }
+.schedule-table tr:nth-child(even) { background-color: #f9f9f9; }
+.schedule-table tr:hover { background-color: #f1f1f1; }
 
-.schedule-table th {
-  background-color: #4285F4;
-  color: white;
-  font-weight: bold;
-}
-
-.schedule-table tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-.schedule-table tr:hover {
-  background-color: #f1f1f1;
-}
-
-/* Peak Time Section */
 .peak-time {
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 10px; padding: 10px;
   background-color: rgba(44, 44, 44, 0.5);
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  text-align: left;
+  border: 1px solid #ddd; border-radius: 8px; text-align: left;
 }
+.peak-time strong { color: #4285F4; }
 
-.peak-time strong {
-  color: #4285F4;
-}
-
-/* Button Group */
-.button-group {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-}
-
+.button-group { display: flex; justify-content: center; margin-top: 10px; }
 .vehicle-button {
-  padding: 10px 20px;
-  margin: 0 5px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 20%; /* Make the buttons circular */
-  cursor: pointer;
-  font-size: 20px; /* Increase the size for icons */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 10px 20px; margin: 0 5px; background-color: #f0f0f0; border: 1px solid #ccc;
+  border-radius: 20%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;
 }
+.vehicle-button.active { background-color: #4285F4; color: #fff; }
+.vehicle-button:hover  { background-color: #ddd; }
 
-.vehicle-button.active {
-  background-color: #4285F4;
-  color: #fff;
-}
-
-.vehicle-button:hover {
-  background-color: #ddd;
-}
 .check-more-button {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 6px 12px;
-  background-color: #4daef4;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
+  display: inline-block; margin-top: 8px; padding: 6px 12px;
+  background-color: #4daef4; color: white; border: none; border-radius: 8px;
+  text-decoration: none; font-size: 14px; font-weight: 600;
   transition: background-color 0.2s ease-in-out;
 }
-
-.check-more-button:hover {
-  background-color: #3691d9;
-}
-
+.check-more-button:hover { background-color: #3691d9; }
