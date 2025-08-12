@@ -26,7 +26,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Register Chart.js bits + datalabels
+// Register Chart.js + datalabels
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -40,19 +40,21 @@ ChartJS.register(
   ChartDataLabels
 );
 
-// Global chart defaults
+// Defaults
 ChartJS.defaults.color = '#fff';
 ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
-// Hide datalabels everywhere by default
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
-/** Centered modal rendered to <body> */
-const Modal = ({ open, onClose, children }) => {
+/** Centered modal */
+const Modal = ({ open, onClose, children, size = 'md' }) => {
   if (!open) return null;
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`modal-box ${size === 'sm' ? 'modal-compact' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="close-button" onClick={onClose}>✖</button>
         {children}
       </div>
@@ -61,11 +63,9 @@ const Modal = ({ open, onClose, children }) => {
   );
 };
 
-/** Helpers for inclusive date-range comparisons */
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
-const labelFor = (date) =>
-  date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+const labelFor = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
 const App = () => {
   const [showDashboards, setShowDashboards] = useState(true);
@@ -77,6 +77,7 @@ const App = () => {
   const [originalColors, setOriginalColors] = useState(new Map());
   const [controllerCommand, setControllerCommand] = useState(null);
 
+  // Instructions popup
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
     return dontShow === 'true' ? false : true;
@@ -90,7 +91,34 @@ const App = () => {
   const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
-  // Smart preset for Weekly Usage
+  // Vehicle schedule popup
+  const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
+  const [vehicleType, setVehicleType] = useState('Cars');
+  const [schedule, setSchedule] = useState([]);
+
+  const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
+  const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
+
+  useEffect(() => {
+    const times = [
+      '6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
+      '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM',
+      '6:00 PM','7:00 PM','8:00 PM','9:00 PM'
+    ];
+    setSchedule(times.map(time => ({
+      time,
+      cars: Math.floor(Math.random()*500),
+      motorcycles: Math.floor(Math.random()*1000)
+    })));
+  }, []);
+
+  const peakTime = schedule.length
+    ? schedule.reduce((p, e) =>
+        (e[vehicleType.toLowerCase()] > p[vehicleType.toLowerCase()] ? e : p),
+      schedule[0])
+    : null;
+
+  // Weekly usage preset
   const [presetRange, setPresetRange] = useState(null);
   const setRangeDays = (days) => {
     const end = new Date();
@@ -100,16 +128,15 @@ const App = () => {
     setPresetRange(days);
   };
 
-  const totalElectricityUsage = 121008.75; // target for last 7 days
+  const totalElectricityUsage = 121008.75;
 
-  /** Build a real daily time series with Date objects; scale last 7 days to target */
   const buildDailySeries = (days = 35) => {
     const today = new Date();
     const series = Array.from({ length: days }, (_, idx) => {
       const date = new Date();
       date.setDate(today.getDate() - (days - 1 - idx));
       const base = 16000;
-      const variance = (Math.random() * 0.2 - 0.1) * base; // ±10%
+      const variance = (Math.random() * 0.2 - 0.1) * base;
       const value = base + variance;
       return { date: startOfDay(date), label: labelFor(date), value };
     });
@@ -124,13 +151,10 @@ const App = () => {
   };
 
   const [series] = useState(() => buildDailySeries(35));
-
-  // Left dashboard needs "last 7 days" arrays
   const last7 = series.slice(-7);
   const weeklyLabels = [last7.map((p) => p.label)];
   const weeklyData = [last7.map((p) => p.value)];
 
-  // Filter using actual dates from the series
   const normalizeRange = (value) => {
     if (Array.isArray(value)) {
       const [s, e] = value;
@@ -169,29 +193,19 @@ const App = () => {
     plugins: {
       legend: { labels: { color: '#fff' } },
       tooltip: { titleColor: '#fff', bodyColor: '#fff' },
-      datalabels: { display: false }, // keep numbers off
+      datalabels: { display: false },
     },
     scales: {
-      x: {
-        ticks: { color: '#fff' },
-        grid: { color: 'rgba(255,255,255,0.15)' },
-      },
-      y: {
-        ticks: { color: '#fff' },
-        grid: { color: 'rgba(255,255,255,0.15)' },
-      },
+      x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
+      y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
     },
   };
 
   // Water mock data
   const buildings = [
-    'Msquare', 'E1', 'E2', 'E3', 'E4',
-    'C1', 'C2', 'C3', 'C4', 'C5',
-    'D1', 'AD1', 'AD2',
-    'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
-    'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
-    'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7',
-    'M3'
+    'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2',
+    'F1','F2','F3','F4','F5','F6','L1','L2','L3','L4','L5','L6','L7',
+    'S1','S2','S3','S4','S5','S6','S7','M3'
   ];
   const [waterUsageData, setWaterUsageData] = useState([]);
 
@@ -235,8 +249,8 @@ const App = () => {
     const id = setInterval(() => {
       if (waterUsageData.length > 0) generateWaterUsage();
     }, 5000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
@@ -293,24 +307,23 @@ const App = () => {
     return () => { clearInterval(bgId); clearInterval(tId); };
   }, [hour24]);
 
-  const handleLiveButtonClick = () => {
-    window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
-  };
+  const handleLiveButtonClick = () => window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
+
   const handleDontShowAgain = () => {
     localStorage.setItem('dontShowInstructions', 'true');
     setShowInstructions(false);
     setShowConfirmPopup(true);
   };
+
   const openInstructions = () => setShowInstructions(true);
   const toggleTimeFormat = () => setHour24((prev) => !prev);
 
-  // --- Derived totals for Water popup ---
+  // Water totals for modal
   const dailyWaterTotal = buildings.reduce(
     (acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0),
     0
   );
   const monthlyWaterTotal = dailyWaterTotal * 30;
-
   const selectedBuildingUsage =
     (selectedBuilding
       ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
@@ -331,11 +344,31 @@ const App = () => {
           onClick={openInstructions}
         />
 
+        {/* Right side clock + help */}
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
-          <div className="time" onClick={toggleTimeFormat} style={{ cursor: 'pointer' }}>
-            {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
-            {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
+          <div className="time-row">
+            <div
+              className="time"
+              onClick={toggleTimeFormat}
+              title="Toggle 24h/12h"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && toggleTimeFormat()}
+            >
+              {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
+              {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
+            </div>
+
+            {/* NEW: Help button */}
+            <button
+              className="help-btn"
+              title="Show instructions"
+              aria-label="Show instructions"
+              onClick={openInstructions}
+            >
+              ?
+            </button>
           </div>
         </div>
       </nav>
@@ -375,7 +408,7 @@ const App = () => {
           </div>
 
           <div className="dashboard-wrapper right-dashboard-wrapper show">
-            <RightDashboard thailandTime={thailandTime} />
+            <RightDashboard onOpenVehiclePopup={openVehiclePopup} />
           </div>
         </>
       )}
@@ -435,49 +468,31 @@ const App = () => {
             <Bar data={popupElectricityUsageData} options={popupElectricityUsageOptions} />
           </div>
           <div className="calendar-wrapper">
-            <Calendar
-              selectRange
-              onChange={(v) => setSelectedDateRange(v)}
-              value={selectedDateRange}
-            />
+            <Calendar selectRange onChange={(v) => setSelectedDateRange(v)} value={selectedDateRange} />
           </div>
         </div>
       </Modal>
 
-      {/* OVERALL CAMPUS MODAL (smart style) */}
+      {/* OVERALL CAMPUS (water) */}
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
         </div>
 
         <div className="modal-kpis">
-          <div className="kpi">
-            <span className="kpi-label">Total Water Usage (Daily)</span>
-            <span className="kpi-value">{dailyWaterTotal.toFixed(2)} liters/day</span>
-          </div>
-          <div className="kpi">
-            <span className="kpi-label">Total Water Usage (Monthly)</span>
-            <span className="kpi-value">{monthlyWaterTotal.toFixed(2)} liters/month</span>
-          </div>
-          <div className="kpi">
-            <span className="kpi-label">Selected Building</span>
-            <span className="kpi-value">{selectedBuilding || '—'}</span>
-          </div>
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{dailyWaterTotal.toFixed(2)} liters/day</span></div>
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{monthlyWaterTotal.toFixed(2)} liters/month</span></div>
+          <div className="kpi"><span className="kpi-label">Selected Building</span><span className="kpi-value">{selectedBuilding || '—'}</span></div>
         </div>
 
         <div className="modal-content">
-          {/* Left: Gauge card */}
           <div className="card gauge-card">
-            <h4 className="card-title">
-              {selectedBuilding ? selectedBuilding : 'Campus Water Usage'}
-            </h4>
+            <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
             <div className="gauge-holder">
               <GaugeChart
                 id="building-speedometer"
                 nrOfLevels={5}
-                percent={
-                  selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5
-                }
+                percent={selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5}
                 arcWidth={0.3}
                 textColor="#ffffff"
                 needleColor="#ff9800"
@@ -487,15 +502,10 @@ const App = () => {
                 animate={false}
                 hideText={true}
               />
-              {selectedBuilding && (
-                <p className="big-stat">
-                  {selectedBuildingUsage.toFixed(2)} liters/day
-                </p>
-              )}
+              {selectedBuilding && (<p className="big-stat">{selectedBuildingUsage.toFixed(2)} liters/day</p>)}
             </div>
           </div>
 
-          {/* Right: Controls card */}
           <div className="card control-card">
             <h4 className="card-title">Select a Building</h4>
             <div className="water-dropdown-container">
@@ -505,24 +515,69 @@ const App = () => {
                 className="building-dropdown"
               >
                 <option value="">Overall Campus</option>
-                {buildings.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
+                {buildings.map((b) => (<option key={b} value={b}>{b}</option>))}
               </select>
             </div>
 
             {selectedBuilding && (
               <div className="stat-box">
                 <div className="stat-label">Current Usage</div>
-                <div className="stat-value">
-                  {selectedBuildingUsage.toFixed(2)} liters/day
-                </div>
+                <div className="stat-value">{selectedBuildingUsage.toFixed(2)} liters/day</div>
               </div>
             )}
-
             <p className="muted-note">Tip: choosing a building updates the gauge on the left.</p>
           </div>
         </div>
+      </Modal>
+
+      {/* VEHICLE SCHEDULE — compact */}
+      <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
+        <div className="modal-header">
+          <h3 className="modal-title">{vehicleType} Schedule</h3>
+          <div className="button-group">
+            <button
+              className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
+              onClick={() => setVehicleType('Cars')}
+              title="Show Cars"
+            >🚗</button>
+            <button
+              className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
+              onClick={() => setVehicleType('Motorcycles')}
+              title="Show Motorcycles"
+            >🏍️</button>
+          </div>
+        </div>
+
+        <p className="modal-note">Here is the schedule for the whole day.</p>
+
+        <div className="schedule-scroll">
+          <table className="schedule-table">
+            <thead>
+              <tr><th>Time</th><th>{vehicleType}</th></tr>
+            </thead>
+            <tbody>
+              {schedule.map((entry) => (
+                <tr key={entry.time}>
+                  <td>{entry.time}</td>
+                  <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {peakTime && (
+          <div className="peak-row">
+            <div className="kpi mini">
+              <span className="kpi-label">Peak Time</span>
+              <span className="kpi-value">{peakTime.time}</span>
+            </div>
+            <div className="kpi mini">
+              <span className="kpi-label">Vehicles</span>
+              <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {showInstructions && (
@@ -547,7 +602,7 @@ const App = () => {
         <div className="confirm-popup">
           <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
           <p className="confirm-text">
-            💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo from the Navigation Bar.
+            💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo or the “?” button on the Navigation Bar.
           </p>
         </div>
       )}

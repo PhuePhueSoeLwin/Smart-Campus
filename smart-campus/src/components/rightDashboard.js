@@ -1,7 +1,8 @@
+// components/rightDashboard.js
 import React, { useEffect, useState } from 'react';
 import './rightDashboard.css';
 
-const RightDashboard = () => {
+const RightDashboard = ({ onOpenVehiclePopup }) => {
   // IEQ
   const [ieqData, setIeQData] = useState({
     co2: 400, pollutants: 15, temperature: 22, humidity: 45, windSpeed: 10, comfort: ' Good',
@@ -12,11 +13,8 @@ const RightDashboard = () => {
   const [totalStudents, setTotalStudents] = useState(0);
   const [selectedBuilding, setSelectedBuilding] = useState('');
 
-  // Vehicles
+  // Vehicles (counts only here)
   const [vehicles, setVehicles] = useState({ cars: 1000, motorcycles: 6000 });
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [vehicleType, setVehicleType] = useState('Cars');
-  const [schedule, setSchedule] = useState([]);
 
   const buildings = [
     'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2','F1','F2','F3','F4','F5','F6',
@@ -51,21 +49,16 @@ const RightDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const times = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'];
-    setSchedule(times.map(time=>({ time, cars: Math.floor(Math.random()*500), motorcycles: Math.floor(Math.random()*1000) })));
-  }, []);
-
-  useEffect(() => {
     const t = setInterval(() => {
       setVehicles(v => ({
-        cars: v.cars + Math.floor(Math.random()*5) - 2,
-        motorcycles: v.motorcycles + Math.floor(Math.random()*10) - 5,
+        cars: Math.max(0, v.cars + Math.floor(Math.random()*5) - 2),
+        motorcycles: Math.max(0, v.motorcycles + Math.floor(Math.random()*10) - 5),
       }));
     }, 1000);
     return () => clearInterval(t);
   }, []);
 
-  // === Capacity from latest stats
+  // Capacity
   const capacity = 15979;
 
   const selectedBuildingStudentCount = selectedBuilding ? (studentCounts[selectedBuilding] || 0) : 0;
@@ -76,13 +69,7 @@ const RightDashboard = () => {
   const campusMin = countsArr.length ? Math.min(...countsArr) : 0;
   const campusMax = countsArr.length ? Math.max(...countsArr) : 0;
 
-  const openPopup = (type) => { setVehicleType(type); setPopupVisible(true); };
-  const closePopup = () => setPopupVisible(false);
-  const peakTime = schedule.length
-    ? schedule.reduce((p,e)=> (e[vehicleType.toLowerCase()] > p[vehicleType.toLowerCase()] ? e : p))
-    : null;
-
-  // Gauge color level for ring
+  // Gauge level
   const level = percent < 60 ? 'ok' : percent < 85 ? 'warn' : 'crit';
 
   return (
@@ -116,7 +103,7 @@ const RightDashboard = () => {
           </div>
         </div>
 
-        {/* Scientific gauge ring */}
+        {/* Your original scientific ring */}
         <div className="circle-progress-container">
           <svg
             className={`gauge gauge--${level}`}
@@ -134,16 +121,9 @@ const RightDashboard = () => {
               </filter>
             </defs>
 
-            {/* track */}
             <circle className="gauge-track" cx="60" cy="60" r="52" />
-
-            {/* minor ticks (every 2%) */}
             <circle className="gauge-ticks-minor" cx="60" cy="60" r="52" pathLength="100" />
-
-            {/* major ticks (every 10%) */}
             <circle className="gauge-ticks-major" cx="60" cy="60" r="52" pathLength="100" />
-
-            {/* progress arc */}
             <circle
               className="gauge-progress"
               cx="60" cy="60" r="52"
@@ -153,8 +133,6 @@ const RightDashboard = () => {
               aria-hidden="true"
               filter="url(#softGlow)"
             />
-
-            {/* moving head dot */}
             <g className="gauge-head" style={{ transform: `rotate(${(percent / 100) * 360}deg)` }} aria-hidden="true">
               <circle cx="60" cy="8" r="3" className="gauge-head-dot" />
             </g>
@@ -182,43 +160,15 @@ const RightDashboard = () => {
 
       <h3>Vehicles On Campus</h3>
       <div className="vehicle-count-container">
-        <div className="vehicle-card car" onClick={() => openPopup('Cars')}>
+        <div className="vehicle-card car" onClick={() => onOpenVehiclePopup && onOpenVehiclePopup('Cars')}>
           <div className="vehicle-icon">🚗</div>
           <div className="vehicle-info"><p className="vehicle-type">Cars</p><p className="vehicle-number">{vehicles.cars.toLocaleString()}</p></div>
         </div>
-        <div className="vehicle-card motorcycle" onClick={() => openPopup('Motorcycles')}>
+        <div className="vehicle-card motorcycle" onClick={() => onOpenVehiclePopup && onOpenVehiclePopup('Motorcycles')}>
           <div className="vehicle-icon">🏍️</div>
           <div className="vehicle-info"><p className="vehicle-type">Motorcycles</p><p className="vehicle-number">{vehicles.motorcycles.toLocaleString()}</p></div>
         </div>
       </div>
-
-      {popupVisible && (
-        <div className="right-popup-overlay" onClick={closePopup}>
-          <div className="right-popup-box" onClick={(e) => e.stopPropagation()}>
-            <button className="close-button" onClick={closePopup}>&times;</button>
-            <h3>{vehicleType} Schedule</h3>
-            <div className="button-group">
-              <button className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`} onClick={() => setVehicleType('Cars')}>🚗</button>
-              <button className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`} onClick={() => setVehicleType('Motorcycles')}>🏍️</button>
-            </div>
-            <p>Here is the schedule for the whole day.</p>
-            <table className="schedule-table">
-              <thead><tr><th>Time</th><th>{vehicleType}</th></tr></thead>
-              <tbody>
-                {schedule.map((entry) => (
-                  <tr key={entry.time}><td>{entry.time}</td><td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td></tr>
-                ))}
-              </tbody>
-            </table>
-            {peakTime && (
-              <div className="peak-time">
-                <p><strong>Peak Time:</strong> {peakTime.time}</p>
-                <p><strong>Vehicles:</strong> {peakTime[vehicleType.toLowerCase()].toLocaleString()}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

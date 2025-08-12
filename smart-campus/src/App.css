@@ -18,11 +18,78 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .live-button img { height: 40px; margin-right: 10px; }
 .live-button .live-label { font-size: 16px; color: #fff; font-weight: bold; text-transform: uppercase; }
 .navbar-logo { position: absolute; left: 50%; transform: translateX(-50%); height: 50px; z-index: 1001; cursor: pointer; }
-.thailand-time { position: absolute; right: 4%; text-align: right; color: #0ff; font-family: 'Courier New', Courier, monospace; font-weight: bold; line-height: 1.3; padding: 6px 12px; border-radius: 8px; user-select: none; }
-.thailand-time .time { font-size: 20px; font-weight: 600; cursor: pointer; }
+
+/* ===== Right-side date/time + help (UPDATED) ===== */
+.thailand-time {
+  position: absolute; right: 4%;
+  display: flex; flex-direction: column; align-items: flex-end;
+  text-align: right; color: #0ff; font-family: 'Courier New', Courier, monospace;
+  font-weight: bold; line-height: 1.3; padding: 6px 12px; border-radius: 8px; user-select: none;
+}
+.thailand-time .date { margin-bottom: 2px; }
+
+/* Put time and ? button on the same row */
+.time-row { display: flex; align-items: center; gap: 0; }
+
+/* Time block with vertical divider after it */
+.thailand-time .time {
+  font-size: 20px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; line-height: 1;
+}
+.thailand-time .time::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 20px;
+  margin: 0 10px;
+  background: linear-gradient(
+    to bottom,
+    rgba(173,216,230,0.15),
+    rgba(173,216,230,0.85),
+    rgba(173,216,230,0.15)
+  );
+  border-radius: 1px;
+  opacity: 0.8;
+}
 .period { margin-left: 6px; font-weight: 600; font-size: 16px; color: #aaddff; }
 
-/* Toggle dashboards button */
+/* Help button: shows only "?" normally; circular chrome appears on hover/focus */
+.help-btn {
+  position: relative;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #e97070;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  outline: none;
+}
+.help-btn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(173,216,230,0.6);
+  box-shadow: 0 0 0 0 rgba(77,174,244,0);
+  opacity: 0;
+  transition: opacity .15s ease, transform .15s ease, box-shadow .2s ease;
+  pointer-events: none;
+}
+.help-btn:hover::before,
+.help-btn:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  box-shadow: 0 0 0 3px rgba(77,174,244,0.2);
+}
+
+/* ===== Toggle dashboards button ===== */
 .hide-button {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
   padding: 10px 25px; background: linear-gradient(90deg, #007bff, #4daef4); color: #fff;
@@ -31,10 +98,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .hide-button:hover { background: linear-gradient(90deg, #0056b3, #007bff); box-shadow: 0 6px 12px rgba(0,0,0,.4); }
 
-/* Map container */
+/* ===== Map container ===== */
 .map-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 
-/* Dashboards */
+/* ===== Dashboards ===== */
 .dashboard-wrapper { position: absolute; top: 70px; bottom: 10px; width: 300px; transition: transform .5s, opacity .3s; z-index: 1001; }
 .dashboard-wrapper.show { transform: translateX(0); opacity: 1; }
 .left-dashboard-wrapper { position: fixed; left: 0; transform: translateX(-100%); opacity: 0; }
@@ -45,7 +112,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .right-dashboard { border-radius: 10px 0 0 10px; }
 
-/* 3D map quick popup */
+/* ===== 3D map quick popup ===== */
 .building-popup {
   position: absolute; background: rgba(44,44,44,.5); padding: 15px; border-radius: 10px; color: #fff;
   box-shadow: 0 8px 20px rgba(0,0,0,.4); width: 220px; transition: opacity .3s; z-index: 1500;
@@ -78,7 +145,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .dont-show-btn { display: block; margin: 0 auto; padding: 8px 16px; background: #4daef4; color: #fff; font-weight: 600; font-size: 14px; border-radius: 8px; cursor: pointer; transition: background .3s; }
 .dont-show-btn:hover { background: #3691d9; }
 
-/* Confirmation popup */
+/* ===== Confirmation popup ===== */
 .confirm-popup {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
   background: rgba(255,255,255,.15); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -87,7 +154,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .confirm-text { font-size: 14px; color: rgba(255,255,255,.8); text-align: center; line-height: 1.5; }
 
-/* ===== Centered Modals (via portal) ===== */
+/* ===== Centered Modals ===== */
 .modal-overlay {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   z-index: 3000; background: rgba(6, 18, 40, 0.22);
@@ -102,10 +169,12 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   padding: clamp(20px, 2vw, 28px); max-height: calc(100vh - 40px); overflow: auto;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+.modal-box.modal-compact { width: clamp(360px, 60vw, 680px); }
+
+/* Header with presets / actions */
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .modal-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .2px; }
 
-/* Header with presets */
-.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .chip-group { display: flex; gap: 8px; }
 .chip {
   background: rgba(255,255,255,0.20);
@@ -123,6 +192,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   border: 1px solid rgba(77,174,244,0.22);
   border-radius: 12px; padding: 10px 12px; box-shadow: 0 6px 18px rgba(0,0,0,.25);
 }
+.kpi.mini { padding: 8px 10px; }
 .kpi-label { display: block; font-size: 11px; opacity: .85; margin-bottom: 4px; }
 .kpi-value { font-size: 16px; font-weight: 700; }
 
@@ -130,7 +200,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .modal-content { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: stretch; }
 @media (min-width: 900px) { .modal-content { grid-template-columns: 1fr 1fr; } }
 
-/* Inner cards (shared) */
+/* Inner cards */
 .chart-wrapper, .calendar-wrapper, .card {
   background: rgba(255,255,255,0.18);
   border: 1px solid rgba(77,174,244,0.18);
@@ -138,7 +208,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   min-height: 260px;
 }
 .chart-wrapper canvas { width: 100% !important; height: 100% !important; }
-
 .card-title { margin: 0 0 10px 0; font-size: 16px; font-weight: 700; color: #fff; }
 
 /* Gauge card */
@@ -155,9 +224,40 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .stat-value { font-size: 16px; font-weight: 700; }
 .muted-note { font-size: 12px; opacity: .8; }
 
-/* Calendar tweaks */
-.calendar-wrapper .react-calendar { width: 100%; background: transparent; border: 0; }
-.react-calendar__navigation { margin-bottom: 8px; }
-.react-calendar__tile { border-radius: 6px; }
-.react-calendar__tile--now { background: rgba(77,174,244,0.16); color: inherit; }
-.react-calendar__tile--active { background: #4daef4 !important; color: #fff !important; }
+/* ===== Vehicle schedule (compact) ===== */
+.button-group { display: flex; gap: 8px; align-items: center; }
+.vehicle-button {
+  padding: 10px 20px; background-color: rgba(240,240,240,.9); border: 1px solid #ccc;
+  border-radius: 12px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: background-color .2s ease, transform .1s ease;
+}
+.vehicle-button:hover { background-color: #ddd; transform: translateY(-1px); }
+.vehicle-button.active { background-color: #4285F4; color: #fff; border-color: #4285F4; box-shadow: 0 0 0 3px rgba(66,133,244,.2); }
+
+.modal-note { margin: 8px 0 6px; opacity: .9; }
+
+.schedule-scroll {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  overflow: auto;
+  max-height: 360px;
+  background: rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.schedule-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.schedule-table th, .schedule-table td {
+  padding: 10px 12px; text-align: left; color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.schedule-table thead th {
+  position: sticky; top: 0;
+  background: #4285F4; color: #fff; z-index: 1; font-weight: 700;
+}
+.schedule-table tbody tr:nth-child(even) { background-color: rgba(255,255,255,.05); }
+.schedule-table tbody tr:hover { background-color: rgba(255,255,255,.10); }
+
+.peak-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 12px;
+}

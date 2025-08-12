@@ -146,21 +146,21 @@
   stroke-width: 8;
 }
 
-/* ticks built from dash patterns; pathLength=100 for percentage mapping */
+/* ticks */
 .gauge-ticks-major{
   fill:none;
   stroke: var(--ring-tick-major);
   stroke-width: 2.4;
-  stroke-dasharray: 1 9; /* 10 major ticks */
+  stroke-dasharray: 1 9;
 }
 .gauge-ticks-minor{
   fill:none;
   stroke: var(--ring-tick-minor);
   stroke-width: 1.25;
-  stroke-dasharray: 0.5 1.5; /* small ticks ~ every 2% */
+  stroke-dasharray: 0.5 1.5;
 }
 
-/* progress arc: color set by modifier class; smooth easing */
+/* progress arc */
 .gauge-progress{
   fill:none;
   stroke-width: 8;
@@ -170,9 +170,9 @@
   filter: drop-shadow(0 0 10px rgba(0,0,0,.35));
 }
 
-/* head dot that rides the arc */
+/* head dot */
 .gauge-head{
-  transform-origin: 60px 60px; /* center of viewBox */
+  transform-origin: 60px 60px;
   transition: transform .7s cubic-bezier(.22,.61,.36,1);
 }
 .gauge-head-dot{
@@ -203,7 +203,7 @@
 .building-label{ font-size: 12.5px; font-weight: 600; color: #eaf6ff; opacity: .95; padding-top: 4px; }
 .percent-label{ margin-top: 4px; font-size: 11px; font-weight: 600; opacity: .85; }
 
-/* Respect reduced motion */
+/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   .gauge-progress,
   .gauge-head { transition: none; }
@@ -250,47 +250,7 @@
 .vehicle-info .vehicle-type { font-size: 16px; font-weight: bold; color: #ffffff; margin: 0; }
 .vehicle-info .vehicle-number { font-size: 20px; font-weight: bold; color: #4CAF50; margin: 0; }
 
-/* Popup */
-.right-popup-overlay {
-  position: fixed; top: 100px; right: 400px; width: 100%; height: 100%;
-  display: flex; justify-content: center; align-items: center; z-index: 200;
-}
-.right-popup-box {
-  position: relative; background-color: rgba(44, 44, 44, 0.5);
-  padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-align: center; width: 800px; height: 300px; overflow-y: auto;
-}
-.close-button{
-  position: absolute; top: 10px; right: 10px; background: transparent; border: none;
-  font-size: 20px; font-weight: bold; color: #ffffff; cursor: pointer;
-  transition: transform 0.2s, color 0.2s;
-}
-.close-button:hover { color: #f44336; transform: scale(1.2); }
-
-.schedule-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.schedule-table th, .schedule-table td {
-  background-color: rgba(44, 44, 44, 0.5);
-  border: 1px solid #ddd; padding: 8px; text-align: center;
-}
-.schedule-table th { background-color: #4285F4; color: white; font-weight: bold; }
-.schedule-table tr:nth-child(even) { background-color: #f9f9f9; }
-.schedule-table tr:hover { background-color: #f1f1f1; }
-
-.peak-time {
-  margin-top: 10px; padding: 10px;
-  background-color: rgba(44, 44, 44, 0.5);
-  border: 1px solid #ddd; border-radius: 8px; text-align: left;
-}
-.peak-time strong { color: #4285F4; }
-
-.button-group { display: flex; justify-content: center; margin-top: 10px; }
-.vehicle-button {
-  padding: 10px 20px; margin: 0 5px; background-color: #f0f0f0; border: 1px solid #ccc;
-  border-radius: 20%; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;
-}
-.vehicle-button.active { background-color: #4285F4; color: #fff; }
-.vehicle-button:hover  { background-color: #ddd; }
-
+/* Link button */
 .check-more-button {
   display: inline-block; margin-top: 8px; padding: 6px 12px;
   background-color: #4daef4; color: white; border: none; border-radius: 8px;
