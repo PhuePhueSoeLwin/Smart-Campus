@@ -249,8 +249,8 @@ const App = () => {
     const id = setInterval(() => {
       if (waterUsageData.length > 0) generateWaterUsage();
     }, 5000);
-  return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
@@ -329,6 +329,11 @@ const App = () => {
       ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
       : 0);
 
+  // Optional: when a building is clicked on the 3D map, reflect it in the water modal selector
+  useEffect(() => {
+    if (popupData?.name) setSelectedBuilding(popupData.name);
+  }, [popupData]);
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       <nav className="navbar">
@@ -379,7 +384,10 @@ const App = () => {
 
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
-          <Canvas style={{ width: '100vw', height: '100vh' }}>
+          <Canvas
+            style={{ width: '100vw', height: '100vh' }}
+            camera={{ fov: 75, near: 0.1, far: 10000 }}  // Map3D will place the camera to frame E1+E2
+          >
             <PerformanceMonitor>
               <Map3D
                 setPopupData={setPopupData}

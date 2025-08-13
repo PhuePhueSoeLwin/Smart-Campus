@@ -59,7 +59,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   background: transparent;
   border: 0;
   padding: 0;
-  color: #e97070;
+  color: #e97070; /* your chosen accent */
   font-weight: 800;
   font-size: 18px;
   line-height: 1;
@@ -117,7 +117,17 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   position: absolute; background: rgba(44,44,44,.5); padding: 15px; border-radius: 10px; color: #fff;
   box-shadow: 0 8px 20px rgba(0,0,0,.4); width: 220px; transition: opacity .3s; z-index: 1500;
 }
-.close-popup { position: absolute; top: 5px; right: 5px; cursor: pointer; font-size: 18px; color: #fff; }
+
+/* (UPDATED) Close icon for quick popup — no circle container */
+.close-popup {
+  position: absolute; top: 6px; right: 6px; cursor: pointer;
+  font-size: 20px; color: #fff; line-height: 1; background: transparent; border: none;
+  width: auto; height: auto; border-radius: 0; box-shadow: none;
+  transition: color .2s ease;
+}
+.close-popup:hover, .close-popup:focus-visible { color: #ff4d4f; }
+
+/* Popup content */
 .popup-content h3 { margin: 0; font-size: 16px; color: #1E90FF; }
 .popup-content hr { border: .5px solid rgba(255,255,255,.3); }
 .popup-content p { font-size: 12px; margin-bottom: 5px; }
@@ -130,12 +140,19 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   z-index: 2000; animation: fadeScaleIn .3s ease forwards; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 @keyframes fadeScaleIn { 0%{opacity:0; transform:translate(-50%,-50%) scale(.85);} 100%{opacity:1; transform:translate(-50%,-50%) scale(1);} }
+
+/* (UPDATED) Base close button — icon only, no circle */
 .close-button {
-  position: absolute; top: 15px; right: 15px; width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(255,255,255,.2); color: #fff; font-weight: bold; font-size: 20px; line-height: 28px;
-  text-align: center; cursor: pointer; transition: background .3s; border: none;
+  position: absolute; top: 15px; right: 15px;
+  background: transparent; color: #fff; font-weight: 700; font-size: 22px;
+  line-height: 1; text-align: center; cursor: pointer; border: none; outline: none;
+  padding: 4px 6px; width: auto; height: auto; border-radius: 0; box-shadow: none;
+  transition: color .2s ease;
 }
-.close-button:hover { background: rgba(255,255,255,.4); }
+.close-button:hover,
+.close-button:focus-visible { color: #ff4d4f; }
+
+/* Instructions content */
 .instruction-title { font-size: 24px; font-weight: 700; margin-bottom: 22px; color: #3399FF; text-align: center; }
 .instruction-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
 .instruction-item { display: flex; align-items: center; gap: 18px; font-size: 17px; font-weight: 500; }
@@ -166,15 +183,29 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-radius: 16px; box-shadow: 0 10px 28px rgba(0,0,0,.25), 0 0 0 1px rgba(77,174,244,0.08) inset;
   color: #fff; width: clamp(360px, 80vw, 960px);
-  padding: clamp(20px, 2vw, 28px); max-height: calc(100vh - 40px); overflow: auto;
+  padding: clamp(20px, 2vw, 28px);
+  /* IMPORTANT: reserve space so the Close button never overlaps header actions */
+  padding-top: clamp(56px, 8vh, 64px);
+  max-height: calc(100vh - 40px); overflow: auto;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .modal-box.modal-compact { width: clamp(360px, 60vw, 680px); }
 
-/* Header with presets / actions */
-.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+/* Modal header leaves room for the close button on the right */
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+  padding-right: 56px; /* <-- keeps chips/vehicle buttons clear of the Close button */
+}
 .modal-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .2px; }
 
+/* (UPDATED) Modal-specific close button — keep position, no circle chrome */
+.modal-box > .close-button {
+  top: 14px; right: 14px;
+  font-size: 24px; line-height: 1; padding: 6px 8px;
+  background: transparent; border: none; box-shadow: none; border-radius: 0;
+}
+
+/* Header action chips/buttons */
 .chip-group { display: flex; gap: 8px; }
 .chip {
   background: rgba(255,255,255,0.20);

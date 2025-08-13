@@ -250,11 +250,25 @@
 .vehicle-info .vehicle-type { font-size: 16px; font-weight: bold; color: #ffffff; margin: 0; }
 .vehicle-info .vehicle-number { font-size: 20px; font-weight: bold; color: #4CAF50; margin: 0; }
 
-/* Link button */
-.check-more-button {
-  display: inline-block; margin-top: 8px; padding: 6px 12px;
-  background-color: #4daef4; color: white; border: none; border-radius: 8px;
-  text-decoration: none; font-size: 14px; font-weight: 600;
-  transition: background-color 0.2s ease-in-out;
+/* Shared primary action button (matches Hide Dashboards) */
+.primary-action-button {
+  display: inline-block;
+  padding: 10px 25px;
+  background: linear-gradient(90deg, #007bff, #4daef4);
+  color: #fff;
+  border: none;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,.2);
+  transition: all .3s ease;
 }
-.check-more-button:hover { background-color: #3691d9; }
+.primary-action-button:hover,
+.primary-action-button:focus-visible {
+  background: linear-gradient(90deg, #0056b3, #007bff);
+  box-shadow: 0 6px 12px rgba(0,0,0,.4);
+  text-decoration: none;
+}
+.primary-action-button:active { transform: translateY(1px); }

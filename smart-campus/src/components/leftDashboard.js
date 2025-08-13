@@ -81,7 +81,10 @@ const LeftDashboard = ({
         />
 
         {/* Weekly Usage button (triggers App.js popup) */}
-        <button className="calendar-button" onClick={onOpenWeeklyPopup}>
+        <button
+          className="primary-action-button card-bottom-right"
+          onClick={onOpenWeeklyPopup}
+        >
           Weekly Usage
         </button>
       </div>
@@ -89,7 +92,10 @@ const LeftDashboard = ({
       <h3>Water Consumption</h3>
       <div className="water-consumption-speedometers">
         {/* Overall Campus button (triggers App.js popup) */}
-        <button className="overallcampus-button" onClick={onOpenOverallPopup}>
+        <button
+          className="primary-action-button card-bottom-right"
+          onClick={onOpenOverallPopup}
+        >
           Overall Campus
         </button>
 

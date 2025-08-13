@@ -1,4 +1,3 @@
-// components/rightDashboard.js
 import React, { useEffect, useState } from 'react';
 import './rightDashboard.css';
 
@@ -74,7 +73,7 @@ const RightDashboard = ({ onOpenVehiclePopup }) => {
 
   return (
     <div className="right-dashboard">
-      <h3>Campus Environmental Quality (IEQ)</h3>
+      <h3>Campus Environmental Quality</h3>
       <div className="ieq-monitoring">
         <div className="data">
           <div className="metric"><div className="indicator normal"></div><p><strong>CO2 Levels:</strong> {ieqData.co2} ppm</p></div>
@@ -85,7 +84,14 @@ const RightDashboard = ({ onOpenVehiclePopup }) => {
         </div>
         <div className="comfort">
           <p><strong>Comfort Level:</strong> <span className={ieqData.comfort === ' Good' ? 'comfort-good' : 'comfort-poor'}>{ieqData.comfort}</span></p>
-          <a href="https://service-library.mfu.ac.th/pm/" target="_blank" rel="noopener noreferrer" className="check-more-button">Check More</a>
+          <a
+            href="https://service-library.mfu.ac.th/pm/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="primary-action-button"
+          >
+            Check More
+          </a>
         </div>
       </div>
 
