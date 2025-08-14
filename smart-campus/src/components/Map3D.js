@@ -63,7 +63,7 @@ function approachCameraToBox({
   aspect,
   azimuthDeg = 0,
   offset = 1.25,
-  proximity = 0.22,      // closer view
+  proximity = 0,      // closer view
   eyeAboveBaseFrac = 0.04,// ~4% of height above base -> low eye level
   floorFrac = 0.01,       // never go below base + 1% height
   animateMs = 1200,
@@ -222,11 +222,12 @@ const Map3D = ({
   });
 
   // Initial camera seed (anywhere reasonable; the approach will take over)
-  useEffect(() => {
-    camera.position.set(80, 20, 100);
-    camera.fov = 75;
-    camera.updateProjectionMatrix();
-  }, [camera]);
+useEffect(() => {
+  camera.position.set(90, 0, 90); // Set camera position
+  camera.rotation.x =  0; // Set vertical angle to 45 degrees
+  camera.fov = 75;
+  camera.updateProjectionMatrix();
+}, [camera]);
 
   // When the model reports the target box (E1+E2), go NEAR + yaw=0° + LOW height
   useEffect(() => {
@@ -236,12 +237,12 @@ const Map3D = ({
         camera,
         box: targetBox,
         aspect,
-        azimuthDeg: 0,     // keep 0° horizontal
+        azimuthDeg: -4.3,     // keep 0° horizontal
         offset: 1,
-        proximity: 0.4,   // closer
-        eyeAboveBaseFrac: 0, // low eye level (like your 2nd screenshot)
-        floorFrac: 0.1,
-        animateMs: 1200,
+        proximity: 0.5,   // closer
+        eyeAboveBaseFrac: 0.5, // low eye level (like your 2nd screenshot)
+        floorFrac: -5,
+        animateMs: 1500,
         ensureForward: true,
       });
       didFitRef.current = true;
@@ -347,3 +348,5 @@ const Map3D = ({
 };
 
 export default Map3D;
+
+
