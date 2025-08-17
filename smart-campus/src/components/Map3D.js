@@ -7,7 +7,7 @@ import gsap from 'gsap';
 
 /** Load the GLB and report the bounding box for E1+E2 (fallback: whole scene) */
 function Model({ setOriginalColors, setBoundingBox }) {
-  const { scene } = useGLTF('/assets/testing20.glb', true);
+  const { scene } = useGLTF('/assets/final4.glb', true);
   const originalColors = useRef(new Map());
 
   // Base transforms — adjust as your model requires
@@ -29,19 +29,29 @@ function Model({ setOriginalColors, setBoundingBox }) {
   useEffect(() => {
     setOriginalColors(originalColors.current);
 
-    // Try to find E1 + E2 in the scene by name
-    const e1 = scene.getObjectByName('E1');
-    const e2 = scene.getObjectByName('E2');
+    // Ensure transforms are applied before measuring
+    scene.updateMatrixWorld(true);
+
+    // Union any nodes whose names start with E1 or E2 (e.g., E1-1, E2-3, etc.)
+    const matches = [];
+    const startsWithE1orE2 = (name) =>
+      !!name && (/^E1($|[^a-z0-9])/i.test(name) || /^E2($|[^a-z0-9])/i.test(name));
+
+    scene.traverse((obj) => {
+      if (startsWithE1orE2(obj.name)) matches.push(obj);
+    });
 
     let targetBox = new THREE.Box3();
-    let foundAny = false;
-
-    if (e1) { targetBox.expandByObject(e1); foundAny = true; }
-    if (e2) { targetBox.expandByObject(e2); foundAny = true; }
-
-    // Fallback to entire scene if named nodes aren't found
-    if (!foundAny) {
-      targetBox = new THREE.Box3().setFromObject(scene);
+    if (matches.length) {
+      matches.forEach((o) => targetBox.expandByObject(o));
+    } else {
+      // Fallback: exact E1/E2; then whole scene
+      const e1 = scene.getObjectByName('E1');
+      const e2 = scene.getObjectByName('E2');
+      let foundAny = false;
+      if (e1) { targetBox.expandByObject(e1); foundAny = true; }
+      if (e2) { targetBox.expandByObject(e2); foundAny = true; }
+      if (!foundAny) targetBox = new THREE.Box3().setFromObject(scene);
     }
 
     setBoundingBox && setBoundingBox(targetBox);
@@ -51,22 +61,20 @@ function Model({ setOriginalColors, setBoundingBox }) {
 }
 
 /**
- * Approach the camera toward a Box3 and stop NEAR it.
- * - azimuthDeg controls horizontal yaw (0/90/180/270). Using 0°.
- * - proximity (<1) makes it closer than a perfect fit. Smaller = closer.
- * - eyeAboveBaseFrac sets eye height above the box base as a fraction of box height.
- * - floorFrac ensures we don't go below the base.
+ * Approach the camera toward a Box3 and stop near it.
+ * - proximity: <1=closer, 1=fit, >1=farther
+ * - eyeAboveBaseFrac: fraction of the box height to place the eye above the base
  */
 function approachCameraToBox({
   camera,
   box,
   aspect,
   azimuthDeg = 0,
-  offset = 1.25,
-  proximity = 0,      // closer view
-  eyeAboveBaseFrac = 0.04,// ~4% of height above base -> low eye level
-  floorFrac = 0.01,       // never go below base + 1% height
-  animateMs = 1200,
+  offset = 6.6,        // base fit multiplier
+  proximity = 1.2,     // closer view
+  eyeAboveBaseFrac = 5.0,
+  floorFrac = 0.0,
+  animateMs = 1400,
   ensureForward = true,
 }) {
   const size = box.getSize(new THREE.Vector3());
@@ -75,46 +83,36 @@ function approachCameraToBox({
   // Distances needed to fit height and width
   const vFOV = THREE.MathUtils.degToRad(camera.fov);
   const fitHeightDistance = (size.y / 2) / Math.tan(vFOV / 2);
-  const fitWidthDistance = (size.x / 2) / Math.tan(Math.atan(Math.tan(vFOV / 2) * aspect));
+  const fitWidthDistance = (size.x / 2) / (Math.tan(vFOV / 2) * aspect);
   const fitDistance = offset * Math.max(fitHeightDistance, fitWidthDistance, size.z);
 
-  // Go closer than a perfect fit
-  const minDistance = Math.max(size.length() * 0.12, 3); // avoid entering geometry
+  const minDistance = Math.max(size.length() * 0.12, 3);
   const targetDistance = Math.max(minDistance, fitDistance * proximity);
 
   // Direction from azimuth (yaw) only, locked to XZ plane
-  // azimuthDeg: 0 => +Z, 90 => +X, 180 => -Z, 270 => -X
   const az = THREE.MathUtils.degToRad(azimuthDeg);
   const dir = new THREE.Vector3(Math.sin(az), 0, Math.cos(az)).normalize();
 
-  // Low eye height: slightly above the base of E1+E2
+  // Eye height — allowed to go above the box top
   const baseY = box.min.y + size.y * floorFrac;
   const eyeY  = Math.max(baseY, box.min.y + size.y * eyeAboveBaseFrac);
 
-  // Target position at requested yaw + low height
-  const targetPos = new THREE.Vector3()
-    .copy(center)
-    .add(dir.clone().multiplyScalar(targetDistance));
+  const targetPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance));
   targetPos.y = eyeY;
 
-  // If already too close, jump farther first so tween comes IN
   if (ensureForward) {
     const currentDist = camera.position.clone().sub(center).length();
     if (currentDist <= targetDistance) {
-      const farPos = new THREE.Vector3()
-        .copy(center)
-        .add(dir.clone().multiplyScalar(targetDistance * 2.2));
+      const farPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance * 2.2));
       farPos.y = eyeY;
       camera.position.copy(farPos);
     }
   }
 
-  // Frustum tuning
   camera.near = Math.max(0.05, targetDistance / 300);
   camera.far  = Math.max(camera.far, targetDistance * 200);
   camera.updateProjectionMatrix();
 
-  // Animate and look at center of the buildings cluster
   gsap.to(camera.position, {
     duration: animateMs / 1000,
     x: targetPos.x,
@@ -133,7 +131,6 @@ const Map3D = ({
   setResetColors,
   setOriginalColors,
   controllerCommand,
-  setControllerCommand
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [highlightedGroupState, setHighlightedGroupState] = useState(null);
@@ -221,15 +218,15 @@ const Map3D = ({
     camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
   });
 
-  // Initial camera seed (anywhere reasonable; the approach will take over)
-useEffect(() => {
-  camera.position.set(90, 0, 90); // Set camera position
-  camera.rotation.x =  0; // Set vertical angle to 45 degrees
-  camera.fov = 75;
-  camera.updateProjectionMatrix();
-}, [camera]);
+  // Initial camera seed (raised Y to match higher vantage)
+  useEffect(() => {
+    camera.position.set(480, 320, 480);
+    camera.rotation.set(0, 0, 0);
+    camera.fov = 75;
+    camera.updateProjectionMatrix();
+  }, [camera]);
 
-  // When the model reports the target box (E1+E2), go NEAR + yaw=0° + LOW height
+  // Approach with high vantage and forward distance
   useEffect(() => {
     if (targetBox && !didFitRef.current) {
       const aspect = size.width / size.height;
@@ -237,11 +234,11 @@ useEffect(() => {
         camera,
         box: targetBox,
         aspect,
-        azimuthDeg: -4.3,     // keep 0° horizontal
-        offset: 1,
-        proximity: 0.5,   // closer
-        eyeAboveBaseFrac: 0.5, // low eye level (like your 2nd screenshot)
-        floorFrac: -5,
+        azimuthDeg: 0,
+        offset: 6.6,
+        proximity: 1.2,       // closer
+        eyeAboveBaseFrac: 5.0, // height kept
+        floorFrac: 0,
         animateMs: 1500,
         ensureForward: true,
       });
@@ -264,19 +261,37 @@ useEffect(() => {
           ease: 'power2.out',
         });
       }
+
       if (parentGroup.userData.name === 'Exabation Hall') {
         if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = false;
       }
+
       const hideBuildings = (buildings) => {
         buildings.forEach((name) => {
           const b = scene.getObjectByName(name);
           if (b) b.visible = false;
         });
       };
+
+      // Library cascading hides
       if (parentGroup.userData.name === 'Library5') hideBuildings(['AV']);
       if (parentGroup.userData.name === 'Library4') hideBuildings(['AV', 'Library5']);
       if (parentGroup.userData.name === 'Library3') hideBuildings(['AV', 'Library5', 'Library4']);
       if (parentGroup.userData.name === 'Library2') hideBuildings(['AV', 'Library5', 'Library4', 'Library3']);
+
+      // E1 floor cascading hides
+      if (parentGroup.userData.name === 'E1-4') hideBuildings(['E1']);
+      if (parentGroup.userData.name === 'E1-3') hideBuildings(['E1', 'E1-4']);
+      if (parentGroup.userData.name === 'E1-2') hideBuildings(['E1', 'E1-4', 'E1-3']);
+      if (parentGroup.userData.name === 'E1-1') hideBuildings(['E1', 'E1-4', 'E1-3', 'E1-2']);
+      if (parentGroup.userData.name === 'E1-G') hideBuildings(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
+
+      // E2 floor cascading hides (mirror E1 behavior)
+       if (parentGroup.userData.name === 'E2-4') hideBuildings(['E2']);
+      if (parentGroup.userData.name === 'E2-3') hideBuildings(['E2', 'E2-4']);
+      if (parentGroup.userData.name === 'E2-2') hideBuildings(['E2', 'E2-4', 'E2-3']);
+      if (parentGroup.userData.name === 'E2-1') hideBuildings(['E2', 'E2-4', 'E2-3', 'E2-2']);
+      if (parentGroup.userData.name === 'E2-G') hideBuildings(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
     });
   };
 
@@ -297,7 +312,7 @@ useEffect(() => {
           let parentGroup = clickedObject.parent;
           while (parentGroup && !parentGroup.userData.name) parentGroup = parentGroup.parent;
           if (parentGroup) {
-            setPopupData({ name: parentGroup.userData.name, x: event.clientX, y: event.clientY });
+            setPopupData && setPopupData({ name: parentGroup.userData.name, x: event.clientX, y: event.clientY });
             handleBuildingSelection(clickedObject, parentGroup);
           }
         }
@@ -322,13 +337,34 @@ useEffect(() => {
           if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = true;
         }
       });
-      const restore = (list) => list.forEach((n) => { const b = scene.getObjectByName(n); if (b) b.visible = true; });
+
+      const restore = (list) =>
+        list.forEach((n) => {
+          const b = scene.getObjectByName(n);
+          if (b) b.visible = true;
+        });
+
+      // Library restores
       if (highlightedGroupState.userData.name === 'Library2') restore(['AV', 'Library5', 'Library4', 'Library3']);
       else if (highlightedGroupState.userData.name === 'Library3') restore(['AV', 'Library5', 'Library4']);
       else if (highlightedGroupState.userData.name === 'Library4') restore(['AV', 'Library5']);
       else if (highlightedGroupState.userData.name === 'Library5') restore(['AV']);
+
+      // E1 floor restores (mirror the hides)
+      else if (highlightedGroupState.userData.name === 'E1-4') restore(['E1']);
+      else if (highlightedGroupState.userData.name === 'E1-3') restore(['E1', 'E1-4']);
+      else if (highlightedGroupState.userData.name === 'E1-2') restore(['E1', 'E1-4', 'E1-3']);
+      else if (highlightedGroupState.userData.name === 'E1-1') restore(['E1', 'E1-4', 'E1-3', 'E1-2']);
+      else if (highlightedGroupState.userData.name === 'E1-G') restore(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
+
+      // E2 floor restores (mirror the hides)
+     else if (highlightedGroupState.userData.name === 'E2-4') restore(['E2']);
+      else if (highlightedGroupState.userData.name === 'E2-3') restore(['E2', 'E2-4']);
+      else if (highlightedGroupState.userData.name === 'E2-2') restore(['E2', 'E2-4', 'E2-3']);
+      else if (highlightedGroupState.userData.name === 'E2-1') restore(['E2', 'E2-4', 'E2-3', 'E2-2']);
+      else if (highlightedGroupState.userData.name === 'E2-G') restore(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
       setHighlightedGroupState(null);
-      setResetColors(false);
+      setResetColors && setResetColors(false);
     }
   }, [resetColors, highlightedGroupState, originalColors, setResetColors, scene]);
 
@@ -348,5 +384,3 @@ useEffect(() => {
 };
 
 export default Map3D;
-
-
