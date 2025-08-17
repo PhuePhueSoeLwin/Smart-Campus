@@ -5,6 +5,7 @@
   "dependencies": {
     "@react-three/drei": "^9.114.6",
     "@react-three/fiber": "^8.0.0",
+    "ajv": "^6.12.6",
     "chart.js": "^4.4.7",
     "chartjs-plugin-datalabels": "^2.2.0",
     "cra-template": "1.2.0",

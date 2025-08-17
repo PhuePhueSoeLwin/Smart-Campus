@@ -169,7 +169,31 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.25); color: #fff; width: 360px; padding: 30px 35px;
   z-index: 2100; animation: fadeScaleIn .3s ease forwards; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-.confirm-text { font-size: 14px; color: rgba(255,255,255,.8); text-align: center; line-height: 1.5; }
+.confirm-text { font-size: 14px; color: rgba(255,255,255,.8); text-align: center; line-height: 1.5; margin-bottom: 20px; }
+
+/* Popup buttons */
+.popup-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.popup-button {
+  padding: 8px 16px;
+  background: #4daef4;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .3s;
+}
+
+.popup-button:hover {
+  background: #3691d9;
+}
 
 /* ===== Centered Modals ===== */
 .modal-overlay {

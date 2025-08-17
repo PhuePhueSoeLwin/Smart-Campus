@@ -78,12 +78,10 @@ const App = () => {
   const [controllerCommand, setControllerCommand] = useState(null);
 
   // Instructions popup
-  const [showInstructions, setShowInstructions] = useState(() => {
-    const dontShow = localStorage.getItem('dontShowInstructions');
-    return dontShow === 'true' ? false : true;
-  });
+  const [showInstructions, setShowInstructions] = useState(true);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [hour24, setHour24] = useState(true);
+  const [isReopenedInstructions, setIsReopenedInstructions] = useState(false);
 
   // App-level popups
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
@@ -98,6 +96,14 @@ const App = () => {
 
   const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
   const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
+
+  // Reopen popup functionality
+  const [showReopenPopup, setShowReopenPopup] = useState(false);
+const openReopenPopup = () => {
+  // Skip showing popup and directly open instructions
+  openInstructions();
+};
+  const closeReopenPopup = () => setShowReopenPopup(false);
 
   useEffect(() => {
     const times = [
@@ -310,12 +316,13 @@ const App = () => {
   const handleLiveButtonClick = () => window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
 
   const handleDontShowAgain = () => {
-    localStorage.setItem('dontShowInstructions', 'true');
     setShowInstructions(false);
-    setShowConfirmPopup(true);
   };
 
-  const openInstructions = () => setShowInstructions(true);
+  const openInstructions = () => {
+    setIsReopenedInstructions(true);
+    setShowInstructions(true);
+  };
   const toggleTimeFormat = () => setHour24((prev) => !prev);
 
   // Water totals for modal
@@ -343,11 +350,20 @@ const App = () => {
         </div>
 
         <img
-          src="/assets/mfu_logo.png"
-          alt="MFU Logo"
-          className="navbar-logo"
-          onClick={openInstructions}
-        />
+  src="/assets/mfu_logo.png"
+  alt="MFU Logo"
+  className="navbar-logo"
+  onClick={openReopenPopup}
+/>
+
+<button
+  className="help-btn"
+  title="Show Instructions"
+  aria-label="Show Instructions"
+  onClick={openReopenPopup}
+>
+  ?
+</button>
 
         {/* Right side clock + help */}
         <div className="thailand-time">
@@ -602,7 +618,11 @@ const App = () => {
           </div>
           <hr className="divider" />
           <p className="tip-text">💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.</p>
-          <button className="dont-show-btn" onClick={handleDontShowAgain}>Do not show me again</button>
+          <div className="popup-buttons">
+            <button className="popup-button" onClick={handleDontShowAgain}>
+              {isReopenedInstructions ? "Show Instruction Again" : "Do not show me again"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -610,8 +630,30 @@ const App = () => {
         <div className="confirm-popup">
           <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
           <p className="confirm-text">
-            💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo or the “?” button on the Navigation Bar.
+            💡 The instructions will show again when you refresh or reopen the website. You can also view them anytime by clicking the MFU Logo or the "?" button on the Navigation Bar.
           </p>
+        </div>
+      )}
+
+      {/* Show Instructions Again Popup */}
+      {showReopenPopup && (
+        <div className="confirm-popup">
+          <div className="close-button" onClick={closeReopenPopup}>×</div>
+          <p className="confirm-text">
+            Would you like to show the instructions again?
+          </p>
+          <div className="popup-buttons">
+            <button 
+              className="popup-button" 
+              onClick={() => {
+                openInstructions();
+                closeReopenPopup();
+              }}
+            >
+              Show instruction again
+            </button>
+            <button className="popup-button" onClick={closeReopenPopup}>Cancel</button>
+          </div>
         </div>
       )}
     </div>
