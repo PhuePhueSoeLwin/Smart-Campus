@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import './leftDashboard.css';
 import { Bar, Line } from 'react-chartjs-2';
 import GaugeChart from 'react-gauge-chart';
@@ -28,25 +28,42 @@ ChartJS.register(
   ArcElement
 );
 
+// Lock the gauge after first mount (never re-render)
+const StaticGauge = React.memo(GaugeChart, () => true);
+
 const LeftDashboard = ({
   weeklyData,
   weeklyLabels,
-  waterUsageData,
+  waterUsageData = [],
   onOpenWeeklyPopup,
   onOpenOverallPopup,
 }) => {
-  const mainElectricityUsageData = {
-    labels: weeklyLabels[0].slice().reverse(),
-    datasets: [
-      {
-        label: 'Electricity Usage (kWh)',
-        data: weeklyData[0].slice().reverse().map((usage) => usage.toFixed(2)),
-        backgroundColor: '#4daef4',
-        borderColor: '#4daef4',
-        borderWidth: 1,
-      },
-    ],
-  };
+  // Freeze water usage once (page load)
+  const [frozenWaterData] = useState(() =>
+    Array.isArray(waterUsageData)
+      ? waterUsageData.slice(0, 3).map((d) => ({ ...d }))
+      : []
+  );
+
+  // Electricity chart (kept dynamic)
+  const mainElectricityUsageData = useMemo(
+    () => ({
+      labels: (weeklyLabels?.[0] || []).slice().reverse(),
+      datasets: [
+        {
+          label: 'Electricity Usage (kWh)',
+          data: (weeklyData?.[0] || [])
+            .slice()
+            .reverse()
+            .map((usage) => Number(usage).toFixed(2)),
+          backgroundColor: '#4daef4',
+          borderColor: '#4daef4',
+          borderWidth: 1,
+        },
+      ],
+    }),
+    [weeklyData, weeklyLabels]
+  );
 
   return (
     <div className="left-dashboard">
@@ -80,7 +97,6 @@ const LeftDashboard = ({
           }}
         />
 
-        {/* Weekly Usage button (triggers App.js popup) */}
         <button
           className="primary-action-button card-bottom-right"
           onClick={onOpenWeeklyPopup}
@@ -91,7 +107,6 @@ const LeftDashboard = ({
 
       <h3>Water Consumption</h3>
       <div className="water-consumption-speedometers">
-        {/* Overall Campus button (triggers App.js popup) */}
         <button
           className="primary-action-button card-bottom-right"
           onClick={onOpenOverallPopup}
@@ -99,26 +114,35 @@ const LeftDashboard = ({
           Overall Campus
         </button>
 
-        {waterUsageData.slice(0, 3).map((data, index) => (
-          <div key={index} className="speedometer-container">
-            <h4>{data.building}</h4>
-            <GaugeChart
-              id={`gauge-chart-${index}`}
-              nrOfLevels={5}
-              percent={data.usage / 1500}
-              arcWidth={0.3}
-              textColor="#eeeeee"
-              needleColor="#ff9800"
-              needleBaseColor="#e01e5a"
-              colors={['#5BE12C', '#F5CD19', '#EA4228']}
-              cornerRadius={0}
-              animate={false}
-              hideText={true}
-              formatTextValue={() => ''}
-            />
-            <p>{data.usage.toFixed(2)} liters/day</p>
-          </div>
-        ))}
+        {frozenWaterData.map((data, index) => {
+          const percent = Math.max(0, Math.min(1, Number(data?.usage || 0) / 1500));
+          return (
+            <div key={index} className="speedometer-container">
+              <h4>{data?.building ?? `B${index + 1}`}</h4>
+
+              {/* Fixed-size wrapper prevents oscillating sizes */}
+              <div className="gauge-box">
+                <StaticGauge
+                  id={`gauge-chart-${index}`}
+                  nrOfLevels={5}
+                  percent={percent}
+                  arcWidth={0.3}
+                  textColor="#eeeeee"
+                  needleColor="#ff9800"
+                  needleBaseColor="#e01e5a"
+                  colors={['#5BE12C', '#F5CD19', '#EA4228']}
+                  cornerRadius={0}
+                  animate={false}
+                  hideText={true}
+                  formatTextValue={() => ''}
+                  style={{ width: '100%' }} /* lock width inside the box */
+                />
+              </div>
+
+              <p>{Number(data?.usage || 0).toFixed(2)} liters/day</p>
+            </div>
+          );
+        })}
       </div>
 
       <h3>Carbon Footprint</h3>

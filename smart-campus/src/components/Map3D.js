@@ -86,9 +86,6 @@ function approachCameraToBox({
   ensureForward = true,
 }) {
   const size = box.getSize(new THREE.Vector3());
-  theCenter: {
-    // The label does nothing; it's just a visual anchor for readability
-  }
   const center = box.getCenter(new THREE.Vector3());
 
   const vFOV = THREE.MathUtils.degToRad(camera.fov);
@@ -346,10 +343,10 @@ const Map3D = ({ controllerCommand }) => {
       highlightGroup(parentGroup);
       applyCascadingHides(parentGroup.userData.name);
 
+      // Build popup info
       const box = new THREE.Box3().setFromObject(parentGroup);
       const sizeV = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const topCenter = new THREE.Vector3(center.x, box.max.y + Math.max(sizeV.y * 0.06, 2), center.z);
 
       const rawName = parentGroup.userData.name;
       const key = baseKeyFrom(rawName);
@@ -362,7 +359,6 @@ const Map3D = ({ controllerCommand }) => {
       setPopupInfo({
         name: rawName,
         type: info.type,
-        pos: topCenter,
         world: { x: center.x, y: center.y, z: center.z },
         electricity: info.electricity,
         water: info.water,
@@ -377,11 +373,6 @@ const Map3D = ({ controllerCommand }) => {
     highlightGroup, applyCascadingHides,
   ]);
 
-  const popupPosition = useMemo(
-    () => (popupInfo?.pos ? [popupInfo.pos.x, popupInfo.pos.y, popupInfo.pos.z] : null),
-    [popupInfo]
-  );
-
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
 
   return (
@@ -393,58 +384,71 @@ const Map3D = ({ controllerCommand }) => {
 
       <Model setOriginalColors={setOriginalColors} setInitialFocusBox={setInitialFocusBox} />
 
-      {popupInfo && popupPosition && (
-        <Html position={popupPosition} transform={false} pointerEvents="auto" className="map3d-html">
-          <div className="map3d-popup scientific" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
-              <div className="head-left">
-                <div className="eyebrow">SMART CAMPUS · MFU</div>
-                <div className="title">{popupInfo.name}</div>
-                <div className="subtitle">{popupInfo.type}</div>
-              </div>
-              <button className="popup-close" aria-label="Close" onClick={closePopup}>×</button>
-            </div>
-
-            <div className="popup-body">
-              <div className="location-card">
-                <div className="loc-title">Location (World)</div>
-                <div className="loc-grid">
-                  <div className="kv"><div className="k">X</div><div className="v">{popupInfo.world.x.toFixed(2)}</div></div>
-                  <div className="kv"><div className="k">Y</div><div className="v">{popupInfo.world.y.toFixed(2)}</div></div>
-                  <div className="kv"><div className="k">Z</div><div className="v">{popupInfo.world.z.toFixed(2)}</div></div>
+      {/* Docked panel to avoid occluding the scene */}
+      {popupInfo && (
+        <Html fullscreen pointerEvents="auto" className="map3d-html">
+          <div className="map3d-popup-docked" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <div className="map3d-popup scientific">
+              <div className="popup-header">
+                <div className="head-left">
+                  <div className="eyebrow">SMART CAMPUS · MFU</div>
+                  <div className="title">{popupInfo.name}</div>
+                  <div className="subtitle">{popupInfo.type}</div>
                 </div>
+                <button className="popup-close" aria-label="Close" onClick={closePopup}>×</button>
               </div>
 
-              <div className="metrics-grid">
-                {/* Electricity */}
-                <div className={`metric-card ${popupInfo.electricity.status === 'High' ? 'risk' : ''}`}>
-                  <div className="metric-head">
-                    <div className="metric-name"><span className="dot" />Electricity</div>
-                    <span className={`badge ${String(popupInfo.electricity.status).toLowerCase()}`}>
-                      {popupInfo.electricity.status}
-                    </span>
+              <div className="popup-body">
+                <div className="location-card">
+                  <div className="loc-title">Location (World)</div>
+                  <div className="loc-grid">
+                    <div className="kv"><div className="k">X</div><div className="v">{popupInfo.world.x.toFixed(2)}</div></div>
+                    <div className="kv"><div className="k">Y</div><div className="v">{popupInfo.world.y.toFixed(2)}</div></div>
+                    <div className="kv"><div className="k">Z</div><div className="v">{popupInfo.world.z.toFixed(2)}</div></div>
                   </div>
-                  <div className="metric-value"><span className="num">{popupInfo.electricity.value}</span><span className="unit">{popupInfo.electricity.unit}</span></div>
-                  <div className="meter"><div className="bar" style={{ width: `${clampPct(popupInfo.electricity.percent)}%` }} /></div>
-                  <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.electricity.percent)}%</span><span>100%</span></div>
                 </div>
 
-                {/* Water */}
-                <div className={`metric-card ${popupInfo.water.status === 'High' ? 'risk' : ''}`}>
-                  <div className="metric-head">
-                    <div className="metric-name"><span className="dot alt" />Water</div>
-                    <span className={`badge ${String(popupInfo.water.status).toLowerCase()}`}>
-                      {popupInfo.water.status}
-                    </span>
+                <div className="metrics-grid">
+                  {/* Electricity */}
+                  <div className={`metric-card ${popupInfo.electricity.status === 'High' ? 'risk' : ''}`}>
+                    <div className="metric-head">
+                      <div className="metric-name"><span className="dot" />Electricity</div>
+                      <span className={`badge ${String(popupInfo.electricity.status).toLowerCase()}`}>
+                        {popupInfo.electricity.status}
+                      </span>
+                    </div>
+                    <div className="metric-value">
+                      <span className="num">{popupInfo.electricity.value}</span>
+                      <span className="unit">{popupInfo.electricity.unit}</span>
+                    </div>
+                    <div className="meter">
+                      <div className="bar" style={{ width: `${clampPct(popupInfo.electricity.percent)}%` }} />
+                    </div>
+                    <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.electricity.percent)}%</span><span>100%</span></div>
                   </div>
-                  <div className="metric-value"><span className="num">{popupInfo.water.value}</span><span className="unit">{popupInfo.water.unit}</span></div>
-                  <div className="meter alt"><div className="bar" style={{ width: `${clampPct(popupInfo.water.percent)}%` }} /></div>
-                  <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.water.percent)}%</span><span>100%</span></div>
-                </div>
-              </div>
 
-              <div className="popup-actions">
-                <button className="btn btn-ghost" onClick={(e) => { e.stopPropagation(); closePopup(); }}>Close</button>
+                  {/* Water */}
+                  <div className={`metric-card ${popupInfo.water.status === 'High' ? 'risk' : ''}`}>
+                    <div className="metric-head">
+                      <div className="metric-name"><span className="dot alt" />Water</div>
+                      <span className={`badge ${String(popupInfo.water.status).toLowerCase()}`}>
+                        {popupInfo.water.status}
+                      </span>
+                    </div>
+                    <div className="metric-value">
+                      <span className="num">{popupInfo.water.value}</span>
+                      <span className="unit">{popupInfo.water.unit}</span>
+                    </div>
+                    <div className="meter alt">
+                      <div className="bar" style={{ width: `${clampPct(popupInfo.water.percent)}%` }} />
+                    </div>
+                    <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.water.percent)}%</span><span>100%</span></div>
+                  </div>
+                </div>
+
+                <div className="popup-actions">
+                  <button className="btn btn-ghost" onClick={(e) => { e.stopPropagation(); closePopup(); }}>Close</button>
+                </div>
               </div>
             </div>
           </div>

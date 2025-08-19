@@ -25,9 +25,7 @@
   box-shadow: none;
 }
 
-.left-dashboard::-webkit-scrollbar {
-  display: none;
-}
+.left-dashboard::-webkit-scrollbar { display: none; }
 
 .left-dashboard h3 {
   margin-top: 0;
@@ -48,13 +46,9 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   color: #fff;
   padding: 20px;
-  position: relative; /* for button positioning */
+  position: relative;
 }
-
-.chart-container canvas {
-  max-width: 100%;
-  max-height: 100%;
-}
+.chart-container canvas { max-width: 100%; max-height: 100%; }
 
 /* Water section */
 .water-consumption-speedometers {
@@ -65,15 +59,16 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   color: #fff;
   padding: 20px;
-  position: relative; /* for overall button */
+  position: relative;
   display: flex;
   gap: 20px;
   justify-content: space-between;
+  align-items: flex-start; /* avoid vertical stretching jitter */
 }
 
-/* Individual speedometer card */
+/* Individual speedometer card (fixed width) */
 .speedometer-container {
-  width: 90px;
+  flex: 0 0 96px;           /* lock width for each gauge column */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -82,6 +77,21 @@
 .speedometer-container h4 {
   margin-bottom: 10px;
   color: #eeeeee;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Fixed-size gauge wrapper */
+.gauge-box {
+  width: 96px;
+  height: 64px;             /* keep a consistent height */
+}
+
+/* Ensure the rendered SVG respects the fixed size */
+.gauge-box svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 
 /* Carbon line chart */
@@ -96,7 +106,7 @@
   position: relative;
 }
 
-/* Shared primary action button (matches Hide Dashboards) */
+/* Shared primary action button */
 .primary-action-button {
   display: inline-block;
   padding: 10px 25px;
@@ -134,8 +144,5 @@
     position: relative;
     box-shadow: none;
   }
-
-  .chart-container {
-    height: 200px;
-  }
+  .chart-container { height: 200px; }
 }

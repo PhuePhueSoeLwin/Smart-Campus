@@ -439,27 +439,7 @@ const openReopenPopup = () => {
 
       {!showDashboards && <Controller setControllerCommand={setControllerCommand} />}
 
-      {popupData && (
-        <div className="building-popup" style={{ top: popupData.y + 10, left: popupData.x + 10 }}>
-          <div
-            className="close-popup"
-            onClick={() => {
-              setPopupData(null);
-              setResetColors(true);
-            }}
-          >
-            ❌
-          </div>
-
-          <div className="popup-content">
-            <h3>{popupData.name}</h3>
-            <hr />
-            <p>📍 <b>Location:</b> {popupData.name}</p>
-            <p>⚡ <b>Electricity Usage:</b> 1234 kWh</p>
-            <p>💧 <b>Water Usage:</b> 2345 L</p>
-          </div>
-        </div>
-      )}
+      
 
       {/* WEEKLY USAGE MODAL */}
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
