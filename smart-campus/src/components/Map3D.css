@@ -32,43 +32,21 @@
   mix-blend-mode: soft-light;
 }
 
-/* Html overlay root */
+/* Popup */
 .map3d-html { pointer-events:auto; }
-
-/* Docked container so popup never hides the model */
-.map3d-popup-docked {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  pointer-events: none; /* allow canvas to receive events except on the popup itself */
-}
-
-/* Popup base (default) */
 .map3d-popup {
-  position: relative;
-  min-width: 290px;
-  max-width: 420px;
-  color: var(--text);
+  position:relative; min-width:290px; max-width:420px; color:var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
   background:
-    linear-gradient(180deg, rgba(46,144,255,0.08), rgba(18,209,184,0.06)),
-    rgba(11,18,32,0.86);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(10px) saturate(1.25);
-  backdrop-filter: blur(10px) saturate(1.25);
-  overflow: clip;
-  animation: popup-in 160ms ease-out both;
-  pointer-events: auto; /* re-enable inside the card */
+    linear-gradient(180deg, rgba(46,144,255,0.10), rgba(18,209,184,0.08)),
+    rgba(11,18,32,0.96);
+  border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow);
+  -webkit-backdrop-filter: blur(10px) saturate(1.25); backdrop-filter: blur(10px) saturate(1.25);
+  overflow:clip; animation: popup-in 160ms ease-out both;
 }
-
 .map3d-popup.scientific::before {
-  content:"";
-  position:absolute; inset:0 0 auto 0; height:2px;
-  background:linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
-  opacity:.9;
+  content:""; position:absolute; inset:0 0 auto 0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent); opacity:.9;
 }
 .map3d-popup.scientific::after {
   content:""; position:absolute; inset:-1px; border-radius:16px; pointer-events:none;
@@ -159,28 +137,8 @@
 
 /* Anim & responsive */
 @keyframes popup-in { from{opacity:0;transform:translateY(-4px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
-
-@media (max-width: 768px) {
+@media (max-width:768px) {
   .map3d-container { height:100dvh; }
+  .map3d-popup { min-width:260px; max-width:90vw; }
   .metrics-grid { grid-template-columns:1fr; }
-  /* Turn docked panel into a bottom sheet on mobile */
-  .map3d-popup-docked {
-    top: auto;
-    right: 8px;
-    left: 8px;
-    bottom: 8px;
-  }
-  .map3d-popup { max-width: 100%; }
-}
-
-/* ------------------------------
-   Force transparency override
-   (higher specificity + !important)
----------------------------------*/
-.map3d-html .map3d-popup {
-  background:
-    linear-gradient(180deg, rgba(46,144,255,0.05), rgba(18,209,184,0.04)),
-    rgba(11,18,32,0.74) !important;
-  border-color: rgba(90, 125, 255, 0.18) !important;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35) !important;
 }

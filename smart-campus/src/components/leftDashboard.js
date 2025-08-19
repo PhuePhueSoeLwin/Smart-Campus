@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './leftDashboard.css';
 import { Bar, Line } from 'react-chartjs-2';
 import GaugeChart from 'react-gauge-chart';
@@ -28,7 +28,7 @@ ChartJS.register(
   ArcElement
 );
 
-// Lock the gauge after first mount (never re-render)
+// Lock the gauge after it mounts (never re-render)
 const StaticGauge = React.memo(GaugeChart, () => true);
 
 const LeftDashboard = ({
@@ -38,12 +38,18 @@ const LeftDashboard = ({
   onOpenWeeklyPopup,
   onOpenOverallPopup,
 }) => {
-  // Freeze water usage once (page load)
-  const [frozenWaterData] = useState(() =>
-    Array.isArray(waterUsageData)
-      ? waterUsageData.slice(0, 3).map((d) => ({ ...d }))
-      : []
-  );
+  // Freeze water data on first non-empty arrival
+  const [frozenWaterData, setFrozenWaterData] = useState([]);
+
+  useEffect(() => {
+    if (
+      frozenWaterData.length === 0 &&
+      Array.isArray(waterUsageData) &&
+      waterUsageData.length > 0
+    ) {
+      setFrozenWaterData(waterUsageData.slice(0, 3).map((d) => ({ ...d })));
+    }
+  }, [waterUsageData, frozenWaterData.length]);
 
   // Electricity chart (kept dynamic)
   const mainElectricityUsageData = useMemo(
@@ -97,6 +103,7 @@ const LeftDashboard = ({
           }}
         />
 
+        {/* Weekly Usage button (triggers App.js popup) */}
         <button
           className="primary-action-button card-bottom-right"
           onClick={onOpenWeeklyPopup}
@@ -107,6 +114,7 @@ const LeftDashboard = ({
 
       <h3>Water Consumption</h3>
       <div className="water-consumption-speedometers">
+        {/* Overall Campus button (triggers App.js popup) */}
         <button
           className="primary-action-button card-bottom-right"
           onClick={onOpenOverallPopup}
@@ -114,35 +122,48 @@ const LeftDashboard = ({
           Overall Campus
         </button>
 
-        {frozenWaterData.map((data, index) => {
-          const percent = Math.max(0, Math.min(1, Number(data?.usage || 0) / 1500));
-          return (
-            <div key={index} className="speedometer-container">
-              <h4>{data?.building ?? `B${index + 1}`}</h4>
-
-              {/* Fixed-size wrapper prevents oscillating sizes */}
-              <div className="gauge-box">
-                <StaticGauge
-                  id={`gauge-chart-${index}`}
-                  nrOfLevels={5}
-                  percent={percent}
-                  arcWidth={0.3}
-                  textColor="#eeeeee"
-                  needleColor="#ff9800"
-                  needleBaseColor="#e01e5a"
-                  colors={['#5BE12C', '#F5CD19', '#EA4228']}
-                  cornerRadius={0}
-                  animate={false}
-                  hideText={true}
-                  formatTextValue={() => ''}
-                  style={{ width: '100%' }} /* lock width inside the box */
-                />
+        {frozenWaterData.length === 0 ? (
+          // Optional tiny placeholder while waiting for first snapshot
+          <>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="speedometer-container">
+                <h4>&nbsp;</h4>
+                <div style={{ width: 96, height: 64, opacity: 0.2, background: '#999', borderRadius: 6 }} />
+                <p style={{ opacity: 0.4 }}>— liters/day</p>
               </div>
+            ))}
+          </>
+        ) : (
+          frozenWaterData.map((data, index) => {
+            const percent = Math.max(0, Math.min(1, Number(data?.usage || 0) / 1500));
+            return (
+              <div key={index} className="speedometer-container">
+                <h4>{data?.building ?? `B${index + 1}`}</h4>
 
-              <p>{Number(data?.usage || 0).toFixed(2)} liters/day</p>
-            </div>
-          );
-        })}
+                {/* Fixed-size wrapper ensures consistent gauge size */}
+                <div style={{ width: 96, height: 64 }}>
+                  <StaticGauge
+                    id={`gauge-chart-${index}`}
+                    nrOfLevels={5}
+                    percent={percent}
+                    arcWidth={0.3}
+                    textColor="#eeeeee"
+                    needleColor="#ff9800"
+                    needleBaseColor="#e01e5a"
+                    colors={['#5BE12C', '#F5CD19', '#EA4228']}
+                    cornerRadius={0}
+                    animate={false}
+                    hideText={true}
+                    formatTextValue={() => ''}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <p>{Number(data?.usage || 0).toFixed(2)} liters/day</p>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <h3>Carbon Footprint</h3>
