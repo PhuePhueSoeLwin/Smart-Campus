@@ -1,7 +1,6 @@
-// components/Map3D.js
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { useGLTF, Html } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import './Map3D.css';
@@ -27,52 +26,7 @@ function baseKeyFrom(name) {
   return BUILDING_DATA[name] ? name : name;
 }
 
-/** GLB loader + initial focus box (E1/E2 union; fallback whole scene) */
-function Model({ setOriginalColors, setInitialFocusBox }) {
-  const { scene } = useGLTF('/assets/final4.glb', true);
-  const originalColors = useRef(new Map());
-
-  scene.scale.set(0.1, 0.1, 0.1);
-  scene.rotation.y = Math.PI / 2;
-  scene.position.set(0, -10, 0);
-
-  scene.traverse((child) => {
-    if (child.isMesh) {
-      if (!originalColors.current.has(child)) {
-        originalColors.current.set(child, child.material.color.clone());
-      }
-      child.material = child.material.clone(); // isolate materials
-      child.userData.name = child.name;
-    }
-  });
-
-  useEffect(() => {
-    setOriginalColors(originalColors.current);
-    scene.updateMatrixWorld(true);
-
-    const matches = [];
-    const startsWithE1orE2 = (name) =>
-      !!name && (/^E1($|[^a-z0-9])/i.test(name) || /^E2($|[^a-z0-9])/i.test(name));
-    scene.traverse((obj) => { if (startsWithE1orE2(obj.name)) matches.push(obj); });
-
-    let targetBox = new THREE.Box3();
-    if (matches.length) {
-      matches.forEach((o) => targetBox.expandByObject(o));
-    } else {
-      const e1 = scene.getObjectByName('E1');
-      const e2 = scene.getObjectByName('E2');
-      let foundAny = false;
-      if (e1) { targetBox.expandByObject(e1); foundAny = true; }
-      if (e2) { targetBox.expandByObject(e2); foundAny = true; }
-      if (!foundAny) targetBox = new THREE.Box3().setFromObject(scene);
-    }
-    setInitialFocusBox && setInitialFocusBox(targetBox);
-  }, [scene, setOriginalColors, setInitialFocusBox]);
-
-  return <primitive object={scene} />;
-}
-
-/** Initial camera fit (same behavior as your original) */
+/** Camera fit helper */
 function approachCameraToBox({
   camera,
   box,
@@ -86,9 +40,6 @@ function approachCameraToBox({
   ensureForward = true,
 }) {
   const size = box.getSize(new THREE.Vector3());
-  theCenter: {
-    // The label does nothing; it's just a visual anchor for readability
-  }
   const center = box.getCenter(new THREE.Vector3());
 
   const vFOV = THREE.MathUtils.degToRad(camera.fov);
@@ -130,20 +81,145 @@ function approachCameraToBox({
   });
 }
 
-const Map3D = ({ controllerCommand }) => {
+/** GLTF loader + ground detection */
+function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
+  const { scene } = useGLTF('/assets/final4.glb', true);
+  const originalColors = useRef(new Map());
+
+  scene.scale.set(0.1, 0.1, 0.1);
+  scene.rotation.y = Math.PI / 2;
+  scene.position.set(0, -10, 0);
+
+  scene.traverse((child) => {
+    if (child.isMesh) {
+      if (!originalColors.current.has(child)) {
+        originalColors.current.set(child, child.material.color.clone());
+      }
+      child.material = child.material.clone();
+      child.userData.name = child.name;
+    }
+  });
+
+  useEffect(() => {
+    setOriginalColors && setOriginalColors(originalColors.current);
+    scene.updateMatrixWorld(true);
+
+    // Initial focus on (E1,E2)
+    const matches = [];
+    const startsWithE1orE2 = (name) =>
+      !!name && (/^E1($|[^a-z0-9])/i.test(name) || /^E2($|[^a-z0-9])/i.test(name));
+    scene.traverse((obj) => { if (startsWithE1orE2(obj.name)) matches.push(obj); });
+
+    let targetBox = new THREE.Box3();
+    if (matches.length) {
+      matches.forEach((o) => targetBox.expandByObject(o));
+    } else {
+      const e1 = scene.getObjectByName('E1');
+      const e2 = scene.getObjectByName('E2');
+      let foundAny = false;
+      if (e1) { targetBox.expandByObject(e1); foundAny = true; }
+      if (e2) { targetBox.expandByObject(e2); foundAny = true; }
+      if (!foundAny) targetBox = new THREE.Box3().setFromObject(scene);
+    }
+    setInitialFocusBox && setInitialFocusBox(targetBox);
+
+    // Detect ground meshes for walk-mode floor locking
+    const groundNameRe = /(terrain|ground|gis|base|map|sat|earth)/i;
+    const buildingLikeRe = /^(e\d|library|av|exabation|exhibition|hall|block|building)/i;
+    const candidates = [];
+    scene.traverse((obj) => {
+      if (obj.isMesh) {
+        try {
+          const bbox = new THREE.Box3().setFromObject(obj);
+          const size = bbox.getSize(new THREE.Vector3());
+          const areaXZ = Math.max(0.0001, size.x * size.z);
+          candidates.push({ mesh: obj, size, areaXZ });
+        } catch { /* ignore */ }
+      }
+    });
+
+    const grounds = candidates
+      .sort((a, b) => b.areaXZ - a.areaXZ)
+      .filter((c) => {
+        const n = (c.mesh.name || '').toLowerCase();
+        const thin = c.size.y < 60;
+        const isGroundName = groundNameRe.test(n);
+        const isBuildingLike = buildingLikeRe.test(n);
+        return !isBuildingLike && (isGroundName || thin);
+      })
+      .slice(0, 12)
+      .map((c) => c.mesh);
+
+    setGroundMeshes && setGroundMeshes(grounds);
+  }, [scene, setOriginalColors, setInitialFocusBox, setGroundMeshes]);
+
+  return <primitive object={scene} />;
+}
+
+/** Walk-mode constants */
+const WALK = {
+  eyeHeight: 1.7,     // camera height above ground in walk mode
+  enterDelta: 2.5,    // enter walk mode when <= this distance to ground
+  exitDelta: 4.0,     // exit walk mode when above this distance
+  walkSpeed: 10,      // m/s towards click target
+  runSpeed: 22,       // m/s on double-click
+  stopDist: 0.6       // stop when this close to target
+};
+
+const Map3D = ({
+  setPopupData,
+  originalColors,
+  resetColors,
+  setResetColors,
+  setOriginalColors,
+  controllerCommand,
+}) => {
   const { camera, gl, scene, size } = useThree();
-  const [originalColors, setOriginalColors] = useState(null);
   const [initialFocusBox, setInitialFocusBox] = useState(null);
   const didFitRef = useRef(false);
 
   const [highlightedGroup, setHighlightedGroup] = useState(null);
-  const [popupInfo, setPopupInfo] = useState(null);
+  const savedColors = useRef(null);
+
+  // Ground lock
+  const groundMeshesRef = useRef([]);
+  const groundRay = useRef(new THREE.Raycaster());
+  const tempVec = useRef(new THREE.Vector3());
+  const downDir = useRef(new THREE.Vector3(0, -1, 0));
+  const sceneMinYRef = useRef(null);
+  const groundClearance = 3.0;
+
+  // Walk mode state
+  const [walkMode, setWalkMode] = useState(false);
+  const lastGroundY = useRef(null);
+  const walkTarget = useRef(null);
+  const walkSpeedRef = useRef(WALK.walkSpeed);
+
   const direction = useRef(new THREE.Vector3());
   const keys = useRef({});
 
   useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
 
-  // Mouse look
+  // Cache a fallback global floor
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        const bb = new THREE.Box3().setFromObject(scene);
+        sceneMinYRef.current = bb.min.y + groundClearance;
+      } catch { /* ignore */ }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [scene]);
+
+  // Change cursor when walk mode toggles
+  useEffect(() => {
+    const el = gl.domElement;
+    if (walkMode) el.classList.add('walk-mode');
+    else el.classList.remove('walk-mode');
+    return () => el.classList.remove('walk-mode');
+  }, [gl, walkMode]);
+
+  // Mouse look (drag)
   useEffect(() => {
     let isDragging = false;
     let previous = { x: 0, y: 0 };
@@ -171,47 +247,110 @@ const Map3D = ({ controllerCommand }) => {
     };
   }, [camera, gl]);
 
-  // Keyboard
+  // Keyboard + ESC to close popup
   useEffect(() => {
-    const down = (e) => { keys.current[e.code] = true; };
+    const down = (e) => {
+      keys.current[e.code] = true;
+      if (e.code === 'Escape') {
+        if (highlightedGroup) {
+          restoreGroupColors(highlightedGroup);
+          restoreCascadesForName(highlightedGroup.userData?.name);
+          setHighlightedGroup(null);
+        }
+        walkTarget.current = null;
+        setPopupData && setPopupData(null);
+      }
+    };
     const up = (e) => { keys.current[e.code] = false; };
-    const esc = (e) => { if (e.code === 'Escape') closePopup(); };
     document.addEventListener('keydown', down);
     document.addEventListener('keyup', up);
-    document.addEventListener('keydown', esc);
     return () => {
       document.removeEventListener('keydown', down);
       document.removeEventListener('keyup', up);
-      document.removeEventListener('keydown', esc);
     };
-  }, []);
+  }, [highlightedGroup, setPopupData]);
 
-  // Movement (user only)
+  // Movement + ground lock + walk-mode transitions
   useFrame((_, delta) => {
-    direction.current.set(0, 0, 0);
-    if (keys.current['KeyW']) direction.current.z -= 1;
-    if (keys.current['KeyS']) direction.current.z += 1;
-    if (keys.current['KeyA']) direction.current.x -= 1;
-    if (keys.current['KeyD']) direction.current.x += 1;
-    if (keys.current['Space']) direction.current.y += 1;
-    if (keys.current['ShiftLeft']) direction.current.y -= 1;
-
-    if (controllerCommand) {
-      if (controllerCommand.moveForward) direction.current.z -= 1;
-      if (controllerCommand.moveBackward) direction.current.z += 1;
-      if (controllerCommand.moveLeft) direction.current.x -= 1;
-      if (controllerCommand.moveRight) direction.current.x += 1;
+    // Standard flight input (WASD/controller)
+    const dir = direction.current.set(0, 0, 0);
+    if (keys.current['KeyW']) dir.z -= 1;
+    if (keys.current['KeyS']) dir.z += 1;
+    if (keys.current['KeyA']) dir.x -= 1;
+    if (keys.current['KeyD']) dir.x += 1;
+    if (!walkMode) {
+      if (keys.current['Space']) dir.y += 1;
+      if (keys.current['ShiftLeft']) dir.y -= 1;
     }
 
-    direction.current.normalize();
+    if (controllerCommand) {
+      if (controllerCommand.moveForward) dir.z -= 1;
+      if (controllerCommand.moveBackward) dir.z += 1;
+      if (controllerCommand.moveLeft) dir.x -= 1;
+      if (controllerCommand.moveRight) dir.x += 1;
+    }
+
+    dir.normalize();
     const moveSpeed = controllerCommand ? 30 : 10;
+
+    // Apply yaw to horizontal plane
     const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
-    const horizontalDir = new THREE.Vector3(direction.current.x, 0, direction.current.z).applyEuler(yawOnly);
-    horizontalDir.y = direction.current.y;
-    camera.position.addScaledVector(horizontalDir, moveSpeed * delta);
+    const horizontalDir = new THREE.Vector3(dir.x, 0, dir.z).applyEuler(yawOnly);
+    horizontalDir.y = walkMode ? 0 : dir.y; // no vertical keys in walk mode
+    camera.position.addScaledVector(horizontalDir, (walkMode ? 8 : moveSpeed) * delta);
+
+    // --- Compute ground height under camera ---
+    const origin = tempVec.current.set(camera.position.x, 1e6, camera.position.z);
+    groundRay.current.set(origin, downDir.current);
+
+    let minYAllowed = sceneMinYRef.current ?? -1e6;
+    let groundY = minYAllowed - groundClearance; // default (very low)
+    const grounds = groundMeshesRef.current;
+    if (grounds && grounds.length) {
+      const hits = groundRay.current.intersectObjects(grounds, true);
+      if (hits.length) {
+        groundY = hits[0].point.y;
+        minYAllowed = Math.max(minYAllowed, groundY + groundClearance);
+      }
+    }
+    lastGroundY.current = groundY;
+
+    // Keep above GIS floor in any mode
+    if (camera.position.y < minYAllowed) camera.position.y = minYAllowed;
+
+    // --- Enter/exit walk mode based on proximity to ground ---
+    const distToGround = camera.position.y - groundY;
+    if (!walkMode && distToGround <= WALK.enterDelta) {
+      setWalkMode(true);
+      walkTarget.current = null;
+    } else if (walkMode && distToGround > WALK.exitDelta) {
+      setWalkMode(false);
+      walkTarget.current = null;
+    }
+
+    // --- While in walk mode, pin eye height + auto-walk towards target ---
+    if (walkMode) {
+      const desiredY = groundY + WALK.eyeHeight;
+      camera.position.y += (desiredY - camera.position.y) * Math.min(1, 12 * delta); // gentle snap
+
+      if (walkTarget.current) {
+        const to = new THREE.Vector3(
+          walkTarget.current.x - camera.position.x,
+          0,
+          walkTarget.current.z - camera.position.z
+        );
+        const dist = to.length();
+        if (dist < WALK.stopDist) {
+          walkTarget.current = null;
+        } else {
+          to.normalize();
+          camera.position.addScaledVector(to, walkSpeedRef.current * delta);
+        }
+      }
+    }
   });
 
-  // Seed + initial fit (original behavior)
+  // Seed + initial fit
   useEffect(() => {
     camera.position.set(480, 320, 480);
     camera.rotation.set(0, 0, 0);
@@ -265,10 +404,10 @@ const Map3D = ({ controllerCommand }) => {
   }, [showByNames]);
 
   const restoreGroupColors = useCallback((group) => {
-    if (!group || !originalColors) return;
+    if (!group || !savedColors.current) return;
     group.traverse((child) => {
       if (child.isMesh) {
-        const orig = originalColors.get(child);
+        const orig = savedColors.current.get(child);
         if (orig) {
           gsap.killTweensOf(child.material.color);
           child.material.color.copy(orig);
@@ -276,7 +415,7 @@ const Map3D = ({ controllerCommand }) => {
         if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = true;
       }
     });
-  }, [originalColors]);
+  }, []);
 
   const highlightGroup = useCallback((group) => {
     group.traverse((child) => {
@@ -308,34 +447,64 @@ const Map3D = ({ controllerCommand }) => {
     if (n === 'E2-G') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
   }, [hideByNames]);
 
-  const closePopup = useCallback(() => {
-    if (highlightedGroup) {
-      restoreGroupColors(highlightedGroup);
-      restoreCascadesForName(highlightedGroup.userData?.name);
-      setHighlightedGroup(null);
-    }
-    setPopupInfo(null);
-  }, [highlightedGroup, restoreGroupColors, restoreCascadesForName]);
-
-  // Picking (no camera change on click)
+  // Picking: buildings vs ground (click-to-walk)
   useEffect(() => {
-    const handleClick = (event) => {
-      const raycaster = new THREE.Raycaster();
+    const onClick = (event) => {
+      const rect = gl.domElement.getBoundingClientRect();
       const mouse = new THREE.Vector2(
-        (event.clientX / window.innerWidth) * 2 - 1,
-        -(event.clientY / window.innerHeight) * 2 + 1
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
       );
+      const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
       const intersects = raycaster.intersectObjects(scene.children, true);
-      if (intersects.length === 0) return;
+      if (!intersects.length) {
+        // No hit: in walk mode, step forward a fixed distance
+        if (walkMode) {
+          const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation).setY(0).normalize();
+          if (forward.lengthSq() > 0) {
+            const d = 20;
+            const p = camera.position.clone().add(forward.multiplyScalar(d));
+            walkTarget.current = { x: p.x, z: p.z };
+            walkSpeedRef.current = WALK.walkSpeed;
+          }
+        } else {
+          // flight mode: clicking sky clears selection
+          if (highlightedGroup) {
+            restoreGroupColors(highlightedGroup);
+            restoreCascadesForName(highlightedGroup.userData?.name);
+            setHighlightedGroup(null);
+          }
+          setPopupData && setPopupData(null);
+        }
+        return;
+      }
 
-      const clickedObject = intersects[0].object;
+      const hit = intersects[0];
+
+      // If walk mode and we clicked a ground mesh → move
+      if (walkMode) {
+        const isGround = groundMeshesRef.current.some((g) => hit.object === g || g.children?.includes?.(hit.object));
+        if (isGround) {
+          walkTarget.current = { x: hit.point.x, z: hit.point.z };
+          walkSpeedRef.current = WALK.walkSpeed;
+          return;
+        }
+      }
+
+      // Otherwise treat as building selection
+      const clickedObject = hit.object;
       if (!clickedObject.userData.name) return;
 
       let parentGroup = clickedObject.parent;
       while (parentGroup && !parentGroup.userData.name) parentGroup = parentGroup.parent;
       if (!parentGroup) return;
+
+      // Same group re-click → ignore to avoid double tint
+      if (highlightedGroup && highlightedGroup === parentGroup) {
+        return;
+      }
 
       if (highlightedGroup && highlightedGroup !== parentGroup) {
         restoreGroupColors(highlightedGroup);
@@ -347,9 +516,7 @@ const Map3D = ({ controllerCommand }) => {
       applyCascadingHides(parentGroup.userData.name);
 
       const box = new THREE.Box3().setFromObject(parentGroup);
-      const sizeV = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const topCenter = new THREE.Vector3(center.x, box.max.y + Math.max(sizeV.y * 0.06, 2), center.z);
 
       const rawName = parentGroup.userData.name;
       const key = baseKeyFrom(rawName);
@@ -359,30 +526,57 @@ const Map3D = ({ controllerCommand }) => {
         water: { value: 0, unit: 'm³', percent: 0, status: 'N/A' },
       };
 
-      setPopupInfo({
+      setPopupData && setPopupData({
         name: rawName,
         type: info.type,
-        pos: topCenter,
         world: { x: center.x, y: center.y, z: center.z },
         electricity: info.electricity,
         water: info.water,
       });
     };
 
-    gl.domElement.addEventListener('click', handleClick);
-    return () => gl.domElement.removeEventListener('click', handleClick);
+    const onDblClick = (event) => {
+      if (!walkMode) return; // run only in walk mode
+      const rect = gl.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(groundMeshesRef.current.length ? groundMeshesRef.current : scene.children, true);
+      if (hits.length) {
+        const p = hits[0].point;
+        walkTarget.current = { x: p.x, z: p.z };
+        walkSpeedRef.current = WALK.runSpeed; // sprint on dblclick
+      }
+    };
+
+    gl.domElement.addEventListener('click', onClick);
+    gl.domElement.addEventListener('dblclick', onDblClick);
+    return () => {
+      gl.domElement.removeEventListener('click', onClick);
+      gl.domElement.removeEventListener('dblclick', onDblClick);
+    };
   }, [
     camera, scene, gl,
-    highlightedGroup, restoreGroupColors, restoreCascadesForName,
-    highlightGroup, applyCascadingHides,
+    walkMode,
+    highlightedGroup, highlightGroup,
+    restoreGroupColors, restoreCascadesForName, applyCascadingHides,
+    setPopupData,
   ]);
 
-  const popupPosition = useMemo(
-    () => (popupInfo?.pos ? [popupInfo.pos.x, popupInfo.pos.y, popupInfo.pos.z] : null),
-    [popupInfo]
-  );
-
-  const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
+  // Reset colors when App closes popup
+  useEffect(() => {
+    if (resetColors) {
+      if (highlightedGroup) {
+        restoreGroupColors(highlightedGroup);
+        restoreCascadesForName(highlightedGroup.userData?.name);
+        setHighlightedGroup(null);
+      }
+      setResetColors && setResetColors(false);
+    }
+  }, [resetColors, highlightedGroup, restoreGroupColors, restoreCascadesForName, setResetColors]);
 
   return (
     <>
@@ -390,66 +584,11 @@ const Map3D = ({ controllerCommand }) => {
       <directionalLight position={[10, 20, 10]} intensity={2.0} />
       <directionalLight position={[-10, 20, -10]} intensity={1.5} />
       <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xffffff)} intensity={0.8} />
-
-      <Model setOriginalColors={setOriginalColors} setInitialFocusBox={setInitialFocusBox} />
-
-      {popupInfo && popupPosition && (
-        <Html position={popupPosition} transform={false} pointerEvents="auto" className="map3d-html">
-          <div className="map3d-popup scientific" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
-              <div className="head-left">
-                <div className="eyebrow">SMART CAMPUS · MFU</div>
-                <div className="title">{popupInfo.name}</div>
-                <div className="subtitle">{popupInfo.type}</div>
-              </div>
-              <button className="popup-close" aria-label="Close" onClick={closePopup}>×</button>
-            </div>
-
-            <div className="popup-body">
-              <div className="location-card">
-                <div className="loc-title">Location (World)</div>
-                <div className="loc-grid">
-                  <div className="kv"><div className="k">X</div><div className="v">{popupInfo.world.x.toFixed(2)}</div></div>
-                  <div className="kv"><div className="k">Y</div><div className="v">{popupInfo.world.y.toFixed(2)}</div></div>
-                  <div className="kv"><div className="k">Z</div><div className="v">{popupInfo.world.z.toFixed(2)}</div></div>
-                </div>
-              </div>
-
-              <div className="metrics-grid">
-                {/* Electricity */}
-                <div className={`metric-card ${popupInfo.electricity.status === 'High' ? 'risk' : ''}`}>
-                  <div className="metric-head">
-                    <div className="metric-name"><span className="dot" />Electricity</div>
-                    <span className={`badge ${String(popupInfo.electricity.status).toLowerCase()}`}>
-                      {popupInfo.electricity.status}
-                    </span>
-                  </div>
-                  <div className="metric-value"><span className="num">{popupInfo.electricity.value}</span><span className="unit">{popupInfo.electricity.unit}</span></div>
-                  <div className="meter"><div className="bar" style={{ width: `${clampPct(popupInfo.electricity.percent)}%` }} /></div>
-                  <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.electricity.percent)}%</span><span>100%</span></div>
-                </div>
-
-                {/* Water */}
-                <div className={`metric-card ${popupInfo.water.status === 'High' ? 'risk' : ''}`}>
-                  <div className="metric-head">
-                    <div className="metric-name"><span className="dot alt" />Water</div>
-                    <span className={`badge ${String(popupInfo.water.status).toLowerCase()}`}>
-                      {popupInfo.water.status}
-                    </span>
-                  </div>
-                  <div className="metric-value"><span className="num">{popupInfo.water.value}</span><span className="unit">{popupInfo.water.unit}</span></div>
-                  <div className="meter alt"><div className="bar" style={{ width: `${clampPct(popupInfo.water.percent)}%` }} /></div>
-                  <div className="meter-labels"><span>0%</span><span>{clampPct(popupInfo.water.percent)}%</span><span>100%</span></div>
-                </div>
-              </div>
-
-              <div className="popup-actions">
-                <button className="btn btn-ghost" onClick={(e) => { e.stopPropagation(); closePopup(); }}>Close</button>
-              </div>
-            </div>
-          </div>
-        </Html>
-      )}
+      <Model
+        setOriginalColors={(map) => { savedColors.current = map; setOriginalColors && setOriginalColors(map); }}
+        setInitialFocusBox={setInitialFocusBox}
+        setGroundMeshes={(arr) => { groundMeshesRef.current = Array.isArray(arr) ? arr : []; }}
+      />
     </>
   );
 };

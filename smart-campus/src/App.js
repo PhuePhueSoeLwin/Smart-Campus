@@ -1,46 +1,47 @@
 // App.js
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import Map3D from './components/Map3D';
 import './App.css';
+
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
 import Controller from './components/controller';
+
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import GaugeChart from 'react-gauge-chart';
 import { Bar } from 'react-chartjs-2';
+
 import {
- Chart as ChartJS,
- CategoryScale,
- LinearScale,
- BarElement,
- LineElement,
- PointElement,
- Title,
- Tooltip,
- Legend,
- ArcElement,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-
 // Register Chart.js + datalabels
 ChartJS.register(
- CategoryScale,
- LinearScale,
- BarElement,
- LineElement,
- PointElement,
- Title,
- Tooltip,
- Legend,
- ArcElement,
- ChartDataLabels
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  ChartDataLabels
 );
-
 
 // Defaults
 ChartJS.defaults.color = '#fff';
@@ -48,643 +49,788 @@ ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
-
-/** Centered modal */
+/** Centered modal (unchanged) */
 const Modal = ({ open, onClose, children, size = 'md' }) => {
- if (!open) return null;
- return createPortal(
-   <div className="modal-overlay" onClick={onClose}>
-     <div
-       className={`modal-box ${size === 'sm' ? 'modal-compact' : ''}`}
-       onClick={(e) => e.stopPropagation()}
-     >
-       <button className="close-button" onClick={onClose}>✖</button>
-       {children}
-     </div>
-   </div>,
-   document.body
- );
+  if (!open) return null;
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className={`modal-box ${size === 'sm' ? 'modal-compact' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="close-button" onClick={onClose}>✖</button>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
 };
-
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
-
-const App = () => {
- const [showDashboards, setShowDashboards] = useState(true);
- const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
- const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
-
-
- const [popupData, setPopupData] = useState(null);
- const [resetColors, setResetColors] = useState(false);
- const [originalColors, setOriginalColors] = useState(new Map());
- const [controllerCommand, setControllerCommand] = useState(null);
-
-
- // Instructions popup
- const [showInstructions, setShowInstructions] = useState(() => {
-   const dontShow = localStorage.getItem('dontShowInstructions');
-   return dontShow === 'true' ? false : true;
- });
- const [showConfirmPopup, setShowConfirmPopup] = useState(false);
- const [hour24, setHour24] = useState(true);
-
-
- // App-level popups
- const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
- const [isOverallPopupVisible, setIsOverallPopupVisible] = useState(false);
- const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
- const [selectedBuilding, setSelectedBuilding] = useState(null);
-
-
- // Vehicle schedule popup
- const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
- const [vehicleType, setVehicleType] = useState('Cars');
- const [schedule, setSchedule] = useState([]);
-
-
- const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
- const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
-
-
- useEffect(() => {
-   const times = [
-     '6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
-     '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM',
-     '6:00 PM','7:00 PM','8:00 PM','9:00 PM'
-   ];
-   setSchedule(times.map(time => ({
-     time,
-     cars: Math.floor(Math.random()*500),
-     motorcycles: Math.floor(Math.random()*1000)
-   })));
- }, []);
-
-
- const peakTime = schedule.length
-   ? schedule.reduce((p, e) =>
-       (e[vehicleType.toLowerCase()] > p[vehicleType.toLowerCase()] ? e : p),
-     schedule[0])
-   : null;
-
-
- // Weekly usage preset
- const [presetRange, setPresetRange] = useState(null);
- const setRangeDays = (days) => {
-   const end = new Date();
-   const start = new Date();
-   start.setDate(end.getDate() - (days - 1));
-   setSelectedDateRange([startOfDay(start), endOfDay(end)]);
-   setPresetRange(days);
- };
-
-
- const totalElectricityUsage = 121008.75;
-
-
- const buildDailySeries = (days = 35) => {
-   const today = new Date();
-   const series = Array.from({ length: days }, (_, idx) => {
-     const date = new Date();
-     date.setDate(today.getDate() - (days - 1 - idx));
-     const base = 16000;
-     const variance = (Math.random() * 0.2 - 0.1) * base;
-     const value = base + variance;
-     return { date: startOfDay(date), label: labelFor(date), value };
-   });
-
-
-   const last7 = series.slice(-7);
-   const sumLast7 = last7.reduce((a, p) => a + p.value, 0);
-   const factor = totalElectricityUsage / sumLast7;
-   for (let i = series.length - 7; i < series.length; i++) {
-     series[i] = { ...series[i], value: series[i].value * factor };
-   }
-   return series;
- };
-
-
- const [series] = useState(() => buildDailySeries(35));
- const last7 = series.slice(-7);
- const weeklyLabels = [last7.map((p) => p.label)];
- const weeklyData = [last7.map((p) => p.value)];
-
-
- const normalizeRange = (value) => {
-   if (Array.isArray(value)) {
-     const [s, e] = value;
-     if (!s || !e) return null;
-     return [startOfDay(s), endOfDay(e)];
-   }
-   if (value) return [startOfDay(value), endOfDay(value)];
-   return null;
- };
-
-
- const normalizedRange = normalizeRange(selectedDateRange);
- const filteredPoints = normalizedRange
-   ? series.filter((p) => p.date >= normalizedRange[0] && p.date <= normalizedRange[1])
-   : series.slice(-7);
-
-
- const usageTotal = filteredPoints.reduce((a, p) => a + p.value, 0);
- const usageCount = filteredPoints.length || 1;
- const usageAvg = usageTotal / usageCount;
-
-
- const popupElectricityUsageData = {
-   labels: filteredPoints.map((p) => p.label),
-   datasets: [
-     {
-       label: 'Electricity Usage (kWh)',
-       data: filteredPoints.map((p) => Number(p.value.toFixed(2))),
-       backgroundColor: '#4daef4',
-       borderColor: '#4daef4',
-       borderWidth: 1,
-     },
-   ],
- };
-
-
- const popupElectricityUsageOptions = {
-   responsive: true,
-   maintainAspectRatio: false,
-   plugins: {
-     legend: { labels: { color: '#fff' } },
-     tooltip: { titleColor: '#fff', bodyColor: '#fff' },
-     datalabels: { display: false },
-   },
-   scales: {
-     x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
-     y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
-   },
- };
-
-
- // Water mock data
- const buildings = [
-   'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2',
-   'F1','F2','F3','F4','F5','F6','L1','L2','L3','L4','L5','L6','L7',
-   'S1','S2','S3','S4','S5','S6','S7','M3'
- ];
- const [waterUsageData, setWaterUsageData] = useState([]);
-
-
- const generateWaterUsage = () => {
-   if (waterUsageData.length > 0) {
-     const updated = waterUsageData.map((d) => {
-       let range;
-       if (d.usage <= 300) range = { min: 50, max: 300 };
-       else if (d.usage <= 600) range = { min: 350, max: 600 };
-       else if (d.usage <= 900) range = { min: 650, max: 900 };
-       else if (d.usage <= 1200) range = { min: 950, max: 1200 };
-       else range = { min: 1250, max: 1450 };
-       const newUsage = range.min + Math.random() * (range.max - range.min);
-       return { building: d.building, usage: newUsage };
-     });
-     updated.sort((a, b) => b.usage - a.usage);
-     setWaterUsageData(updated);
-     return;
-   }
-
-
-   const ranges = [
-     { min: 50, max: 300 },
-     { min: 350, max: 600 },
-     { min: 650, max: 900 },
-     { min: 950, max: 1200 },
-     { min: 1250, max: 1450 },
-   ];
-
-
-   const usageData = buildings.map((building, index) => {
-     const range = ranges[index % ranges.length];
-     const usage = range.min + Math.random() * (range.max - range.min);
-     return { building, usage };
-   });
-
-
-   usageData.sort((a, b) => b.usage - a.usage);
-   setWaterUsageData(usageData);
- };
-
-
- useEffect(() => {
-   generateWaterUsage();
-   const id = setInterval(() => {
-     if (waterUsageData.length > 0) generateWaterUsage();
-   }, 5000);
-   return () => clearInterval(id);
-   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, []);
-
-
- const toggleDashboards = () => setShowDashboards((prev) => !prev);
-
-
- const calculateSkyColor = () => {
-   const hour = new Date().getHours();
-   if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';
-   else if (hour >= 9 && hour < 17) return '#87CEEB';
-   else if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';
-   else return '#2C3E50';
- };
-
-
- const padZero = (num) => (num < 10 ? '0' + num : num);
-
-
- const updateThailandTime = () => {
-   const optionsDate = {
-     timeZone: 'Asia/Bangkok',
-     day: '2-digit',
-     month: 'short',
-     year: 'numeric',
-     weekday: 'short',
-   };
-   const formatterDate = new Intl.DateTimeFormat('en-GB', optionsDate);
-   const now = new Date();
-   const parts = formatterDate.formatToParts(now);
-   const day = parts.find((p) => p.type === 'day')?.value;
-   const month = parts.find((p) => p.type === 'month')?.value;
-   const year = parts.find((p) => p.type === 'year')?.value;
-   const weekday = parts.find((p) => p.type === 'weekday')?.value;
-   const dateStr = `${day}/${month}/${year} ${weekday}`;
-
-
-   let h = now.getHours();
-   let m = now.getMinutes();
-   let s = now.getSeconds();
-   const period = h >= 12 ? 'PM' : 'AM';
-   let hour12 = h % 12;
-   if (hour12 === 0) hour12 = 12;
-   const displayHour = hour24 ? padZero(h) : hour12.toString();
-
-
-   setThailandTime({
-     date: dateStr,
-     hour: displayHour,
-     minute: padZero(m),
-     second: padZero(s),
-     period: hour24 ? '' : period,
-   });
- };
-
-
- useEffect(() => {
-   setBackgroundColor(calculateSkyColor());
-   updateThailandTime();
-   const bgId = setInterval(() => setBackgroundColor(calculateSkyColor()), 60000);
-   const tId = setInterval(updateThailandTime, 1000);
-   return () => { clearInterval(bgId); clearInterval(tId); };
- }, [hour24]);
-
-
- const handleLiveButtonClick = () => window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
-
-
- const handleDontShowAgain = () => {
-   localStorage.setItem('dontShowInstructions', 'true');
-   setShowInstructions(false);
-   setShowConfirmPopup(true);
- };
-
-
- const openInstructions = () => setShowInstructions(true);
- const toggleTimeFormat = () => setHour24((prev) => !prev);
-
-
- // Water totals for modal
- const dailyWaterTotal = buildings.reduce(
-   (acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0),
-   0
- );
- const monthlyWaterTotal = dailyWaterTotal * 30;
- const selectedBuildingUsage =
-   (selectedBuilding
-     ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
-     : 0);
-
-
- // Optional: when a building is clicked on the 3D map, reflect it in the water modal selector
- useEffect(() => {
-   if (popupData?.name) setSelectedBuilding(popupData.name);
- }, [popupData]);
-
-
- return (
-   <div className="app-container" style={{ background: backgroundColor }}>
-     <nav className="navbar">
-       <div className="live-button" onClick={handleLiveButtonClick}>
-         <img src="/assets/live.png" alt="Live Stream" />
-         <div className="live-label">LIVE</div>
-       </div>
-
-
-       <img
-         src="/assets/mfu_logo.png"
-         alt="MFU Logo"
-         className="navbar-logo"
-         onClick={openInstructions}
-       />
-
-
-       {/* Right side clock + help */}
-       <div className="thailand-time">
-         <div className="date">{thailandTime.date}</div>
-         <div className="time-row">
-           <div
-             className="time"
-             onClick={toggleTimeFormat}
-             title="Toggle 24h/12h"
-             role="button"
-             tabIndex={0}
-             onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && toggleTimeFormat()}
-           >
-             {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
-             {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
-           </div>
-
-
-           {/* NEW: Help button */}
-           <button
-             className="help-btn"
-             title="Show instructions"
-             aria-label="Show instructions"
-             onClick={openInstructions}
-           >
-             ?
-           </button>
-         </div>
-       </div>
-     </nav>
-
-
-     <button className="hide-button" onClick={toggleDashboards}>
-       {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
-     </button>
-
-
-     <div className="map-container">
-       <Suspense fallback={<div>Loading...</div>}>
-         <Canvas
-           style={{ width: '100vw', height: '100vh' }}
-           camera={{ fov: 75, near: 0.1, far: 10000 }}  // Map3D will place the camera to frame E1+E2
-         >
-           <PerformanceMonitor>
-             <Map3D
-               setPopupData={setPopupData}
-               originalColors={originalColors}
-               resetColors={resetColors}
-               setResetColors={setResetColors}
-               setOriginalColors={setOriginalColors}
-               controllerCommand={controllerCommand}
-               setControllerCommand={setControllerCommand}
-             />
-           </PerformanceMonitor>
-         </Canvas>
-       </Suspense>
-     </div>
-
-
-     {showDashboards && (
-       <>
-         <div className="dashboard-wrapper left-dashboard-wrapper show">
-           <LeftDashboard
-             weeklyData={weeklyData}
-             weeklyLabels={weeklyLabels}
-             waterUsageData={waterUsageData}
-             onOpenWeeklyPopup={() => setIsWeeklyPopupVisible(true)}
-             onOpenOverallPopup={() => setIsOverallPopupVisible(true)}
-           />
-         </div>
-
-
-         <div className="dashboard-wrapper right-dashboard-wrapper show">
-           <RightDashboard onOpenVehiclePopup={openVehiclePopup} />
-         </div>
-       </>
-     )}
-
-
-     {!showDashboards && <Controller setControllerCommand={setControllerCommand} />}
-
-
-     {popupData && (
-       <div className="building-popup" style={{ top: popupData.y + 10, left: popupData.x + 10 }}>
-         <div
-           className="close-popup"
-           onClick={() => {
-             setPopupData(null);
-             setResetColors(true);
-           }}
-         >
-           ❌
-         </div>
-
-
-         <div className="popup-content">
-           <h3>{popupData.name}</h3>
-           <hr />
-           <p>📍 <b>Location:</b> {popupData.name}</p>
-           <p>⚡ <b>Electricity Usage:</b> 1234 kWh</p>
-           <p>💧 <b>Water Usage:</b> 2345 L</p>
-         </div>
-       </div>
-     )}
-
-
-     {/* WEEKLY USAGE MODAL */}
-     <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
-       <div className="modal-header">
-         <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
-         <div className="chip-group" role="group" aria-label="Range presets">
-           <button className={`chip ${presetRange === 7 ? 'active' : ''}`} onClick={() => setRangeDays(7)}>7d</button>
-           <button className={`chip ${presetRange === 14 ? 'active' : ''}`} onClick={() => setRangeDays(14)}>14d</button>
-           <button className={`chip ${presetRange === 30 ? 'active' : ''}`} onClick={() => setRangeDays(30)}>30d</button>
-         </div>
-       </div>
-
-
-       <div className="modal-kpis">
-         <div className="kpi">
-           <span className="kpi-label">Total</span>
-           <span className="kpi-value">{Math.round(usageTotal).toLocaleString()} kWh</span>
-         </div>
-         <div className="kpi">
-           <span className="kpi-label">Avg / day</span>
-           <span className="kpi-value">{Math.round(usageAvg).toLocaleString()} kWh</span>
-         </div>
-         <div className="kpi">
-           <span className="kpi-label">Days</span>
-           <span className="kpi-value">{usageCount}</span>
-         </div>
-       </div>
-
-
-       <div className="modal-content">
-         <div className="chart-wrapper">
-           <Bar data={popupElectricityUsageData} options={popupElectricityUsageOptions} />
-         </div>
-         <div className="calendar-wrapper">
-           <Calendar selectRange onChange={(v) => setSelectedDateRange(v)} value={selectedDateRange} />
-         </div>
-       </div>
-     </Modal>
-
-
-     {/* OVERALL CAMPUS (water) */}
-     <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
-       <div className="modal-header">
-         <h3 className="modal-title">Water Usage: Overall Campus</h3>
-       </div>
-
-
-       <div className="modal-kpis">
-         <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{dailyWaterTotal.toFixed(2)} liters/day</span></div>
-         <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{monthlyWaterTotal.toFixed(2)} liters/month</span></div>
-         <div className="kpi"><span className="kpi-label">Selected Building</span><span className="kpi-value">{selectedBuilding || '—'}</span></div>
-       </div>
-
-
-       <div className="modal-content">
-         <div className="card gauge-card">
-           <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
-           <div className="gauge-holder">
-             <GaugeChart
-               id="building-speedometer"
-               nrOfLevels={5}
-               percent={selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5}
-               arcWidth={0.3}
-               textColor="#ffffff"
-               needleColor="#ff9800"
-               needleBaseColor="#e01e5a"
-               colors={['#5BE12C', '#F5CD19', '#EA4228']}
-               cornerRadius={0}
-               animate={false}
-               hideText={true}
-             />
-             {selectedBuilding && (<p className="big-stat">{selectedBuildingUsage.toFixed(2)} liters/day</p>)}
-           </div>
-         </div>
-
-
-         <div className="card control-card">
-           <h4 className="card-title">Select a Building</h4>
-           <div className="water-dropdown-container">
-             <select
-               value={selectedBuilding || ''}
-               onChange={(e) => setSelectedBuilding(e.target.value)}
-               className="building-dropdown"
-             >
-               <option value="">Overall Campus</option>
-               {buildings.map((b) => (<option key={b} value={b}>{b}</option>))}
-             </select>
-           </div>
-
-
-           {selectedBuilding && (
-             <div className="stat-box">
-               <div className="stat-label">Current Usage</div>
-               <div className="stat-value">{selectedBuildingUsage.toFixed(2)} liters/day</div>
-             </div>
-           )}
-           <p className="muted-note">Tip: choosing a building updates the gauge on the left.</p>
-         </div>
-       </div>
-     </Modal>
-
-
-     {/* VEHICLE SCHEDULE — compact */}
-     <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
-       <div className="modal-header">
-         <h3 className="modal-title">{vehicleType} Schedule</h3>
-         <div className="button-group">
-           <button
-             className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
-             onClick={() => setVehicleType('Cars')}
-             title="Show Cars"
-           >🚗</button>
-           <button
-             className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
-             onClick={() => setVehicleType('Motorcycles')}
-             title="Show Motorcycles"
-           >🏍️</button>
-         </div>
-       </div>
-
-
-       <p className="modal-note">Here is the schedule for the whole day.</p>
-
-
-       <div className="schedule-scroll">
-         <table className="schedule-table">
-           <thead>
-             <tr><th>Time</th><th>{vehicleType}</th></tr>
-           </thead>
-           <tbody>
-             {schedule.map((entry) => (
-               <tr key={entry.time}>
-                 <td>{entry.time}</td>
-                 <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
-               </tr>
-             ))}
-           </tbody>
-         </table>
-       </div>
-
-
-       {peakTime && (
-         <div className="peak-row">
-           <div className="kpi mini">
-             <span className="kpi-label">Peak Time</span>
-             <span className="kpi-value">{peakTime.time}</span>
-           </div>
-           <div className="kpi mini">
-             <span className="kpi-label">Vehicles</span>
-             <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
-           </div>
-         </div>
-       )}
-     </Modal>
-
-
-     {showInstructions && (
-       <div className="instructions-popup">
-         <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
-         <h3 className="instruction-title">Map Controls</h3>
-         <div className="instruction-list">
-           <div className="instruction-item"><div className="key-badge">W</div><div>Move Forward</div></div>
-           <div className="instruction-item"><div className="key-badge">S</div><div>Move Backward</div></div>
-           <div className="instruction-item"><div className="key-badge">A</div><div>Move Left</div></div>
-           <div className="instruction-item"><div className="key-badge">D</div><div>Move Right</div></div>
-           <div className="instruction-item"><div className="key-badge">Space</div><div>Move Upward</div></div>
-           <div className="instruction-item"><div className="key-badge">Shift</div><div>Move Downward</div></div>
-         </div>
-         <hr className="divider" />
-         <p className="tip-text">💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.</p>
-         <button className="dont-show-btn" onClick={handleDontShowAgain}>Do not show me again</button>
-       </div>
-     )}
-
-
-     {showConfirmPopup && (
-       <div className="confirm-popup">
-         <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
-         <p className="confirm-text">
-           💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo or the “?” button on the Navigation Bar.
-         </p>
-       </div>
-     )}
-   </div>
- );
+/** Tiny inline icons to avoid extra deps */
+const Icon = ({ name, size = 14 }) => {
+  const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  switch (name) {
+    case 'pin':
+      return (<svg {...common}><path d="M16 3l5 5-7 7-4 1 1-4 7-7z"/><path d="M2 22l10-10"/></svg>);
+    case 'download':
+      return (<svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>);
+    case 'route':
+      return (<svg {...common}><path d="M3 5h5a2 2 0 0 1 2 2v10a2 2 0 0 0 2 2h7"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg>);
+    case 'layers':
+      return (<svg {...common}><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>);
+    case 'x':
+      return (<svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
+    case 'user':   return (<svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+    case 'therm':  return (<svg {...common}><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"/></svg>);
+    case 'leaf':   return (<svg {...common}><path d="M11 3C7 3 3 7 3 11s4 8 8 8 8-4 8-8V5l-4 4"/></svg>);
+    case 'wind':   return (<svg {...common}><path d="M9 5a3 3 0 1 1 3 3H2"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M4 18h10"/></svg>);
+    default: return null;
+  }
 };
 
+const App = () => {
+  const [showDashboards, setShowDashboards] = useState(true);
+  const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
+  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
+
+  // Map interaction <> popup (Popup is handled here in App)
+  const [popupData, setPopupData] = useState(null);
+  const [resetColors, setResetColors] = useState(false);
+  const [originalColors, setOriginalColors] = useState(new Map());
+
+  // Controller for map movement
+  const [controllerCommand, setControllerCommand] = useState(null);
+
+  // Pin state — when pinned, clicks on new buildings are ignored
+  const [pinned, setPinned] = useState(false);
+  const setPopupFromMap = useCallback((d) => {
+    if (!pinned) setPopupData(d);
+  }, [pinned]);
+
+  // Instructions popup
+  const [showInstructions, setShowInstructions] = useState(() => {
+    const dontShow = localStorage.getItem('dontShowInstructions');
+    return dontShow === 'true' ? false : true;
+  });
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [hour24, setHour24] = useState(true);
+
+  // App-level popups
+  const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
+  const [isOverallPopupVisible, setIsOverallPopupVisible] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
+
+  // Vehicle schedule popup
+  const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
+  const [vehicleType, setVehicleType] = useState('Cars');
+  const [schedule, setSchedule] = useState([]);
+
+  const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
+  const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
+
+  useEffect(() => {
+    const times = [
+      '6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
+      '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM',
+      '6:00 PM','7:00 PM','8:00 PM','9:00 PM'
+    ];
+    setSchedule(times.map(time => ({
+      time,
+      cars: Math.floor(Math.random()*500),
+      motorcycles: Math.floor(Math.random()*1000)
+    })));
+  }, []);
+
+  const peakTime = schedule.length
+    ? schedule.reduce((p, e) =>
+        (e[vehicleType.toLowerCase()] > p[vehicleType.toLowerCase()] ? e : p),
+      schedule[0])
+    : null;
+
+  // Weekly usage preset
+  const [presetRange, setPresetRange] = useState(null);
+  const setRangeDays = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    setSelectedDateRange([startOfDay(start), endOfDay(end)]);
+    setPresetRange(days);
+  };
+
+  const totalElectricityUsage = 121008.75;
+
+  const buildDailySeries = (days = 35) => {
+    const today = new Date();
+    const series = Array.from({ length: days }, (_, idx) => {
+      const date = new Date();
+      date.setDate(today.getDate() - (days - 1 - idx));
+      const base = 16000;
+      const variance = (Math.random() * 0.2 - 0.1) * base;
+      const value = base + variance;
+      return { date: startOfDay(date), label: labelFor(date), value };
+    });
+
+    const last7 = series.slice(-7);
+    const sumLast7 = last7.reduce((a, p) => a + p.value, 0);
+    const factor = totalElectricityUsage / sumLast7;
+    for (let i = series.length - 7; i < series.length; i++) {
+      series[i] = { ...series[i], value: series[i].value * factor };
+    }
+    return series;
+  };
+
+  const [series] = useState(() => buildDailySeries(35));
+  const last7 = series.slice(-7);
+  const weeklyLabels = [last7.map((p) => p.label)];
+  const weeklyData = [last7.map((p) => p.value)];
+
+  const normalizeRange = (value) => {
+    if (Array.isArray(value)) {
+      const [s, e] = value;
+      if (!s || !e) return null;
+      return [startOfDay(s), endOfDay(e)];
+    }
+    if (value) return [startOfDay(value), endOfDay(value)];
+    return null;
+  };
+
+  const normalizedRange = normalizeRange(selectedDateRange);
+  const filteredPoints = normalizedRange
+    ? series.filter((p) => p.date >= normalizedRange[0] && p.date <= normalizedRange[1])
+    : series.slice(-7);
+
+  const usageTotal = filteredPoints.reduce((a, p) => a + p.value, 0);
+  const usageCount = filteredPoints.length || 1;
+  const usageAvg = usageTotal / usageCount;
+
+  const popupElectricityUsageData = {
+    labels: filteredPoints.map((p) => p.label),
+    datasets: [
+      {
+        label: 'Electricity Usage (kWh)',
+        data: filteredPoints.map((p) => Number(p.value.toFixed(2))),
+        backgroundColor: '#4daef4',
+        borderColor: '#4daef4',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const popupElectricityUsageOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#fff' } },
+      tooltip: { titleColor: '#fff', bodyColor: '#fff' },
+      datalabels: { display: false },
+    },
+    scales: {
+      x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
+      y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.15)' } },
+    },
+  };
+
+  // Water mock data
+  const buildings = [
+    'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2',
+    'F1','F2','F3','F4','F5','F6','L1','L2','L3','L4','L5','L6','L7',
+    'S1','S2','S3','S4','S5','S6','S7','M3'
+  ];
+  const [waterUsageData, setWaterUsageData] = useState([]);
+
+  const generateWaterUsage = () => {
+    if (waterUsageData.length > 0) {
+      const updated = waterUsageData.map((d) => {
+        let range;
+        if (d.usage <= 300) range = { min: 50, max: 300 };
+        else if (d.usage <= 600) range = { min: 350, max: 600 };
+        else if (d.usage <= 900) range = { min: 650, max: 900 };
+        else if (d.usage <= 1200) range = { min: 950, max: 1200 };
+        else range = { min: 1250, max: 1450 };
+        const newUsage = range.min + Math.random() * (range.max - range.min);
+        return { building: d.building, usage: newUsage };
+      });
+      updated.sort((a, b) => b.usage - a.usage);
+      setWaterUsageData(updated);
+      return;
+    }
+
+    const ranges = [
+      { min: 50, max: 300 },
+      { min: 350, max: 600 },
+      { min: 650, max: 900 },
+      { min: 950, max: 1200 },
+      { min: 1250, max: 1450 },
+    ];
+
+    const usageData = buildings.map((building, index) => {
+      const range = ranges[index % ranges.length];
+      const usage = range.min + Math.random() * (range.max - range.min);
+      return { building, usage };
+    });
+
+    usageData.sort((a, b) => b.usage - a.usage);
+    setWaterUsageData(usageData);
+  };
+
+  useEffect(() => {
+    generateWaterUsage();
+    const id = setInterval(() => {
+      if (waterUsageData.length > 0) generateWaterUsage();
+    }, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleDashboards = () => setShowDashboards((prev) => !prev);
+
+  const calculateSkyColor = () => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';
+    else if (hour >= 9 && hour < 17) return '#87CEEB';
+    else if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';
+    else return '#2C3E50';
+  };
+
+  const padZero = (num) => (num < 10 ? '0' + num : num);
+
+  const updateThailandTime = () => {
+    const optionsDate = {
+      timeZone: 'Asia/Bangkok',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      weekday: 'short',
+    };
+    const formatterDate = new Intl.DateTimeFormat('en-GB', optionsDate);
+    const now = new Date();
+    const parts = formatterDate.formatToParts(now);
+    const day = parts.find((p) => p.type === 'day')?.value;
+    const month = parts.find((p) => p.type === 'month')?.value;
+    const year = parts.find((p) => p.type === 'year')?.value;
+    const weekday = parts.find((p) => p.type === 'weekday')?.value;
+    const dateStr = `${day}/${month}/${year} ${weekday}`;
+
+    let h = now.getHours();
+    let m = now.getMinutes();
+    let s = now.getSeconds();
+    const period = h >= 12 ? 'PM' : 'AM';
+    let hour12 = h % 12;
+    if (hour12 === 0) hour12 = 12;
+    const displayHour = hour24 ? padZero(h) : hour12.toString();
+
+    setThailandTime({
+      date: dateStr,
+      hour: displayHour,
+      minute: padZero(m),
+      second: padZero(s),
+      period: hour24 ? '' : period,
+    });
+  };
+
+  useEffect(() => {
+    setBackgroundColor(calculateSkyColor());
+    updateThailandTime();
+    const bgId = setInterval(() => setBackgroundColor(calculateSkyColor()), 60000);
+    const tId = setInterval(updateThailandTime, 1000);
+    return () => { clearInterval(bgId); clearInterval(tId); };
+  }, [hour24]);
+
+  const handleLiveButtonClick = () => window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
+
+  const handleDontShowAgain = () => {
+    localStorage.setItem('dontShowInstructions', 'true');
+    setShowInstructions(false);
+    setShowConfirmPopup(true);
+  };
+
+  const openInstructions = () => setShowInstructions(true);
+  const toggleTimeFormat = () => setHour24((prev) => !prev);
+
+  // Optional: reflect selected building name in other UI
+  useEffect(() => {
+    if (popupData?.name) setSelectedBuilding(popupData.name);
+  }, [popupData]);
+
+  // Water totals for modal
+  const dailyWaterTotal = buildings.reduce(
+    (acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0),
+    0
+  );
+  const monthlyWaterTotal = dailyWaterTotal * 30;
+  const selectedBuildingUsage =
+    (selectedBuilding
+      ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
+      : 0);
+
+  // helper for meters
+  const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
+
+  /** Derived “smart city” extras for the popup */
+  const popupDerived = useMemo(() => {
+    if (!popupData) return null;
+
+    // Tiny pseudo-trends so UI looks alive (±0–3%)
+    const randTrend = () => {
+      const n = Math.round((Math.random() * 6 - 3) * 10) / 10; // -3..+3 %
+      return { value: n, dir: n === 0 ? 'eq' : n > 0 ? 'up' : 'down' };
+    };
+
+    const elec = popupData.electricity || { value: 0, unit: 'kWh', percent: 0, status: 'N/A' };
+    const water = popupData.water || { value: 0, unit: 'm³', percent: 0, status: 'N/A' };
+
+    // Example rates (tweak to your real tariffs)
+    const THB_PER_KWH   = 4.19;
+    const THB_PER_M3    = 13.0;
+    const GRID_CO2_KG_KWH = 0.45;
+
+    // Costs / emissions
+    const costTHB = elec.value * THB_PER_KWH;
+    const waterTHB = water.value * THB_PER_M3;
+    const co2kg = elec.value * GRID_CO2_KG_KWH;
+
+    // A simple occupancy estimate by building type
+    const baseOcc = popupData.type?.toLowerCase().includes('library') ? 220 :
+                    popupData.type?.toLowerCase().includes('auditor') ? 350 :
+                    120;
+    const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4))); // ±20%
+
+    // Micro-environment (fake but plausible)
+    const temperature = 24 + Math.round(Math.random()*4); // 24–28 °C
+    const co2ppm = 420 + Math.round(Math.random()*200);   // ambient-ish
+    const aqi = 18 + Math.round(Math.random()*12);
+
+    return {
+      trendElec: randTrend(),
+      trendWater: randTrend(),
+      costTHB,
+      waterTHB,
+      co2kg,
+      occupancy,
+      temperature,
+      co2ppm,
+      aqi
+    };
+  }, [popupData]);
+
+  /** Export popup to JSON */
+  const exportPopup = () => {
+    if (!popupData) return;
+    const payload = { ...popupData, derived: popupDerived, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${popupData.name.replace(/\s+/g,'_')}_snapshot.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** Copy coordinates */
+  const copyCoords = async () => {
+    if (!popupData?.world) return;
+    const { x, y, z } = popupData.world;
+    const text = `X ${x.toFixed(2)}, Y ${y.toFixed(2)}, Z ${z.toFixed(2)}`;
+    try { await navigator.clipboard.writeText(text); } catch {}
+  };
+
+  /** Open a (future) deep link */
+  const openAnalytics = () => {
+    if (!popupData) return;
+    // Hook into your router later
+    window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
+  };
+
+  return (
+    <div className="app-container" style={{ background: backgroundColor }}>
+      <nav className="navbar">
+        <div className="live-button" onClick={handleLiveButtonClick}>
+          <img src="/assets/live.png" alt="Live Stream" />
+          <div className="live-label">LIVE</div>
+        </div>
+
+        <img
+          src="/assets/mfu_logo.png"
+          alt="MFU Logo"
+          className="navbar-logo"
+          onClick={openInstructions}
+        />
+
+        {/* Right side clock + help */}
+        <div className="thailand-time">
+          <div className="date">{thailandTime.date}</div>
+          <div className="time-row">
+            <div
+              className="time"
+              onClick={toggleTimeFormat}
+              title="Toggle 24h/12h"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && toggleTimeFormat()}
+            >
+              {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
+              {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
+            </div>
+
+            {/* Help button */}
+            <button
+              className="help-btn"
+              title="Show instructions"
+              aria-label="Show instructions"
+              onClick={openInstructions}
+            >
+              ?
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <button className="hide-button" onClick={toggleDashboards}>
+        {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
+      </button>
+
+      {/* 3D Map */}
+      <div className="map-container">
+        <Suspense fallback={<div>Loading...</div>}>
+          <Canvas
+            className="map3d-canvas"
+            style={{ width: '100vw', height: '100vh' }}
+            camera={{ fov: 75, near: 0.1, far: 10000 }}
+          >
+            <PerformanceMonitor>
+              <Map3D
+                setPopupData={setPopupFromMap}
+                originalColors={originalColors}
+                resetColors={resetColors}
+                setResetColors={setResetColors}
+                setOriginalColors={setOriginalColors}
+                controllerCommand={controllerCommand}
+                setControllerCommand={setControllerCommand}
+              />
+            </PerformanceMonitor>
+          </Canvas>
+        </Suspense>
+      </div>
+
+      {/* Left / Right dashboards */}
+      {showDashboards && (
+        <>
+          <div className="dashboard-wrapper left-dashboard-wrapper show">
+            <LeftDashboard
+              weeklyData={weeklyData}
+              weeklyLabels={weeklyLabels}
+              waterUsageData={waterUsageData}
+              onOpenWeeklyPopup={() => setIsWeeklyPopupVisible(true)}
+              onOpenOverallPopup={() => setIsOverallPopupVisible(true)}
+            />
+          </div>
+
+          <div className="dashboard-wrapper right-dashboard-wrapper show">
+            <RightDashboard onOpenVehiclePopup={openVehiclePopup} />
+          </div>
+        </>
+      )}
+
+      {!showDashboards && <Controller setControllerCommand={setControllerCommand} />}
+
+      {/* Building popup — fixed, scientific & compact containers (NO scrollbar) */}
+      {popupData && popupDerived && (
+        <div
+          className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
+          role="dialog"
+          aria-label={`${popupData.name} details`}
+        >
+          {/* Header */}
+          <div className="popup-header">
+            <div className="head-left">
+              <div className="eyebrow">SMART CAMPUS · MFU</div>
+              <div className="title">{popupData.name}</div>
+              <div className="subtitle">{popupData.type}</div>
+            </div>
+
+            <div className="toolbar">
+              <button
+                className={`tool-btn ${pinned ? 'active' : ''}`}
+                title={pinned ? 'Unpin' : 'Pin'}
+                onClick={() => setPinned((p) => !p)}
+                aria-pressed={pinned}
+              >
+                <Icon name="pin" />
+              </button>
+              <button className="tool-btn" title="Copy coordinates" onClick={copyCoords}>
+                <Icon name="layers" />
+              </button>
+              <button className="tool-btn" title="Export snapshot (JSON)" onClick={exportPopup}>
+                <Icon name="download" />
+              </button>
+              <button className="tool-btn" title="Open analytics" onClick={openAnalytics}>
+                <Icon name="route" />
+              </button>
+              {/* keep X icon only (you asked to remove the text “Close” button) */}
+              <button
+                className="tool-btn danger"
+                title="Close"
+                aria-label="Close building popup"
+                onClick={() => { setPopupData(null); setResetColors(true); setPinned(false); }}
+              >
+                <Icon name="x" />
+              </button>
+            </div>
+          </div>
+
+          {/* Compact status strip (4 chips) */}
+          <div className="telemetry-row">
+            <div className="chip">
+              <Icon name="user" /><span>{popupDerived.occupancy}</span><small>people</small>
+            </div>
+            <div className="chip">
+              <Icon name="therm" /><span>{popupDerived.temperature}°C</span><small>temp</small>
+            </div>
+            <div className="chip">
+              <Icon name="leaf" /><span>{popupDerived.co2ppm}</span><small>CO₂ ppm</small>
+            </div>
+            <div className="chip">
+              <Icon name="wind" /><span>{popupDerived.aqi}</span><small>AQI</small>
+            </div>
+          </div>
+
+          {/* Location (single compact line) */}
+          <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
+            <span className="loc-label">World</span>
+            <span className="coord">X {popupData.world.x.toFixed(2)}</span>
+            <span className="coord">Y {popupData.world.y.toFixed(2)}</span>
+            <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
+          </div>
+
+          {/* Metric cards - ultra compact, no scroll */}
+          <div className="metrics-grid">
+            {/* Electricity */}
+            <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
+              <div className="metric-head">
+                <div className="metric-name"><span className="dot" />Electricity</div>
+                <span className={`badge ${String(popupData.electricity.status).toLowerCase()}`}>
+                  {popupData.electricity.status}
+                </span>
+              </div>
+              <div className="metric-value">
+                <span className="num">{popupData.electricity.value}</span>
+                <span className="unit">{popupData.electricity.unit}</span>
+              </div>
+              <div className="meter">
+                <div className="bar" style={{ width: `${clampPct(popupData.electricity.percent)}%` }} />
+              </div>
+              <div className={`trend ${popupDerived.trendElec.dir}`}>
+                {popupDerived.trendElec.dir === 'up' ? '▲' : popupDerived.trendElec.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendElec.value)}%
+              </div>
+            </div>
+
+            {/* Water */}
+            <div className={`metric-card ${popupData.water.status === 'High' ? 'risk' : ''}`}>
+              <div className="metric-head">
+                <div className="metric-name"><span className="dot alt" />Water</div>
+                <span className={`badge ${String(popupData.water.status).toLowerCase()}`}>
+                  {popupData.water.status}
+                </span>
+              </div>
+              <div className="metric-value">
+                <span className="num">{popupData.water.value}</span>
+                <span className="unit">{popupData.water.unit}</span>
+              </div>
+              <div className="meter alt">
+                <div className="bar" style={{ width: `${clampPct(popupData.water.percent)}%` }} />
+              </div>
+              <div className={`trend ${popupDerived.trendWater.dir}`}>
+                {popupDerived.trendWater.dir === 'up' ? '▲' : popupDerived.trendWater.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendWater.value)}%
+              </div>
+            </div>
+          </div>
+
+          {/* Footer stats row (3 compact pills) */}
+          <div className="footer-stats">
+            <div className="pill"><span className="k">Cost</span><span className="v">฿{popupDerived.costTHB.toFixed(0)}</span></div>
+            <div className="pill"><span className="k">CO₂</span><span className="v">{popupDerived.co2kg.toFixed(0)} kg</span></div>
+            <div className="pill"><span className="k">Water ฿</span><span className="v">฿{popupDerived.waterTHB.toFixed(0)}</span></div>
+          </div>
+        </div>
+      )}
+
+      {/* WEEKLY USAGE MODAL */}
+      <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
+          <div className="chip-group" role="group" aria-label="Range presets">
+            <button className={`chip ${presetRange === 7 ? 'active' : ''}`} onClick={() => setRangeDays(7)}>7d</button>
+            <button className={`chip ${presetRange === 14 ? 'active' : ''}`} onClick={() => setRangeDays(14)}>14d</button>
+            <button className={`chip ${presetRange === 30 ? 'active' : ''}`} onClick={() => setRangeDays(30)}>30d</button>
+          </div>
+        </div>
+
+        <div className="modal-kpis">
+          <div className="kpi">
+            <span className="kpi-label">Total</span>
+            <span className="kpi-value">{Math.round(usageTotal).toLocaleString()} kWh</span>
+          </div>
+          <div className="kpi">
+            <span className="kpi-label">Avg / day</span>
+            <span className="kpi-value">{Math.round(usageAvg).toLocaleString()} kWh</span>
+          </div>
+          <div className="kpi">
+            <span className="kpi-label">Days</span>
+            <span className="kpi-value">{usageCount}</span>
+          </div>
+        </div>
+
+        <div className="modal-content">
+          <div className="chart-wrapper">
+            <Bar data={popupElectricityUsageData} options={popupElectricityUsageOptions} />
+          </div>
+          <div className="calendar-wrapper">
+            <Calendar selectRange onChange={(v) => setSelectedDateRange(v)} value={selectedDateRange} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* OVERALL CAMPUS (water) */}
+      <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
+        <div className="modal-header">
+          <h3 className="modal-title">Water Usage: Overall Campus</h3>
+        </div>
+
+        <div className="modal-kpis">
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{dailyWaterTotal.toFixed(2)} liters/day</span></div>
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{monthlyWaterTotal.toFixed(2)} liters/month</span></div>
+          <div className="kpi"><span className="kpi-label">Selected Building</span><span className="kpi-value">{selectedBuilding || '—'}</span></div>
+        </div>
+
+        <div className="modal-content">
+          <div className="card gauge-card">
+            <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
+            <div className="gauge-holder">
+              <GaugeChart
+                id="building-speedometer"
+                nrOfLevels={5}
+                percent={selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5}
+                arcWidth={0.3}
+                textColor="#ffffff"
+                needleColor="#ff9800"
+                needleBaseColor="#e01e5a"
+                colors={['#5BE12C', '#F5CD19', '#EA4228']}
+                cornerRadius={0}
+                animate={false}
+                hideText={true}
+              />
+              {selectedBuilding && (<p className="big-stat">{selectedBuildingUsage.toFixed(2)} liters/day</p>)}
+            </div>
+          </div>
+
+          <div className="card control-card">
+            <h4 className="card-title">Select a Building</h4>
+            <div className="water-dropdown-container">
+              <select
+                value={selectedBuilding || ''}
+                onChange={(e) => setSelectedBuilding(e.target.value)}
+                className="building-dropdown"
+              >
+                <option value="">Overall Campus</option>
+                {buildings.map((b) => (<option key={b} value={b}>{b}</option>))}
+              </select>
+            </div>
+
+            {selectedBuilding && (
+              <div className="stat-box">
+                <div className="stat-label">Current Usage</div>
+                <div className="stat-value">{selectedBuildingUsage.toFixed(2)} liters/day</div>
+              </div>
+            )}
+            <p className="muted-note">Tip: choosing a building updates the gauge on the left.</p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* VEHICLE SCHEDULE — compact */}
+      <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
+        <div className="modal-header">
+          <h3 className="modal-title">{vehicleType} Schedule</h3>
+          <div className="button-group">
+            <button
+              className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
+              onClick={() => setVehicleType('Cars')}
+              title="Show Cars"
+            >🚗</button>
+            <button
+              className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
+              onClick={() => setVehicleType('Motorcycles')}
+              title="Show Motorcycles"
+            >🏍️</button>
+          </div>
+        </div>
+
+        <p className="modal-note">Here is the schedule for the whole day.</p>
+
+        <div className="schedule-scroll">
+          <table className="schedule-table">
+            <thead>
+              <tr><th>Time</th><th>{vehicleType}</th></tr>
+            </thead>
+            <tbody>
+              {schedule.map((entry) => (
+                <tr key={entry.time}>
+                  <td>{entry.time}</td>
+                  <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {peakTime && (
+          <div className="peak-row">
+            <div className="kpi mini">
+              <span className="kpi-label">Peak Time</span>
+              <span className="kpi-value">{peakTime.time}</span>
+            </div>
+            <div className="kpi mini">
+              <span className="kpi-label">Vehicles</span>
+              <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Instructions */}
+      {showInstructions && (
+        <div className="instructions-popup">
+          <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
+          <h3 className="instruction-title">Map Controls</h3>
+          <div className="instruction-list">
+            <div className="instruction-item"><div className="key-badge">W</div><div>Move Forward</div></div>
+            <div className="instruction-item"><div className="key-badge">S</div><div>Move Backward</div></div>
+            <div className="instruction-item"><div className="key-badge">A</div><div>Move Left</div></div>
+            <div className="instruction-item"><div className="key-badge">D</div><div>Move Right</div></div>
+            <div className="instruction-item"><div className="key-badge">Space</div><div>Move Upward</div></div>
+            <div className="instruction-item"><div className="key-badge">Shift</div><div>Move Downward</div></div>
+          </div>
+          <hr className="divider" />
+          <p className="tip-text">💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.</p>
+          <button className="dont-show-btn" onClick={handleDontShowAgain}>Do not show me again</button>
+        </div>
+      )}
+
+      {showConfirmPopup && (
+        <div className="confirm-popup">
+          <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
+          <p className="confirm-text">
+            💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo or the “?” button on the Navigation Bar.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default App;
-
-
-
