@@ -70,7 +70,7 @@ const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
-/** Tiny inline icons to avoid extra deps */
+/** Tiny inline icons (+ walk/drone) */
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -88,6 +88,10 @@ const Icon = ({ name, size = 14 }) => {
     case 'therm':  return (<svg {...common}><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"/></svg>);
     case 'leaf':   return (<svg {...common}><path d="M11 3C7 3 3 7 3 11s4 8 8 8 8-4 8-8V5l-4 4"/></svg>);
     case 'wind':   return (<svg {...common}><path d="M9 5a3 3 0 1 1 3 3H2"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M4 18h10"/></svg>);
+    case 'walk':
+      return (<svg {...common}><circle cx="12" cy="5" r="2"/><path d="M12 7 9.6 11.5 7.5 13M12 7l2.2 4 3 2M8.5 14.5 10 19M14 13l-1 5"/><path d="M5.5 20H9M12.5 20H16"/></svg>);
+    case 'drone':
+      return (<svg {...common}><circle cx="12" cy="12" r="2"/><path d="M12 10V6M12 18v-4M10 12H6M18 12h-4"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>);
     default: return null;
   }
 };
@@ -105,7 +109,13 @@ const App = () => {
   // Controller for map movement
   const [controllerCommand, setControllerCommand] = useState(null);
 
-  // Pin state — when pinned, clicks on new buildings are ignored
+  // View mode + step nudges for street-view arrows
+  const [navMode, setNavMode] = useState('drone'); // 'walk' | 'drone'
+  const [stepNudge, setStepNudge] = useState(null);
+  const [stepNudgeTick, setStepNudgeTick] = useState(0);
+  const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
+
+  // Pin state
   const [pinned, setPinned] = useState(false);
   const setPopupFromMap = useCallback((d) => {
     if (!pinned) setPopupData(d);
@@ -375,34 +385,29 @@ const App = () => {
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
 
-    // Tiny pseudo-trends so UI looks alive (±0–3%)
     const randTrend = () => {
-      const n = Math.round((Math.random() * 6 - 3) * 10) / 10; // -3..+3 %
+      const n = Math.round((Math.random() * 6 - 3) * 10) / 10;
       return { value: n, dir: n === 0 ? 'eq' : n > 0 ? 'up' : 'down' };
     };
 
     const elec = popupData.electricity || { value: 0, unit: 'kWh', percent: 0, status: 'N/A' };
     const water = popupData.water || { value: 0, unit: 'm³', percent: 0, status: 'N/A' };
 
-    // Example rates (tweak to your real tariffs)
     const THB_PER_KWH   = 4.19;
     const THB_PER_M3    = 13.0;
     const GRID_CO2_KG_KWH = 0.45;
 
-    // Costs / emissions
     const costTHB = elec.value * THB_PER_KWH;
     const waterTHB = water.value * THB_PER_M3;
     const co2kg = elec.value * GRID_CO2_KG_KWH;
 
-    // A simple occupancy estimate by building type
     const baseOcc = popupData.type?.toLowerCase().includes('library') ? 220 :
                     popupData.type?.toLowerCase().includes('auditor') ? 350 :
                     120;
-    const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4))); // ±20%
+    const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4)));
 
-    // Micro-environment (fake but plausible)
-    const temperature = 24 + Math.round(Math.random()*4); // 24–28 °C
-    const co2ppm = 420 + Math.round(Math.random()*200);   // ambient-ish
+    const temperature = 24 + Math.round(Math.random()*4);
+    const co2ppm = 420 + Math.round(Math.random()*200);
     const aqi = 18 + Math.round(Math.random()*12);
 
     return {
@@ -442,7 +447,6 @@ const App = () => {
   /** Open a (future) deep link */
   const openAnalytics = () => {
     if (!popupData) return;
-    // Hook into your router later
     window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
   };
 
@@ -452,6 +456,38 @@ const App = () => {
         <div className="live-button" onClick={handleLiveButtonClick}>
           <img src="/assets/live.png" alt="Live Stream" />
           <div className="live-label">LIVE</div>
+        </div>
+
+        {/* Walk/Drone segmented toggle (clean, no duplicate labels) */}
+        <div className="mode-switch" role="tablist" aria-label="View mode">
+          <button
+            className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
+            onClick={() => setNavMode('walk')}
+            role="tab"
+            aria-selected={navMode === 'walk'}
+            aria-controls="mode-walk"
+          >
+            <Icon name="walk" size={14} />
+            <span>Walk</span>
+          </button>
+
+          <button
+            className={`mode-seg ${navMode === 'drone' ? 'active' : ''}`}
+            onClick={() => setNavMode('drone')}
+            role="tab"
+            aria-selected={navMode === 'drone'}
+            aria-controls="mode-drone"
+          >
+            <Icon name="drone" size={14} />
+            <span>Drone</span>
+          </button>
+
+          {/* Moving highlight only — no text/icons here */}
+          <div
+            className="mode-thumb"
+            style={{ transform: navMode === 'walk' ? 'translateX(0%)' : 'translateX(100%)' }}
+            aria-hidden="true"
+          />
         </div>
 
         <img
@@ -511,10 +547,24 @@ const App = () => {
                 setOriginalColors={setOriginalColors}
                 controllerCommand={controllerCommand}
                 setControllerCommand={setControllerCommand}
+                mode={navMode}
+                stepNudge={stepNudge}
+                stepNudgeTick={stepNudgeTick}
               />
             </PerformanceMonitor>
           </Canvas>
         </Suspense>
+
+        {/* Street-View arrows (only in walk mode) — placed above Hide/Show button */}
+        {navMode === 'walk' && (
+          <div className="streetview-ui" aria-hidden="false">
+            <button className="sv-arrow up" title="Move forward" onClick={() => doNudge('forward')}>▲</button>
+            <div className="sv-left-right">
+              <button className="sv-arrow left" title="Step left" onClick={() => doNudge('left')}>◀</button>
+              <button className="sv-arrow right" title="Step right" onClick={() => doNudge('right')}>▶</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Left / Right dashboards */}
@@ -571,7 +621,6 @@ const App = () => {
               <button className="tool-btn" title="Open analytics" onClick={openAnalytics}>
                 <Icon name="route" />
               </button>
-              {/* keep X icon only (you asked to remove the text “Close” button) */}
               <button
                 className="tool-btn danger"
                 title="Close"
@@ -609,7 +658,6 @@ const App = () => {
 
           {/* Metric cards - ultra compact, no scroll */}
           <div className="metrics-grid">
-            {/* Electricity */}
             <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
                 <div className="metric-name"><span className="dot" />Electricity</div>
@@ -629,7 +677,6 @@ const App = () => {
               </div>
             </div>
 
-            {/* Water */}
             <div className={`metric-card ${popupData.water.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
                 <div className="metric-name"><span className="dot alt" />Water</div>
@@ -650,7 +697,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Footer stats row (3 compact pills) */}
           <div className="footer-stats">
             <div className="pill"><span className="k">Cost</span><span className="v">฿{popupDerived.costTHB.toFixed(0)}</span></div>
             <div className="pill"><span className="k">CO₂</span><span className="v">{popupDerived.co2kg.toFixed(0)} kg</span></div>

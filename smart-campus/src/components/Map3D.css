@@ -8,3 +8,8 @@
 .map3d-canvas:active {
   cursor: grabbing;
 }
+
+/* Cursor hint while in walking mode */
+.walk-mode {
+  cursor: crosshair;
+}

@@ -1,3 +1,4 @@
+// components/Map3D.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
@@ -81,7 +82,7 @@ function approachCameraToBox({
   });
 }
 
-/** GLTF loader + ground detection */
+/** GLTF + ground detection */
 function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
   const { scene } = useGLTF('/assets/final4.glb', true);
   const originalColors = useRef(new Map());
@@ -111,9 +112,8 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
     scene.traverse((obj) => { if (startsWithE1orE2(obj.name)) matches.push(obj); });
 
     let targetBox = new THREE.Box3();
-    if (matches.length) {
-      matches.forEach((o) => targetBox.expandByObject(o));
-    } else {
+    if (matches.length) { matches.forEach((o) => targetBox.expandByObject(o)); }
+    else {
       const e1 = scene.getObjectByName('E1');
       const e2 = scene.getObjectByName('E2');
       let foundAny = false;
@@ -123,7 +123,7 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
     }
     setInitialFocusBox && setInitialFocusBox(targetBox);
 
-    // Detect ground meshes for walk-mode floor locking
+    // Detect likely ground meshes
     const groundNameRe = /(terrain|ground|gis|base|map|sat|earth)/i;
     const buildingLikeRe = /^(e\d|library|av|exabation|exhibition|hall|block|building)/i;
     const candidates = [];
@@ -134,7 +134,7 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
           const size = bbox.getSize(new THREE.Vector3());
           const areaXZ = Math.max(0.0001, size.x * size.z);
           candidates.push({ mesh: obj, size, areaXZ });
-        } catch { /* ignore */ }
+        } catch {}
       }
     });
 
@@ -156,15 +156,10 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
   return <primitive object={scene} />;
 }
 
-/** Walk-mode constants */
-const WALK = {
-  eyeHeight: 1.7,     // camera height above ground in walk mode
-  enterDelta: 2.5,    // enter walk mode when <= this distance to ground
-  exitDelta: 4.0,     // exit walk mode when above this distance
-  walkSpeed: 10,      // m/s towards click target
-  runSpeed: 22,       // m/s on double-click
-  stopDist: 0.6       // stop when this close to target
-};
+/** Walk & Drone constants */
+const WALK = { eyeHeight: 1.7, clearance: 0.25, stepMeters: 6, moveSpeed: 8 };
+const DRONE = { raiseMin: 120, speed: 30 };
+const ROTATE = { yaw: 1.8, pitch: 1.2 };
 
 const Map3D = ({
   setPopupData,
@@ -173,6 +168,9 @@ const Map3D = ({
   setResetColors,
   setOriginalColors,
   controllerCommand,
+  mode = 'drone',
+  stepNudge,
+  stepNudgeTick,
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
@@ -184,85 +182,96 @@ const Map3D = ({
   // Ground lock
   const groundMeshesRef = useRef([]);
   const groundRay = useRef(new THREE.Raycaster());
-  const tempVec = useRef(new THREE.Vector3());
-  const downDir = useRef(new THREE.Vector3(0, -1, 0));
+  const tmp = useRef(new THREE.Vector3());
+  const DOWN = useRef(new THREE.Vector3(0, -1, 0));
   const sceneMinYRef = useRef(null);
-  const groundClearance = 3.0;
-
-  // Walk mode state
-  const [walkMode, setWalkMode] = useState(false);
   const lastGroundY = useRef(null);
-  const walkTarget = useRef(null);
-  const walkSpeedRef = useRef(WALK.walkSpeed);
 
   const direction = useRef(new THREE.Vector3());
   const keys = useRef({});
 
   useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
 
-  // Cache a fallback global floor
+  // Fallback scene floor
   useEffect(() => {
     const id = setTimeout(() => {
       try {
         const bb = new THREE.Box3().setFromObject(scene);
-        sceneMinYRef.current = bb.min.y + groundClearance;
-      } catch { /* ignore */ }
+        sceneMinYRef.current = bb.min.y;
+      } catch {}
     }, 0);
     return () => clearTimeout(id);
   }, [scene]);
 
-  // Change cursor when walk mode toggles
+  // Cursor hint in walk mode
   useEffect(() => {
     const el = gl.domElement;
-    if (walkMode) el.classList.add('walk-mode');
+    if (mode === 'walk') el.classList.add('walk-mode');
     else el.classList.remove('walk-mode');
     return () => el.classList.remove('walk-mode');
-  }, [gl, walkMode]);
+  }, [gl, mode]);
+
+  // Adjust altitude when switching modes
+  useEffect(() => {
+    const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
+    groundRay.current.set(origin, DOWN.current);
+
+    let groundY = (sceneMinYRef.current ?? 0);
+    const grounds = groundMeshesRef.current;
+    if (grounds?.length) {
+      const hits = groundRay.current.intersectObjects(grounds, true);
+      if (hits.length) groundY = hits[0].point.y;
+    }
+    lastGroundY.current = groundY;
+
+    if (mode === 'walk') {
+      const targetY = groundY + WALK.eyeHeight;
+      gsap.to(camera.position, { y: targetY, duration: 0.35, ease: 'power2.out' });
+    } else {
+      const minDroneY = Math.max(groundY + DRONE.raiseMin, camera.position.y);
+      gsap.to(camera.position, { y: minDroneY, duration: 0.5, ease: 'power2.out' });
+    }
+  }, [mode, camera]);
 
   // Mouse look (drag)
   useEffect(() => {
     let isDragging = false;
-    let previous = { x: 0, y: 0 };
-    const onMouseDown = (e) => { isDragging = true; previous = { x: e.clientX, y: e.clientY }; };
-    const onMouseMove = (e) => {
+    let prev = { x: 0, y: 0 };
+    const onDown = (e) => { isDragging = true; prev = { x: e.clientX, y: e.clientY }; };
+    const onMove = (e) => {
       if (!isDragging) return;
-      const dx = e.clientX - previous.x;
-      const dy = e.clientY - previous.y;
-      previous = { x: e.clientX, y: e.clientY };
-      const yaw = dx * 0.002;
-      const pitch = dy * 0.002;
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+      prev = { x: e.clientX, y: e.clientY };
       camera.rotation.order = 'YXZ';
-      camera.rotation.y -= yaw;
-      camera.rotation.x -= pitch;
+      camera.rotation.y -= dx * 0.002;
+      camera.rotation.x -= dy * 0.002;
       camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
     };
-    const onMouseUp = () => { isDragging = false; };
-    gl.domElement.addEventListener('mousedown', onMouseDown);
-    gl.domElement.addEventListener('mousemove', onMouseMove);
-    gl.domElement.addEventListener('mouseup', onMouseUp);
+    const onUp = () => { isDragging = false; };
+    gl.domElement.addEventListener('mousedown', onDown);
+    gl.domElement.addEventListener('mousemove', onMove);
+    gl.domElement.addEventListener('mouseup', onUp);
     return () => {
-      gl.domElement.removeEventListener('mousedown', onMouseDown);
-      gl.domElement.removeEventListener('mousemove', onMouseMove);
-      gl.domElement.removeEventListener('mouseup', onMouseUp);
+      gl.domElement.removeEventListener('mousedown', onDown);
+      gl.domElement.removeEventListener('mousemove', onMove);
+      gl.domElement.removeEventListener('mouseup', onUp);
     };
   }, [camera, gl]);
 
-  // Keyboard + ESC to close popup
+  // Keys
   useEffect(() => {
     const down = (e) => {
       keys.current[e.code] = true;
+      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
       if (e.code === 'Escape') {
-        if (highlightedGroup) {
-          restoreGroupColors(highlightedGroup);
-          restoreCascadesForName(highlightedGroup.userData?.name);
-          setHighlightedGroup(null);
-        }
-        walkTarget.current = null;
+        if (highlightedGroup) restoreGroupColors(highlightedGroup);
         setPopupData && setPopupData(null);
+        setHighlightedGroup(null);
       }
     };
     const up = (e) => { keys.current[e.code] = false; };
-    document.addEventListener('keydown', down);
+    document.addEventListener('keydown', down, { passive: false });
     document.addEventListener('keyup', up);
     return () => {
       document.removeEventListener('keydown', down);
@@ -270,15 +279,31 @@ const Map3D = ({
     };
   }, [highlightedGroup, setPopupData]);
 
-  // Movement + ground lock + walk-mode transitions
+  // Movement + ground lock + nudges
+  const lastNudgeTick = useRef(-1);
   useFrame((_, delta) => {
-    // Standard flight input (WASD/controller)
+    // Rotate with arrows
+    const yawLeft  = keys.current['ArrowLeft']  ? 1 : 0;
+    const yawRight = keys.current['ArrowRight'] ? 1 : 0;
+    const pitchUp  = keys.current['ArrowUp']    ? 1 : 0;
+    const pitchDn  = keys.current['ArrowDown']  ? 1 : 0;
+
+    if (yawLeft || yawRight || pitchUp || pitchDn) {
+      camera.rotation.order = 'YXZ';
+      camera.rotation.y += (yawLeft - yawRight) * ROTATE.yaw * delta;
+      camera.rotation.x -= (pitchUp - pitchDn) * ROTATE.pitch * delta;
+      const HALF = Math.PI / 2;
+      camera.rotation.x = Math.max(-HALF, Math.min(HALF, camera.rotation.x));
+    }
+
+    // WASD (+ Space/Shift in drone)
     const dir = direction.current.set(0, 0, 0);
     if (keys.current['KeyW']) dir.z -= 1;
     if (keys.current['KeyS']) dir.z += 1;
     if (keys.current['KeyA']) dir.x -= 1;
     if (keys.current['KeyD']) dir.x += 1;
-    if (!walkMode) {
+
+    if (mode === 'drone') {
       if (keys.current['Space']) dir.y += 1;
       if (keys.current['ShiftLeft']) dir.y -= 1;
     }
@@ -288,65 +313,50 @@ const Map3D = ({
       if (controllerCommand.moveBackward) dir.z += 1;
       if (controllerCommand.moveLeft) dir.x -= 1;
       if (controllerCommand.moveRight) dir.x += 1;
+      if (mode === 'drone') {
+        if (controllerCommand.moveUp) dir.y += 1;
+        if (controllerCommand.moveDown) dir.y -= 1;
+      }
     }
 
     dir.normalize();
-    const moveSpeed = controllerCommand ? 30 : 10;
+    const moveSpeed = (mode === 'drone') ? DRONE.speed : WALK.moveSpeed;
 
-    // Apply yaw to horizontal plane
     const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
-    const horizontalDir = new THREE.Vector3(dir.x, 0, dir.z).applyEuler(yawOnly);
-    horizontalDir.y = walkMode ? 0 : dir.y; // no vertical keys in walk mode
-    camera.position.addScaledVector(horizontalDir, (walkMode ? 8 : moveSpeed) * delta);
+    const horiz = new THREE.Vector3(dir.x, 0, dir.z).applyEuler(yawOnly);
+    const vY = (mode === 'drone') ? dir.y : 0;
+    camera.position.addScaledVector(new THREE.Vector3(horiz.x, vY, horiz.z), moveSpeed * delta);
 
-    // --- Compute ground height under camera ---
-    const origin = tempVec.current.set(camera.position.x, 1e6, camera.position.z);
-    groundRay.current.set(origin, downDir.current);
+    // Street-View button nudges (fixed forward/left/right)
+    if (mode === 'walk' && stepNudge && stepNudgeTick !== lastNudgeTick.current) {
+      lastNudgeTick.current = stepNudgeTick;
+      const worldUp = new THREE.Vector3(0,1,0);
+      const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly).setY(0).normalize();
+      const left = new THREE.Vector3().crossVectors(worldUp, forward).normalize(); // LEFT vector
+      let stepDir = forward;
+      if (stepNudge.dir === 'left')  stepDir = left;                  // left arrow = left
+      if (stepNudge.dir === 'right') stepDir = left.clone().multiplyScalar(-1); // right arrow = -left (right)
+      camera.position.addScaledVector(stepDir, WALK.stepMeters);
+    }
 
-    let minYAllowed = sceneMinYRef.current ?? -1e6;
-    let groundY = minYAllowed - groundClearance; // default (very low)
+    // Ground lock
+    const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
+    groundRay.current.set(origin, new THREE.Vector3(0,-1,0));
+    let groundY = (sceneMinYRef.current ?? 0);
     const grounds = groundMeshesRef.current;
-    if (grounds && grounds.length) {
+    if (grounds?.length) {
       const hits = groundRay.current.intersectObjects(grounds, true);
-      if (hits.length) {
-        groundY = hits[0].point.y;
-        minYAllowed = Math.max(minYAllowed, groundY + groundClearance);
-      }
+      if (hits.length) groundY = hits[0].point.y;
     }
     lastGroundY.current = groundY;
 
-    // Keep above GIS floor in any mode
-    if (camera.position.y < minYAllowed) camera.position.y = minYAllowed;
-
-    // --- Enter/exit walk mode based on proximity to ground ---
-    const distToGround = camera.position.y - groundY;
-    if (!walkMode && distToGround <= WALK.enterDelta) {
-      setWalkMode(true);
-      walkTarget.current = null;
-    } else if (walkMode && distToGround > WALK.exitDelta) {
-      setWalkMode(false);
-      walkTarget.current = null;
-    }
-
-    // --- While in walk mode, pin eye height + auto-walk towards target ---
-    if (walkMode) {
-      const desiredY = groundY + WALK.eyeHeight;
-      camera.position.y += (desiredY - camera.position.y) * Math.min(1, 12 * delta); // gentle snap
-
-      if (walkTarget.current) {
-        const to = new THREE.Vector3(
-          walkTarget.current.x - camera.position.x,
-          0,
-          walkTarget.current.z - camera.position.z
-        );
-        const dist = to.length();
-        if (dist < WALK.stopDist) {
-          walkTarget.current = null;
-        } else {
-          to.normalize();
-          camera.position.addScaledVector(to, walkSpeedRef.current * delta);
-        }
-      }
+    if (mode === 'walk') {
+      const desired = groundY + WALK.eyeHeight;
+      const t = 1 - Math.pow(0.0001, delta);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, desired, t);
+    } else {
+      const minY = groundY + WALK.clearance;
+      if (camera.position.y < minY) camera.position.y = minY;
     }
   });
 
@@ -415,7 +425,8 @@ const Map3D = ({
         if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = true;
       }
     });
-  }, []);
+    restoreCascadesForName(group.userData.name);
+  }, [restoreCascadesForName]);
 
   const highlightGroup = useCallback((group) => {
     group.traverse((child) => {
@@ -429,25 +440,7 @@ const Map3D = ({
     });
   }, []);
 
-  const applyCascadingHides = useCallback((n) => {
-    if (!n) return;
-    if (n === 'Library5') hideByNames(['AV']);
-    if (n === 'Library4') hideByNames(['AV', 'Library5']);
-    if (n === 'Library3') hideByNames(['AV', 'Library5', 'Library4']);
-    if (n === 'Library2') hideByNames(['AV', 'Library5', 'Library4', 'Library3']);
-    if (n === 'E1-4') hideByNames(['E1']);
-    if (n === 'E1-3') hideByNames(['E1', 'E1-4']);
-    if (n === 'E1-2') hideByNames(['E1', 'E1-4', 'E1-3']);
-    if (n === 'E1-1') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2']);
-    if (n === 'E1-G') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
-    if (n === 'E2-4') hideByNames(['E2']);
-    if (n === 'E2-3') hideByNames(['E2', 'E2-4']);
-    if (n === 'E2-2') hideByNames(['E2', 'E2-4', 'E2-3']);
-    if (n === 'E2-1') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2']);
-    if (n === 'E2-G') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
-  }, [hideByNames]);
-
-  // Picking: buildings vs ground (click-to-walk)
+  // Picking
   useEffect(() => {
     const onClick = (event) => {
       const rect = gl.domElement.getBoundingClientRect();
@@ -460,40 +453,13 @@ const Map3D = ({
 
       const intersects = raycaster.intersectObjects(scene.children, true);
       if (!intersects.length) {
-        // No hit: in walk mode, step forward a fixed distance
-        if (walkMode) {
-          const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation).setY(0).normalize();
-          if (forward.lengthSq() > 0) {
-            const d = 20;
-            const p = camera.position.clone().add(forward.multiplyScalar(d));
-            walkTarget.current = { x: p.x, z: p.z };
-            walkSpeedRef.current = WALK.walkSpeed;
-          }
-        } else {
-          // flight mode: clicking sky clears selection
-          if (highlightedGroup) {
-            restoreGroupColors(highlightedGroup);
-            restoreCascadesForName(highlightedGroup.userData?.name);
-            setHighlightedGroup(null);
-          }
-          setPopupData && setPopupData(null);
-        }
+        if (highlightedGroup) restoreGroupColors(highlightedGroup);
+        setPopupData && setPopupData(null);
+        setHighlightedGroup(null);
         return;
       }
 
       const hit = intersects[0];
-
-      // If walk mode and we clicked a ground mesh → move
-      if (walkMode) {
-        const isGround = groundMeshesRef.current.some((g) => hit.object === g || g.children?.includes?.(hit.object));
-        if (isGround) {
-          walkTarget.current = { x: hit.point.x, z: hit.point.z };
-          walkSpeedRef.current = WALK.walkSpeed;
-          return;
-        }
-      }
-
-      // Otherwise treat as building selection
       const clickedObject = hit.object;
       if (!clickedObject.userData.name) return;
 
@@ -501,23 +467,31 @@ const Map3D = ({
       while (parentGroup && !parentGroup.userData.name) parentGroup = parentGroup.parent;
       if (!parentGroup) return;
 
-      // Same group re-click → ignore to avoid double tint
-      if (highlightedGroup && highlightedGroup === parentGroup) {
-        return;
-      }
-
-      if (highlightedGroup && highlightedGroup !== parentGroup) {
-        restoreGroupColors(highlightedGroup);
-        restoreCascadesForName(highlightedGroup.userData?.name);
-      }
+      if (highlightedGroup && highlightedGroup !== parentGroup) restoreGroupColors(highlightedGroup);
+      if (highlightedGroup === parentGroup) return;
 
       setHighlightedGroup(parentGroup);
       highlightGroup(parentGroup);
-      applyCascadingHides(parentGroup.userData.name);
 
+      const n = parentGroup.userData.name;
+      if (n === 'Library5') hideByNames(['AV']);
+      if (n === 'Library4') hideByNames(['AV', 'Library5']);
+      if (n === 'Library3') hideByNames(['AV', 'Library5', 'Library4']);
+      if (n === 'Library2') hideByNames(['AV', 'Library5', 'Library4', 'Library3']);
+      if (n === 'E1-4') hideByNames(['E1']);
+      if (n === 'E1-3') hideByNames(['E1', 'E1-4']);
+      if (n === 'E1-2') hideByNames(['E1', 'E1-4', 'E1-3']);
+      if (n === 'E1-1') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2']);
+      if (n === 'E1-G') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
+      if (n === 'E2-4') hideByNames(['E2']);
+      if (n === 'E2-3') hideByNames(['E2', 'E2-4']);
+      if (n === 'E2-2') hideByNames(['E2', 'E2-4', 'E2-3']);
+      if (n === 'E2-1') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2']);
+      if (n === 'E2-G') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
+
+      // Popup
       const box = new THREE.Box3().setFromObject(parentGroup);
       const center = box.getCenter(new THREE.Vector3());
-
       const rawName = parentGroup.userData.name;
       const key = baseKeyFrom(rawName);
       const info = BUILDING_DATA[key] || {
@@ -535,48 +509,20 @@ const Map3D = ({
       });
     };
 
-    const onDblClick = (event) => {
-      if (!walkMode) return; // run only in walk mode
-      const rect = gl.domElement.getBoundingClientRect();
-      const mouse = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-      );
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(groundMeshesRef.current.length ? groundMeshesRef.current : scene.children, true);
-      if (hits.length) {
-        const p = hits[0].point;
-        walkTarget.current = { x: p.x, z: p.z };
-        walkSpeedRef.current = WALK.runSpeed; // sprint on dblclick
-      }
-    };
-
     gl.domElement.addEventListener('click', onClick);
-    gl.domElement.addEventListener('dblclick', onDblClick);
-    return () => {
-      gl.domElement.removeEventListener('click', onClick);
-      gl.domElement.removeEventListener('dblclick', onDblClick);
-    };
-  }, [
-    camera, scene, gl,
-    walkMode,
-    highlightedGroup, highlightGroup,
-    restoreGroupColors, restoreCascadesForName, applyCascadingHides,
-    setPopupData,
-  ]);
+    return () => { gl.domElement.removeEventListener('click', onClick); };
+  }, [camera, scene, gl, highlightedGroup, highlightGroup, setPopupData, hideByNames, restoreGroupColors]);
 
-  // Reset colors when App closes popup
+  // Respond to "close popup" from App: restore colors & hidden floors
   useEffect(() => {
-    if (resetColors) {
-      if (highlightedGroup) {
-        restoreGroupColors(highlightedGroup);
-        restoreCascadesForName(highlightedGroup.userData?.name);
-        setHighlightedGroup(null);
-      }
-      setResetColors && setResetColors(false);
+    if (!resetColors) return;
+    if (highlightedGroup) {
+      restoreGroupColors(highlightedGroup);
+      setHighlightedGroup(null);
     }
-  }, [resetColors, highlightedGroup, restoreGroupColors, restoreCascadesForName, setResetColors]);
+    setPopupData && setPopupData(null);
+    setResetColors && setResetColors(false);
+  }, [resetColors, highlightedGroup, restoreGroupColors, setPopupData, setResetColors]);
 
   return (
     <>
