@@ -1,5 +1,5 @@
 // components/Map3D.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -27,7 +27,7 @@ function baseKeyFrom(name) {
   return BUILDING_DATA[name] ? name : name;
 }
 
-/** Camera fit helper */
+/** Camera fit helper (supports immediate placement) */
 function approachCameraToBox({
   camera,
   box,
@@ -39,6 +39,8 @@ function approachCameraToBox({
   floorFrac = 0.0,
   animateMs = 1500,
   ensureForward = true,
+  onFinish = null,
+  immediate = false,
 }) {
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -60,7 +62,7 @@ function approachCameraToBox({
   const targetPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance));
   targetPos.y = eyeY;
 
-  if (ensureForward) {
+  if (ensureForward && !immediate) {
     const currentDist = camera.position.clone().sub(center).length();
     if (currentDist <= targetDistance) {
       const farPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance * 2.2));
@@ -73,12 +75,19 @@ function approachCameraToBox({
   camera.far  = Math.max(camera.far, targetDistance * 200);
   camera.updateProjectionMatrix();
 
+  if (immediate || animateMs <= 0) {
+    camera.position.copy(targetPos);
+    camera.lookAt(center);
+    if (typeof onFinish === 'function') onFinish();
+    return;
+  }
+
   gsap.to(camera.position, {
     duration: animateMs / 1000,
     x: targetPos.x, y: targetPos.y, z: targetPos.z,
     ease: 'power2.out',
     onUpdate: () => camera.lookAt(center),
-    onComplete: () => camera.lookAt(center),
+    onComplete: () => { camera.lookAt(center); if (typeof onFinish === 'function') onFinish(); },
   });
 }
 
@@ -157,9 +166,26 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
 }
 
 /** Walk & Drone constants */
-const WALK = { eyeHeight: 1.7, clearance: 0.25, stepMeters: 6, moveSpeed: 8 };
-const DRONE = { raiseMin: 120, speed: 30 };
-const ROTATE = { yaw: 1.8, pitch: 1.2 };
+const WALK = { eyeHeight: 1.7, clearance: 0.25, stepMeters: 6, moveSpeed: 6 };
+const DRONE = { raiseMin: 120, speed: 18, defaultY: 320 };
+const ROTATE = { yaw: 1.0, pitch: 0.8 }; // gentler for comfort
+
+/** Smoothing constants */
+const SMOOTH = {
+  accel: 5.0,            // velocity smoothing
+  rot: 8.0,              // rotation smoothing
+  mouseSens: 0.0013,     // pointer sensitivity
+  nudgeMs: 240,          // street-view step tween
+  yLock: 10.0,           // vertical smoothing (walk)
+};
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dampFactor(kps, dt) { return 1 - Math.exp(-kps * dt); }
+function lerpAngle(a, b, t) {
+  let diff = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
+  if (diff < -Math.PI) diff += Math.PI * 2;
+  return a + diff * t;
+}
 
 const Map3D = ({
   setPopupData,
@@ -187,8 +213,18 @@ const Map3D = ({
   const sceneMinYRef = useRef(null);
   const lastGroundY = useRef(null);
 
-  const direction = useRef(new THREE.Vector3());
-  const keys = useRef({});
+  // Smooth movement & look
+  const velRef = useRef(new THREE.Vector3());
+  const yawTargetRef = useRef(0);
+  const pitchTargetRef = useRef(0);
+
+  // “Street-view” step tween control
+  const nudgeTweenRef = useRef(null);
+  const suppressMoveUntilRef = useRef(0); // timestamp (ms) to pause integration
+
+  // Store the opening drone height
+  const openingDroneYRef = useRef(null);
+  const bootDoneRef = useRef(false);
 
   useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
 
@@ -211,29 +247,7 @@ const Map3D = ({
     return () => el.classList.remove('walk-mode');
   }, [gl, mode]);
 
-  // Adjust altitude when switching modes
-  useEffect(() => {
-    const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
-    groundRay.current.set(origin, DOWN.current);
-
-    let groundY = (sceneMinYRef.current ?? 0);
-    const grounds = groundMeshesRef.current;
-    if (grounds?.length) {
-      const hits = groundRay.current.intersectObjects(grounds, true);
-      if (hits.length) groundY = hits[0].point.y;
-    }
-    lastGroundY.current = groundY;
-
-    if (mode === 'walk') {
-      const targetY = groundY + WALK.eyeHeight;
-      gsap.to(camera.position, { y: targetY, duration: 0.35, ease: 'power2.out' });
-    } else {
-      const minDroneY = Math.max(groundY + DRONE.raiseMin, camera.position.y);
-      gsap.to(camera.position, { y: minDroneY, duration: 0.5, ease: 'power2.out' });
-    }
-  }, [mode, camera]);
-
-  // Mouse look (drag)
+  // Mouse look: update targets only (we'll smooth to them in useFrame)
   useEffect(() => {
     let isDragging = false;
     let prev = { x: 0, y: 0 };
@@ -243,10 +257,11 @@ const Map3D = ({
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
       prev = { x: e.clientX, y: e.clientY };
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y -= dx * 0.002;
-      camera.rotation.x -= dy * 0.002;
-      camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+
+      yawTargetRef.current -= dx * SMOOTH.mouseSens;
+      pitchTargetRef.current -= dy * SMOOTH.mouseSens;
+      const HALF = Math.PI / 2;
+      pitchTargetRef.current = Math.max(-HALF, Math.min(HALF, pitchTargetRef.current));
     };
     const onUp = () => { isDragging = false; };
     gl.domElement.addEventListener('mousedown', onDown);
@@ -257,9 +272,10 @@ const Map3D = ({
       gl.domElement.removeEventListener('mousemove', onMove);
       gl.domElement.removeEventListener('mouseup', onUp);
     };
-  }, [camera, gl]);
+  }, [gl]);
 
-  // Keys
+  // Keyboard
+  const keys = useRef({});
   useEffect(() => {
     const down = (e) => {
       keys.current[e.code] = true;
@@ -279,64 +295,95 @@ const Map3D = ({
     };
   }, [highlightedGroup, setPopupData]);
 
-  // Movement + ground lock + nudges
+  // Smooth movement + ground lock + nudges
   const lastNudgeTick = useRef(-1);
   useFrame((_, delta) => {
-    // Rotate with arrows
+    const now = performance.now();
+
+    // Rotate targets from arrow keys
     const yawLeft  = keys.current['ArrowLeft']  ? 1 : 0;
     const yawRight = keys.current['ArrowRight'] ? 1 : 0;
     const pitchUp  = keys.current['ArrowUp']    ? 1 : 0;
     const pitchDn  = keys.current['ArrowDown']  ? 1 : 0;
 
     if (yawLeft || yawRight || pitchUp || pitchDn) {
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y += (yawLeft - yawRight) * ROTATE.yaw * delta;
-      camera.rotation.x -= (pitchUp - pitchDn) * ROTATE.pitch * delta;
+      yawTargetRef.current   += (yawLeft - yawRight) * ROTATE.yaw * delta;
+      pitchTargetRef.current -= (pitchUp - pitchDn) * ROTATE.pitch * delta;
       const HALF = Math.PI / 2;
-      camera.rotation.x = Math.max(-HALF, Math.min(HALF, camera.rotation.x));
+      pitchTargetRef.current = Math.max(-HALF, Math.min(HALF, pitchTargetRef.current));
     }
 
-    // WASD (+ Space/Shift in drone)
-    const dir = direction.current.set(0, 0, 0);
-    if (keys.current['KeyW']) dir.z -= 1;
-    if (keys.current['KeyS']) dir.z += 1;
-    if (keys.current['KeyA']) dir.x -= 1;
-    if (keys.current['KeyD']) dir.x += 1;
+    // Smooth camera rotation toward targets
+    const tRot = dampFactor(SMOOTH.rot, delta);
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = lerpAngle(camera.rotation.y, yawTargetRef.current, tRot);
+    camera.rotation.x = lerp(camera.rotation.x,      pitchTargetRef.current, tRot);
+    camera.rotation.z = 0;
 
+    // Input -> desired world velocity
+    const wish = new THREE.Vector3(0, 0, 0);
+    if (keys.current['KeyW']) wish.z -= 1;
+    if (keys.current['KeyS']) wish.z += 1;
+    if (keys.current['KeyA']) wish.x -= 1;
+    if (keys.current['KeyD']) wish.x += 1;
+
+    // Space = up, Shift = down for Drone
     if (mode === 'drone') {
-      if (keys.current['Space']) dir.y += 1;
-      if (keys.current['ShiftLeft']) dir.y -= 1;
+      if (keys.current['Space']) wish.y += 1;
+      if (keys.current['ShiftLeft'] || keys.current['ShiftRight']) wish.y -= 1;
     }
 
     if (controllerCommand) {
-      if (controllerCommand.moveForward) dir.z -= 1;
-      if (controllerCommand.moveBackward) dir.z += 1;
-      if (controllerCommand.moveLeft) dir.x -= 1;
-      if (controllerCommand.moveRight) dir.x += 1;
+      if (controllerCommand.moveForward) wish.z -= 1;
+      if (controllerCommand.moveBackward) wish.z += 1;
+      if (controllerCommand.moveLeft) wish.x -= 1;
+      if (controllerCommand.moveRight) wish.x += 1;
       if (mode === 'drone') {
-        if (controllerCommand.moveUp) dir.y += 1;
-        if (controllerCommand.moveDown) dir.y -= 1;
+        if (controllerCommand.moveUp) wish.y += 1;
+        if (controllerCommand.moveDown) wish.y -= 1;
       }
     }
 
-    dir.normalize();
-    const moveSpeed = (mode === 'drone') ? DRONE.speed : WALK.moveSpeed;
+    wish.normalize();
+    const maxSpeed = (mode === 'drone') ? DRONE.speed : WALK.moveSpeed;
 
     const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
-    const horiz = new THREE.Vector3(dir.x, 0, dir.z).applyEuler(yawOnly);
-    const vY = (mode === 'drone') ? dir.y : 0;
-    camera.position.addScaledVector(new THREE.Vector3(horiz.x, vY, horiz.z), moveSpeed * delta);
+    const worldHoriz = new THREE.Vector3(wish.x, 0, wish.z).applyEuler(yawOnly);
+    const desiredVel = new THREE.Vector3(
+      worldHoriz.x * maxSpeed,
+      (mode === 'drone' ? wish.y * maxSpeed : 0),
+      worldHoriz.z * maxSpeed
+    );
 
-    // Street-View button nudges (fixed forward/left/right)
+    // Smooth velocity -> position
+    const tAcc = dampFactor(SMOOTH.accel, delta);
+    velRef.current.lerp(desiredVel, tAcc);
+
+    // Soft “street-view” step nudges
     if (mode === 'walk' && stepNudge && stepNudgeTick !== lastNudgeTick.current) {
       lastNudgeTick.current = stepNudgeTick;
+
       const worldUp = new THREE.Vector3(0,1,0);
       const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly).setY(0).normalize();
-      const left = new THREE.Vector3().crossVectors(worldUp, forward).normalize(); // LEFT vector
+      const left = new THREE.Vector3().crossVectors(worldUp, forward).normalize(); // LEFT
       let stepDir = forward;
-      if (stepNudge.dir === 'left')  stepDir = left;                  // left arrow = left
-      if (stepNudge.dir === 'right') stepDir = left.clone().multiplyScalar(-1); // right arrow = -left (right)
-      camera.position.addScaledVector(stepDir, WALK.stepMeters);
+      if (stepNudge.dir === 'left')  stepDir = left;
+      if (stepNudge.dir === 'right') stepDir = left.clone().multiplyScalar(-1);
+
+      const to = camera.position.clone().add(stepDir.multiplyScalar(WALK.stepMeters));
+
+      if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
+      suppressMoveUntilRef.current = now + SMOOTH.nudgeMs + 20;
+
+      nudgeTweenRef.current = gsap.to(camera.position, {
+        x: to.x, z: to.z, duration: SMOOTH.nudgeMs / 1000, ease: 'power2.out',
+        onComplete: () => { nudgeTweenRef.current = null; }
+      });
+    }
+
+    // Integrate movement unless in the middle of a nudge tween
+    if (now > suppressMoveUntilRef.current) {
+      camera.position.addScaledVector(velRef.current, delta);
     }
 
     // Ground lock
@@ -351,24 +398,17 @@ const Map3D = ({
     lastGroundY.current = groundY;
 
     if (mode === 'walk') {
-      const desired = groundY + WALK.eyeHeight;
-      const t = 1 - Math.pow(0.0001, delta);
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, desired, t);
+      const desiredY = groundY + WALK.eyeHeight;
+      const tY = dampFactor(SMOOTH.yLock, delta);
+      camera.position.y = lerp(camera.position.y, desiredY, tY);
     } else {
       const minY = groundY + WALK.clearance;
       if (camera.position.y < minY) camera.position.y = minY;
     }
   });
 
-  // Seed + initial fit
-  useEffect(() => {
-    camera.position.set(480, 320, 480);
-    camera.rotation.set(0, 0, 0);
-    camera.fov = 75;
-    camera.updateProjectionMatrix();
-  }, [camera]);
-
-  useEffect(() => {
+  // --- Initial fit BEFORE PAINT (no tween) to avoid boot "jump" ---
+  useLayoutEffect(() => {
     if (initialFocusBox && !didFitRef.current) {
       const aspect = size.width / size.height;
       approachCameraToBox({
@@ -380,12 +420,45 @@ const Map3D = ({
         proximity: 1.2,
         eyeAboveBaseFrac: 5.0,
         floorFrac: 0,
-        animateMs: 1500,
-        ensureForward: true,
+        animateMs: 0,
+        ensureForward: false,
+        immediate: true,
+        onFinish: () => {
+          yawTargetRef.current = camera.rotation.y;
+          pitchTargetRef.current = camera.rotation.x;
+          openingDroneYRef.current = camera.position.y;
+          bootDoneRef.current = true;
+        },
       });
       didFitRef.current = true;
     }
   }, [initialFocusBox, camera, size]);
+
+  // Mode height adjust — skip during boot to avoid any extra jump
+  useEffect(() => {
+    if (!bootDoneRef.current) return;
+
+    // raycast for groundY
+    const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
+    groundRay.current.set(origin, DOWN.current);
+
+    let groundY = (sceneMinYRef.current ?? 0);
+    const grounds = groundMeshesRef.current;
+    if (grounds?.length) {
+      const hits = groundRay.current.intersectObjects(grounds, true);
+      if (hits.length) groundY = hits[0].point.y;
+    }
+    lastGroundY.current = groundY;
+
+    if (mode === 'walk') {
+      const targetY = groundY + WALK.eyeHeight;
+      gsap.to(camera.position, { y: targetY, duration: 0.35, ease: 'power2.out' });
+    } else {
+      const wantY = openingDroneYRef.current ?? DRONE.defaultY;
+      const safeY = Math.max(groundY + WALK.clearance, wantY);
+      gsap.to(camera.position, { y: safeY, duration: 0.45, ease: 'power2.out' });
+    }
+  }, [mode, camera]);
 
   // Helpers show/hide
   const showByNames = useCallback((names) => {

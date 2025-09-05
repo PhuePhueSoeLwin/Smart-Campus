@@ -6,12 +6,12 @@ const Controller = ({ setControllerCommand }) => {
 
   const handlePress = (direction) => {
     setActiveDirection(direction);
-    setControllerCommand(direction); // start moving
+    setControllerCommand(direction);
   };
 
   const handleRelease = () => {
     setActiveDirection(null);
-    setControllerCommand(null); // stop moving
+    setControllerCommand(null);
   };
 
   return (

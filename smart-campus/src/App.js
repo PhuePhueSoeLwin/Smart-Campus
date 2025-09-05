@@ -101,12 +101,12 @@ const App = () => {
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
   const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
 
-  // Map interaction <> popup (Popup is handled here in App)
+  // Map interaction <> popup
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
   const [originalColors, setOriginalColors] = useState(new Map());
 
-  // Controller for map movement
+  // Controller command (for on-screen pad)
   const [controllerCommand, setControllerCommand] = useState(null);
 
   // View mode + step nudges for street-view arrows
@@ -115,13 +115,14 @@ const App = () => {
   const [stepNudgeTick, setStepNudgeTick] = useState(0);
   const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
 
-  // Pin state
-  const [pinned, setPinned] = useState(false);
-  const setPopupFromMap = useCallback((d) => {
-    if (!pinned) setPopupData(d);
-  }, [pinned]);
+  // Ensure controller stops sending commands when switching modes
+  useEffect(() => { setControllerCommand(null); }, [navMode]);
 
-  // Instructions popup
+  // Pin state (lock popup)
+  const [pinned, setPinned] = useState(false);
+  const setPopupFromMap = useCallback((d) => { if (!pinned) setPopupData(d); }, [pinned]);
+
+  // Instructions, weekly/overall modals, etc...
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
     return dontShow === 'true' ? false : true;
@@ -129,13 +130,11 @@ const App = () => {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [hour24, setHour24] = useState(true);
 
-  // App-level popups
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
   const [isOverallPopupVisible, setIsOverallPopupVisible] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
-  // Vehicle schedule popup
   const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
   const [vehicleType, setVehicleType] = useState('Cars');
   const [schedule, setSchedule] = useState([]);
@@ -362,12 +361,8 @@ const App = () => {
   const openInstructions = () => setShowInstructions(true);
   const toggleTimeFormat = () => setHour24((prev) => !prev);
 
-  // Optional: reflect selected building name in other UI
-  useEffect(() => {
-    if (popupData?.name) setSelectedBuilding(popupData.name);
-  }, [popupData]);
+  useEffect(() => { if (popupData?.name) setSelectedBuilding(popupData.name); }, [popupData]);
 
-  // Water totals for modal
   const dailyWaterTotal = buildings.reduce(
     (acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0),
     0
@@ -378,7 +373,6 @@ const App = () => {
       ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
       : 0);
 
-  // helper for meters
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
 
   /** Derived “smart city” extras for the popup */
@@ -458,7 +452,7 @@ const App = () => {
           <div className="live-label">LIVE</div>
         </div>
 
-        {/* Walk/Drone segmented toggle (clean, no duplicate labels) */}
+        {/* Walk/Drone segmented toggle */}
         <div className="mode-switch" role="tablist" aria-label="View mode">
           <button
             className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
@@ -482,7 +476,6 @@ const App = () => {
             <span>Drone</span>
           </button>
 
-          {/* Moving highlight only — no text/icons here */}
           <div
             className="mode-thumb"
             style={{ transform: navMode === 'walk' ? 'translateX(0%)' : 'translateX(100%)' }}
@@ -513,7 +506,6 @@ const App = () => {
               {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
             </div>
 
-            {/* Help button */}
             <button
               className="help-btn"
               title="Show instructions"
@@ -546,7 +538,6 @@ const App = () => {
                 setResetColors={setResetColors}
                 setOriginalColors={setOriginalColors}
                 controllerCommand={controllerCommand}
-                setControllerCommand={setControllerCommand}
                 mode={navMode}
                 stepNudge={stepNudge}
                 stepNudgeTick={stepNudgeTick}
@@ -555,7 +546,7 @@ const App = () => {
           </Canvas>
         </Suspense>
 
-        {/* Street-View arrows (only in walk mode) — placed above Hide/Show button */}
+        {/* Street-View arrows — only in walk mode */}
         {navMode === 'walk' && (
           <div className="streetview-ui" aria-hidden="false">
             <button className="sv-arrow up" title="Move forward" onClick={() => doNudge('forward')}>▲</button>
@@ -567,7 +558,7 @@ const App = () => {
         )}
       </div>
 
-      {/* Left / Right dashboards */}
+      {/* Dashboards */}
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -586,16 +577,18 @@ const App = () => {
         </>
       )}
 
-      {!showDashboards && <Controller setControllerCommand={setControllerCommand} />}
+      {/* Show controller pad ONLY when dashboards are hidden AND mode is DRONE */}
+      {!showDashboards && navMode === 'drone' && (
+        <Controller setControllerCommand={setControllerCommand} />
+      )}
 
-      {/* Building popup — fixed, scientific & compact containers (NO scrollbar) */}
+      {/* Building popup */}
       {popupData && popupDerived && (
         <div
           className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
           role="dialog"
           aria-label={`${popupData.name} details`}
         >
-          {/* Header */}
           <div className="popup-header">
             <div className="head-left">
               <div className="eyebrow">SMART CAMPUS · MFU</div>
@@ -632,7 +625,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Compact status strip (4 chips) */}
           <div className="telemetry-row">
             <div className="chip">
               <Icon name="user" /><span>{popupDerived.occupancy}</span><small>people</small>
@@ -648,7 +640,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Location (single compact line) */}
           <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
             <span className="loc-label">World</span>
             <span className="coord">X {popupData.world.x.toFixed(2)}</span>
@@ -656,7 +647,6 @@ const App = () => {
             <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
           </div>
 
-          {/* Metric cards - ultra compact, no scroll */}
           <div className="metrics-grid">
             <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
@@ -670,7 +660,7 @@ const App = () => {
                 <span className="unit">{popupData.electricity.unit}</span>
               </div>
               <div className="meter">
-                <div className="bar" style={{ width: `${clampPct(popupData.electricity.percent)}%` }} />
+                <div className="bar" style={{ width: `${Math.max(0, Math.min(100, popupData.electricity.percent || 0))}%` }} />
               </div>
               <div className={`trend ${popupDerived.trendElec.dir}`}>
                 {popupDerived.trendElec.dir === 'up' ? '▲' : popupDerived.trendElec.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendElec.value)}%
@@ -689,7 +679,7 @@ const App = () => {
                 <span className="unit">{popupData.water.unit}</span>
               </div>
               <div className="meter alt">
-                <div className="bar" style={{ width: `${clampPct(popupData.water.percent)}%` }} />
+                <div className="bar" style={{ width: `${Math.max(0, Math.min(100, popupData.water.percent || 0))}%` }} />
               </div>
               <div className={`trend ${popupDerived.trendWater.dir}`}>
                 {popupDerived.trendWater.dir === 'up' ? '▲' : popupDerived.trendWater.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendWater.value)}%
@@ -717,18 +707,9 @@ const App = () => {
         </div>
 
         <div className="modal-kpis">
-          <div className="kpi">
-            <span className="kpi-label">Total</span>
-            <span className="kpi-value">{Math.round(usageTotal).toLocaleString()} kWh</span>
-          </div>
-          <div className="kpi">
-            <span className="kpi-label">Avg / day</span>
-            <span className="kpi-value">{Math.round(usageAvg).toLocaleString()} kWh</span>
-          </div>
-          <div className="kpi">
-            <span className="kpi-label">Days</span>
-            <span className="kpi-value">{usageCount}</span>
-          </div>
+          <div className="kpi"><span className="kpi-label">Total</span><span className="kpi-value">{Math.round(usageTotal).toLocaleString()} kWh</span></div>
+          <div className="kpi"><span className="kpi-label">Avg / day</span><span className="kpi-value">{Math.round(usageAvg).toLocaleString()} kWh</span></div>
+          <div className="kpi"><span className="kpi-label">Days</span><span className="kpi-value">{usageCount}</span></div>
         </div>
 
         <div className="modal-content">
