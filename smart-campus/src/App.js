@@ -1,9 +1,10 @@
-// App.js
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import Map3D from './components/Map3D';
+import CCTV from './components/CCTV';
 import './App.css';
 
 import LeftDashboard from './components/leftDashboard';
@@ -49,7 +50,7 @@ ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
-/** Centered modal (unchanged) */
+/** Centered modal */
 const Modal = ({ open, onClose, children, size = 'md' }) => {
   if (!open) return null;
   return createPortal(
@@ -68,7 +69,7 @@ const Modal = ({ open, onClose, children, size = 'md' }) => {
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
-const labelFor = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
 /** Tiny inline icons (+ walk/drone) */
 const Icon = ({ name, size = 14 }) => {
@@ -92,11 +93,46 @@ const Icon = ({ name, size = 14 }) => {
       return (<svg {...common}><circle cx="12" cy="5" r="2"/><path d="M12 7 9.6 11.5 7.5 13M12 7l2.2 4 3 2M8.5 14.5 10 19M14 13l-1 5"/><path d="M5.5 20H9M12.5 20H16"/></svg>);
     case 'drone':
       return (<svg {...common}><circle cx="12" cy="12" r="2"/><path d="M12 10V6M12 18v-4M10 12H6M18 12h-4"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>);
+    case 'camera':
+      return (<svg {...common}><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 10l5-3v8l-5-3"/><circle cx="9.5" cy="12" r="2.5"/></svg>);
     default: return null;
   }
 };
 
-const App = () => {
+/* ---------- NAVBAR (shared shell) ---------- */
+const Navbar = ({ children }) => {
+  const location = useLocation();
+  const onCCTV = location.pathname === '/cctv';
+
+  return (
+    <nav className="navbar">
+      {/* Left: CCTV nav button */}
+      <Link
+        to={onCCTV ? '/' : '/cctv'}
+        className={`cctv-nav-btn ${onCCTV ? 'active' : ''}`}
+        title={onCCTV ? 'Back to Map' : 'CCTV on Campus'}
+        aria-label={onCCTV ? 'Back to Map' : 'CCTV on Campus'}
+      >
+        <span className="cctv-dot" aria-hidden="true" />
+        <Icon name="camera" size={16} />
+        <span className="cctv-text">{onCCTV ? 'Back to Map' : 'CCTV'}</span>
+      </Link>
+
+      {/* Center logo */}
+      <img
+        src="/assets/mfu_logo.png"
+        alt="MFU Logo"
+        className="navbar-logo"
+      />
+
+      {/* Right/overlay content passed from pages (time/help, mode switch, etc.) */}
+      {children}
+    </nav>
+  );
+};
+
+/* ===================== MAP PAGE ===================== */
+const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
   const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
@@ -122,7 +158,7 @@ const App = () => {
   const [pinned, setPinned] = useState(false);
   const setPopupFromMap = useCallback((d) => { if (!pinned) setPopupData(d); }, [pinned]);
 
-  // Instructions, weekly/overall modals, etc...
+  // Instructions, modals, etc...
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
     return dontShow === 'true' ? false : true;
@@ -172,7 +208,6 @@ const App = () => {
   };
 
   const totalElectricityUsage = 121008.75;
-
   const buildDailySeries = (days = 35) => {
     const today = new Date();
     const series = Array.from({ length: days }, (_, idx) => {
@@ -292,8 +327,7 @@ const App = () => {
     const id = setInterval(() => {
       if (waterUsageData.length > 0) generateWaterUsage();
     }, 5000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
@@ -349,14 +383,6 @@ const App = () => {
     const tId = setInterval(updateThailandTime, 1000);
     return () => { clearInterval(bgId); clearInterval(tId); };
   }, [hour24]);
-
-  const handleLiveButtonClick = () => window.open('https://youtu.be/DFnemdpr_aw?si=rKIZzgN3T9MFIRuA', '_blank');
-
-  const handleDontShowAgain = () => {
-    localStorage.setItem('dontShowInstructions', 'true');
-    setShowInstructions(false);
-    setShowConfirmPopup(true);
-  };
 
   const openInstructions = () => setShowInstructions(true);
   const toggleTimeFormat = () => setHour24((prev) => !prev);
@@ -446,13 +472,8 @@ const App = () => {
 
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
-      <nav className="navbar">
-        <div className="live-button" onClick={handleLiveButtonClick}>
-          <img src="/assets/live.png" alt="Live Stream" />
-          <div className="live-label">LIVE</div>
-        </div>
-
-        {/* Walk/Drone segmented toggle */}
+      <Navbar>
+        {/* === WALK/DRONE SEGMENTED SWITCH (restored) === */}
         <div className="mode-switch" role="tablist" aria-label="View mode">
           <button
             className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
@@ -483,13 +504,6 @@ const App = () => {
           />
         </div>
 
-        <img
-          src="/assets/mfu_logo.png"
-          alt="MFU Logo"
-          className="navbar-logo"
-          onClick={openInstructions}
-        />
-
         {/* Right side clock + help */}
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
@@ -516,7 +530,7 @@ const App = () => {
             </button>
           </div>
         </div>
-      </nav>
+      </Navbar>
 
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
@@ -844,7 +858,11 @@ const App = () => {
           </div>
           <hr className="divider" />
           <p className="tip-text">💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.</p>
-          <button className="dont-show-btn" onClick={handleDontShowAgain}>Do not show me again</button>
+          <button className="dont-show-btn" onClick={() => {
+            localStorage.setItem('dontShowInstructions', 'true');
+            setShowInstructions(false);
+            setShowConfirmPopup(true);
+          }}>Do not show me again</button>
         </div>
       )}
 
@@ -857,6 +875,18 @@ const App = () => {
         </div>
       )}
     </div>
+  );
+};
+
+/* ===================== APP (ROUTER) ===================== */
+const App = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MapApp />} />
+        <Route path="/cctv" element={<CCTV />} />
+      </Routes>
+    </Router>
   );
 };
 
