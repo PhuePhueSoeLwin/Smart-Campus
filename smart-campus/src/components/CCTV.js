@@ -2,26 +2,25 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CCTV.css';
 
-const CameraIcon = ({ size = 16 }) => (
+/* ===== Icons ===== */
+const CameraIcon = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="3" y="7" width="13" height="10" rx="2"/>
     <path d="M16 10l5-3v8l-5-3"/>
     <circle cx="9.5" cy="12" r="2.5"/>
   </svg>
 );
-
 const BuildingIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="8" width="7" height="13" rx="1"/>
     <path d="M6.5 7h0M6.5 11h0M6.5 15h0M17.5 11h0M17.5 14h0M17.5 17h0"/>
   </svg>
 );
-
 const PeopleIcon = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
     <circle cx="9" cy="7" r="4"/>
     <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
@@ -29,44 +28,36 @@ const PeopleIcon = ({ size = 14 }) => (
   </svg>
 );
 
-/* Small control icons */
-const PlayIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>);
-const PauseIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>);
-const VolumeIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M5 10v4h4l5 4V6l-5 4H5z"/></svg>);
-const MuteIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12a4.5 4.5 0 0 0-3-4.243V6l-5 4H5v4h3.5l5 4v-1.757A4.5 4.5 0 0 0 16.5 12zM19 9l-2 2-2-2-1 1 2 2-2 2 1 1 2-2 2 2 1-1-2-2 2-2-1-1z"/></svg>);
-const FullIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm0-4h3V7h2V5H5v5h2zm10 7h-3v2h5v-5h-2v3zm0-12h-5v2h3v3h2V5z"/></svg>);
-const FullExitIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 10H5V5h5v2H7v3zm7-3V5h5v5h-2V7h-3zm-2 9v2H7v-5h2v3h3zm5-3h2v5h-5v-2h3v-3z"/></svg>);
-const PipIcon = ({ size=16 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v14H3V5zm10 6h6v5h-6v-5z"/></svg>);
-const GearIcon = ({ size=16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.4 13a7.95 7.95 0 0 0 .06-1 7.95 7.95 0 0 0-.06-1l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a8.12 8.12 0 0 0-1.73-1l-.38-2.65a.5.5 0 0 0-.5-.42h-4a.5.5 0 0 0-.5.42L9.05 4a8.12 8.12 0 0 0-1.73 1l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.56 11a7.95 7.95 0 0 0 0 2L2.35 14.7a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49-1a8.12 8.12 0 0 0 1.73 1l.38 2.65a.5.5 0 0 0 .5.42h4a.5.5 0 0 0 .5-.42l.38-2.65a8.12 8.12 0 0 0 1.73-1l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/>
-  </svg>
-);
+/* Bigger, clearer player icons */
+const PlayIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>);
+const PauseIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>);
+const VolumeIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" strokeWidth="2"/></svg>);
+const MuteIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><path fill="currentColor" d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M19 9l-6 6m0-6l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
+const FullIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm0-4h3V7h2V5H5v5h2zm10 7h-3v2h5v-5h-2v3zm0-12h-5v2h3v3h2V5z"/></svg>);
+const FullExitIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 10H5V5h5v2H7v3zm7-3V5h5v5h-2V7h-3zm-2 9v2H7v-5h2v3h3zm5-3h2v5h-5v-2h3v-3z"/></svg>);
+const PipIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="currentColor" opacity=".7"/><rect x="12" y="10" width="7" height="5" rx="1.2" fill="#fff"/></svg>);
+const GearIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.95 7.95 0 0 0 .06-1 7.95 7.95 0 0 0-.06-1l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a8.12 8.12 0 0 0-1.73-1l-.38-2.65a.5.5 0 0 0-.5-.42h-4a.5.5 0 0 0-.5.42L9.05 4a8.12 8.12 0 0 0-1.73 1l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.56 11a7.95 7.95 0 0 0 0 2L2.35 14.7a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49 1a8.12 8.12 0 0 0 1.73 1l.38 2.65a.5.5 0 0 0 .5.42h4a.5.5 0 0 0 .5-.42l.38-2.65a8.12 8.12 0 0 0 1.73-1l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>);
 
+/* ===== Data ===== */
 const BUILDINGS = ['E1','E2','E3','E4','C1','C2','C3','C5','AD1','AD2','AS','AV','F1','F2','F3','F4','F5','F6','F7'];
 
 const CCTV = () => {
   const navigate = useNavigate();
 
-  // Step: null = buildings, else cameras for building
   const [selectedBuilding, setSelectedBuilding] = useState(null);
-
-  // Building search (first page)
   const [buildingQuery, setBuildingQuery] = useState('');
-
-  // Camera filters (second page)
   const [query, setQuery] = useState('');
-  const [zone, setZone] = useState('All');        // Indoor / Outdoor
-  const [status, setStatus] = useState('All');    // Online / Offline
+  const [zone, setZone] = useState('All');
+  const [status, setStatus] = useState('All');
 
   // Player overlay
   const [selectedCam, setSelectedCam] = useState(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const videoRef = useRef(null);
-  const playerSheetRef = useRef(null);
+  const stageRef = useRef(null);
   const snapshotCanvasRef = useRef(null);
 
-  // Player UI state
+  // Player UI
   const [isPlaying, setIsPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(0.7);
@@ -78,8 +69,8 @@ const CCTV = () => {
   const [isLoop, setIsLoop] = useState(false);
   const [pipSupported, setPipSupported] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [useCrossOrigin, setUseCrossOrigin] = useState(true);
 
-  // Helpers
   const randInt = (min, max) => Math.floor(min + Math.random() * (max - min + 1));
   const fmt = (t) => {
     if (!isFinite(t)) return '0:00';
@@ -89,16 +80,16 @@ const CCTV = () => {
     return h ? `${h}:${m.padStart(2,'0')}:${s}` : `${m}:${s}`;
   };
 
-  // Catalog (mock) — swap with real API later
+  /* Mock catalog */
   const catalog = useMemo(() => {
     const rand = (a) => a[Math.floor(Math.random() * a.length)];
     const places = ['Entrance','Lobby','Corridor','Parking','Stairwell','Elevator','Perimeter','Backyard','Gate','Loading'];
     const zones  = ['Indoor','Outdoor'];
     const makeCams = (b) => {
-      const n = 10 + Math.floor(Math.random() * 10);
+      const n = 12;
       return Array.from({ length: n }, (_, i) => {
         const z = rand(zones);
-        const id = `${b}-${String(i + 1).padStart(2,'0')}`;
+               const id = `${b}-${String(i + 1).padStart(2,'0')}`;
         return { id, name: `${b} ${rand(places)}`, zone: z, status: Math.random() < 0.88 ? 'Online' : 'Offline' };
       });
     };
@@ -107,7 +98,6 @@ const CCTV = () => {
     return map;
   }, []);
 
-  // Students (mock live)
   const [students, setStudents] = useState(() => {
     const init = {};
     BUILDINGS.forEach(b => {
@@ -122,17 +112,13 @@ const CCTV = () => {
     const t = setInterval(() => {
       setStudents(prev => {
         const next = { ...prev };
-        for (const b of BUILDINGS) {
-          const mult = 0.97 + Math.random() * 0.06;
-          next[b] = Math.max(0, Math.round(prev[b] * mult));
-        }
+        for (const b of BUILDINGS) next[b] = Math.max(0, Math.round(prev[b] * (0.97 + Math.random() * 0.06)));
         return next;
       });
     }, 10000);
     return () => clearInterval(t);
   }, []);
 
-  // Building cards
   const buildingCards = useMemo(() => {
     return BUILDINGS.map(b => {
       const cams = catalog[b] || [];
@@ -143,7 +129,6 @@ const CCTV = () => {
     });
   }, [catalog, students]);
 
-  // Totals KPI
   const totals = useMemo(() => {
     const cameras = buildingCards.reduce((a, b) => a + b.total, 0);
     const online  = buildingCards.reduce((a, b) => a + b.online, 0);
@@ -153,14 +138,12 @@ const CCTV = () => {
     return { buildings: BUILDINGS.length, cameras, online, offline, students: people, uptime };
   }, [buildingCards]);
 
-  // Visible buildings (first page search)
   const visibleBuildings = useMemo(() => {
     const q = (buildingQuery || '').trim().toLowerCase();
     if (!q) return buildingCards;
     return buildingCards.filter(b => b.code.toLowerCase().includes(q));
   }, [buildingCards, buildingQuery]);
 
-  // Camera filters for selected building
   const filteredCams = useMemo(() => {
     if (!selectedBuilding) return [];
     const all = catalog[selectedBuilding] || [];
@@ -173,22 +156,20 @@ const CCTV = () => {
     });
   }, [catalog, selectedBuilding, query, zone, status]);
 
-  // Per-building KPI
   const perBld = useMemo(() => {
     if (!selectedBuilding) return null;
     return buildingCards.find(x => x.code === selectedBuilding) || null;
   }, [buildingCards, selectedBuilding]);
 
-  // Stream URL mapping (demo)
   const getStreamUrl = (cam) =>
     cam?.status === 'Online'
       ? 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
       : null;
 
-  // Open/close player
   const openPlayer = (cam) => {
     const streamUrl = getStreamUrl(cam);
     setSelectedCam({ ...cam, building: selectedBuilding, streamUrl });
+    setUseCrossOrigin(true);
     setPlayerOpen(true);
     setIsPlaying(true);
     setMuted(true);
@@ -202,30 +183,22 @@ const CCTV = () => {
   const closePlayer = () => {
     setPlayerOpen(false);
     const v = videoRef.current;
-    if (v) {
-      try { v.pause(); } catch {}
-      v.removeAttribute('src');
-      v.load();
-    }
+    if (v) { try { v.pause(); } catch {} v.removeAttribute('src'); v.load(); }
     setSelectedCam(null);
   };
 
-  // Player wiring
+  /* Player wiring */
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !playerOpen || !selectedCam?.streamUrl) return;
 
-    v.muted = muted;
-    v.volume = volume;
-    v.loop = isLoop;
-    v.playbackRate = speed;
+    v.muted = muted; v.volume = volume; v.loop = isLoop; v.playbackRate = speed;
 
-    const onLoaded = () => { setDuration(v.duration || 0); };
-    const onTime = () => {
+    const onLoaded = () => setDuration(v.duration || 0);
+    const onTime   = () => {
       setCurrent(v.currentTime || 0);
       try {
-        const buf = v.buffered;
-        let end = 0;
+        const buf = v.buffered; let end = 0;
         for (let i = 0; i < buf.length; i++) end = Math.max(end, buf.end(i));
         const pct = v.duration ? Math.min(100, (end / v.duration) * 100) : 0;
         setBufferedPct(pct || 0);
@@ -245,9 +218,7 @@ const CCTV = () => {
     v.addEventListener('ratechange', onRate);
 
     setPipSupported(!!document.pictureInPictureEnabled && typeof v.requestPictureInPicture === 'function');
-
-    const playAttempt = v.play?.();
-    if (playAttempt?.catch) playAttempt.catch(()=> setIsPlaying(false));
+    v.play?.().catch(()=> setIsPlaying(false));
 
     return () => {
       v.removeEventListener('loadedmetadata', onLoaded);
@@ -258,21 +229,43 @@ const CCTV = () => {
       v.removeEventListener('volumechange', onVol);
       v.removeEventListener('ratechange', onRate);
     };
-  }, [playerOpen, selectedCam?.streamUrl, muted, volume, isLoop, speed]);
+  }, [playerOpen, selectedCam?.streamUrl, muted, volume, isLoop, speed, useCrossOrigin]);
 
-  // Fullscreen listener
+  /* Fullscreen listeners (incl. iOS video fullscreen) */
   useEffect(() => {
-    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    const onFs = () => {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      const v = videoRef.current;
+      const iosVideoFS = v && (v.webkitDisplayingFullscreen === true);
+      setIsFullscreen(!!(fsEl || iosVideoFS));
+    };
     document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
+    document.addEventListener('webkitfullscreenchange', onFs);
+    document.addEventListener('MSFullscreenChange', onFs);
+
+    const v = videoRef.current;
+    const onIOSBegin = () => setIsFullscreen(true);
+    const onIOSEnd = () => setIsFullscreen(false);
+    if (v) {
+      v.addEventListener('webkitbeginfullscreen', onIOSBegin);
+      v.addEventListener('webkitendfullscreen', onIOSEnd);
+    }
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      document.removeEventListener('webkitfullscreenchange', onFs);
+      document.removeEventListener('MSFullscreenChange', onFs);
+      if (v) {
+        v.removeEventListener('webkitbeginfullscreen', onIOSBegin);
+        v.removeEventListener('webkitendfullscreen', onIOSEnd);
+      }
+    };
   }, []);
 
-  // Keyboard shortcuts
+  /* Keyboard */
   useEffect(() => {
     if (!playerOpen) return;
     const onKey = (e) => {
-      const v = videoRef.current;
-      if (!v) return;
+      const v = videoRef.current; if (!v) return;
       switch (e.key.toLowerCase()) {
         case ' ':
         case 'k': e.preventDefault(); v.paused ? v.play() : v.pause(); break;
@@ -292,29 +285,33 @@ const CCTV = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [playerOpen]);
 
-  // Control handlers
-  const togglePlay = () => {
-    const v = videoRef.current; if (!v) return;
-    v.paused ? v.play() : v.pause();
-  };
-  const setVol = (val) => {
-    const v = videoRef.current; if (!v) return;
-    v.volume = val; v.muted = val === 0;
-  };
+  /* Controls */
+  const togglePlay = () => { const v = videoRef.current; if (v) v.paused ? v.play() : v.pause(); };
+  const setVol = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
   const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted; };
-  const seekTo = (sec) => {
-    const v = videoRef.current; if (!v || !isFinite(v.duration)) return;
-    v.currentTime = Math.max(0, Math.min(v.duration, sec));
-  };
+  const seekTo = (sec) => { const v = videoRef.current; if (v && isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, sec)); };
   const changeSpeed = (val) => { const v = videoRef.current; if (v) v.playbackRate = val; };
-  const toggleLoop = () => {
-    const v = videoRef.current; if (!v) return;
-    v.loop = !v.loop; setIsLoop(v.loop);
+  const toggleLoop = () => { const v = videoRef.current; if (v) { v.loop = !v.loop; setIsLoop(v.loop); } };
+
+  const toggleFullscreen = async () => {
+    try {
+      const stage = stageRef.current;
+      const v = videoRef.current;
+      const inFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+      if (!inFS) {
+        if (stage?.requestFullscreen) await stage.requestFullscreen();
+        else if (stage?.webkitRequestFullscreen) stage.webkitRequestFullscreen();
+        else if (stage?.msRequestFullscreen) stage.msRequestFullscreen();
+        else if (v?.webkitEnterFullscreen) v.webkitEnterFullscreen();
+      } else {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+        else if (v?.webkitExitFullscreen) v.webkitExitFullscreen();
+      }
+    } catch {}
   };
-  const toggleFullscreen = () => {
-    const el = playerSheetRef.current; if (!el) return;
-    if (!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.();
-  };
+
   const togglePiP = async () => {
     try {
       const v = videoRef.current; if (!v) return;
@@ -322,18 +319,37 @@ const CCTV = () => {
       else if (document.pictureInPictureEnabled) await v.requestPictureInPicture();
     } catch {}
   };
+
   const snapshot = () => {
     const v = videoRef.current, c = snapshotCanvasRef.current;
     if (!v || !c) return;
     const w = v.videoWidth || 1280, h = v.videoHeight || 720;
     c.width = w; c.height = h;
-    const ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0, w, h);
-    const url = c.toDataURL('image/png');
-    const a = document.createElement('a'); a.href = url;
-    a.download = `${selectedCam?.id || 'camera'}_${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
-    a.click();
+    const ctx = c.getContext('2d');
+    try {
+      ctx.drawImage(v, 0, 0, w, h);
+      const url = c.toDataURL('image/png');
+      const a = document.createElement('a'); a.href = url;
+      a.download = `${selectedCam?.id || 'camera'}_${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
+      a.click();
+    } catch {
+      alert('Snapshot blocked by browser. Enable CORS on the video server and keep crossOrigin="anonymous".');
+    }
   };
+
   const copyUrl = () => { if (selectedCam?.streamUrl) navigator.clipboard?.writeText(selectedCam.streamUrl).catch(()=>{}); };
+
+  const handleVideoError = () => {
+    const v = videoRef.current;
+    if (useCrossOrigin) {
+      setUseCrossOrigin(false);
+      if (v) {
+        const src = selectedCam?.streamUrl || '';
+        v.removeAttribute('src'); v.load();
+        setTimeout(() => { if (v) { v.src = src; v.load(); v.play?.().catch(()=>{}); } }, 0);
+      }
+    }
+  };
 
   return (
     <div className="cctv-page">
@@ -378,10 +394,7 @@ const CCTV = () => {
             </select>
             <button
               className="ghost-btn"
-              onClick={() => {
-                setSelectedBuilding(null);
-                setQuery(''); setZone('All'); setStatus('All'); setBuildingQuery('');
-              }}
+              onClick={() => { setSelectedBuilding(null); setQuery(''); setZone('All'); setStatus('All'); setBuildingQuery(''); }}
             >
               ← All Buildings
             </button>
@@ -440,35 +453,52 @@ const CCTV = () => {
               <div className="pill neutral big">{perBld.total} cameras</div>
             </div>
           )}
+
+          {/* Uniform camera tiles */}
           <section className="cctv-grid">
-            {filteredCams.map((cam) => (
-              <article
-                className={`cam-card ${cam.status === 'Online' ? 'ok' : 'off'}`}
-                key={cam.id}
-                onClick={() => openPlayer(cam)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
-              >
-                <div className="thumb">
-                  <div className="stream-placeholder">
-                    <div className="scanline" />
-                    <div className="overlay"><CameraIcon size={18} /><span>{cam.status === 'Online' ? 'Live' : 'Offline'}</span></div>
+            {filteredCams.map((cam) => {
+              const safeName = (cam?.name && cam.name.trim()) ? cam.name : `${selectedBuilding} #${cam?.id}`;
+              return (
+                <article
+                  className={`cam-card ${cam.status === 'Online' ? 'ok' : 'off'}`}
+                  key={cam.id}
+                  onClick={() => openPlayer(cam)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
+                >
+                  {/* Row 1: thumbnail */}
+                  <div className="thumb">
+                    <div className="stream-placeholder">
+                      <div className="scanline" />
+                      <div className={`overlay ${cam.status === 'Online' ? 'live' : 'offline'}`}>
+                        <CameraIcon size={18} />
+                        <span>{cam.status === 'Online' ? 'Live' : 'Offline'}</span>
+                      </div>
+                      <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
+                        <span className="thumb-name">{safeName}</span>
+                        <span className="thumb-id">#{cam.id}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="meta">
-                  <div className="left">
-                    <h4 className="name">{cam.name}</h4>
-                    <div className="sub"><span className="id">#{cam.id}</span><span className="sep">•</span><span className="zone">{cam.zone}</span></div>
+
+                  {/* Row 2: footer */}
+                  <div className="card-footer">
+                    <div className="cf-left">
+                      <div className="cf-name" title={safeName}>{safeName}</div>
+                      <div className="cf-sub" title={`#${cam.id} • ${cam.zone}`}>
+                        <span className="cf-id">#{cam.id}</span>
+                        <span className="cf-sep">•</span>
+                        <span className="cf-zone">{cam.zone}</span>
+                      </div>
+                    </div>
+                    <div className={`cf-status ${cam.status === 'Online' ? 'ok' : 'off'}`}>
+                      {cam.status}
+                    </div>
                   </div>
-                  <div className={`status ${cam.status === 'Online' ? 'ok' : 'off'}`}><span className="dot" />{cam.status}</div>
-                </div>
-                <div className="actions" onClick={(e) => e.stopPropagation()}>
-                  <button className="btn" onClick={() => openPlayer(cam)}>View</button>
-                  <button className="btn alt">Snapshot</button>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
             {filteredCams.length === 0 && <div className="empty"><p>No cameras match your filters.</p></div>}
           </section>
         </>
@@ -477,8 +507,7 @@ const CCTV = () => {
       {/* === PLAYER OVERLAY === */}
       {playerOpen && selectedCam && (
         <div className="player-overlay" role="dialog" aria-modal="true">
-          <div className="player-sheet" ref={playerSheetRef}>
-            {/* Head */}
+          <div className="player-sheet">
             <div className="player-head">
               <div className="ph-left">
                 <CameraIcon size={16} />
@@ -495,16 +524,14 @@ const CCTV = () => {
                   </div>
                 </div>
               </div>
-              <div className="ph-right">
-                <button className="player-close" onClick={closePlayer} aria-label="Close">×</button>
-              </div>
+              <button className="player-close" onClick={closePlayer} aria-label="Close">×</button>
             </div>
 
-            {/* Stage + controls (YouTube-like) */}
-            <div className={`player-stage ${selectedCam.status !== 'Online' ? 'offline' : ''}`}>
+            <div className={`player-stage ${selectedCam.status !== 'Online' ? 'offline' : ''}`} ref={stageRef}>
               {selectedCam.status === 'Online' && selectedCam.streamUrl ? (
                 <>
                   <video
+                    key={`video-${useCrossOrigin ? 'cors' : 'nocors'}`}
                     ref={videoRef}
                     className="player-video"
                     src={selectedCam.streamUrl}
@@ -512,11 +539,12 @@ const CCTV = () => {
                     autoPlay
                     playsInline
                     muted
+                    preload="auto"
+                    {...(useCrossOrigin ? { crossOrigin: 'anonymous' } : {})}
+                    onError={handleVideoError}
                   />
 
-                  {/* Controls pinned at bottom */}
                   <div className="yt-controls">
-                    {/* Scrubber */}
                     <div className="yt-progress">
                       <div className="track">
                         <div className="track-buffer" style={{ width: `${bufferedPct}%` }} />
@@ -533,10 +561,8 @@ const CCTV = () => {
                       </div>
                     </div>
 
-                    {/* Bottom row */}
                     <div className="yt-row">
                       <div className="yt-left">
-                        {/* Single Play/Pause button (toggles icon) */}
                         <button className="icon-btn" onClick={togglePlay} title={isPlaying ? 'Pause (k)' : 'Play (k)'} aria-label="Play/Pause">
                           {isPlaying ? <PauseIcon /> : <PlayIcon />}
                         </button>
@@ -557,7 +583,6 @@ const CCTV = () => {
                       </div>
 
                       <div className="yt-right">
-                        {/* Settings */}
                         <div className="yt-settings-wrap">
                           <button className="icon-btn" onClick={()=> setShowSettings(v => !v)} title="Settings"><GearIcon/></button>
                           {showSettings && (
@@ -585,23 +610,22 @@ const CCTV = () => {
                           )}
                         </div>
 
-                        {/* Extras */}
                         {pipSupported && (
                           <button className="icon-btn" onClick={togglePiP} title="Picture-in-Picture (i)" aria-label="Picture in Picture">
                             <PipIcon />
                           </button>
                         )}
                         <button className="icon-btn" onClick={snapshot} title="Snapshot" aria-label="Snapshot">
-                          {/* reuse camera icon as filled */}
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="4"/></svg>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="4" fill="#fff"/>
+                          </svg>
                         </button>
                         {selectedCam.streamUrl && (
-                          <>
-                            <button className="icon-btn" onClick={copyUrl} title="Copy stream URL" aria-label="Copy URL">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14h13a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/></svg>
-                            </button>
-                            <a className="ghost-btn small" href={selectedCam.streamUrl} target="_blank" rel="noreferrer">Open</a>
-                          </>
+                          <button className="icon-btn" onClick={copyUrl} title="Copy stream URL" aria-label="Copy URL">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14h13a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/>
+                            </svg>
+                          </button>
                         )}
                         <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'} aria-label="Fullscreen">
                           {isFullscreen ? <FullExitIcon/> : <FullIcon/>}
@@ -619,7 +643,6 @@ const CCTV = () => {
             </div>
           </div>
 
-          {/* hidden canvas for snapshot */}
           <canvas ref={snapshotCanvasRef} style={{ display:'none' }} />
           <div className="player-backdrop" onClick={closePlayer} />
         </div>
