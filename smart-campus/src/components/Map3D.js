@@ -27,7 +27,7 @@ function baseKeyFrom(name) {
   return BUILDING_DATA[name] ? name : name;
 }
 
-/** Camera fit helper (supports immediate placement) */
+/** Camera fit helper */
 function approachCameraToBox({
   camera,
   box,
@@ -165,19 +165,10 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
   return <primitive object={scene} />;
 }
 
-/** Walk & Drone constants */
 const WALK = { eyeHeight: 1.7, clearance: 0.25, stepMeters: 6, moveSpeed: 6 };
 const DRONE = { raiseMin: 120, speed: 18, defaultY: 320 };
-const ROTATE = { yaw: 1.0, pitch: 0.8 }; // gentler for comfort
-
-/** Smoothing constants */
-const SMOOTH = {
-  accel: 5.0,            // velocity smoothing
-  rot: 8.0,              // rotation smoothing
-  mouseSens: 0.0013,     // pointer sensitivity
-  nudgeMs: 240,          // street-view step tween
-  yLock: 10.0,           // vertical smoothing (walk)
-};
+const ROTATE = { yaw: 1.0, pitch: 0.8 };
+const SMOOTH = { accel: 5.0, rot: 8.0, mouseSens: 0.0013, nudgeMs: 240, yLock: 10.0 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 function dampFactor(kps, dt) { return 1 - Math.exp(-kps * dt); }
@@ -218,9 +209,9 @@ const Map3D = ({
   const yawTargetRef = useRef(0);
   const pitchTargetRef = useRef(0);
 
-  // “Street-view” step tween control
+  // “Street-view” step tween
   const nudgeTweenRef = useRef(null);
-  const suppressMoveUntilRef = useRef(0); // timestamp (ms) to pause integration
+  const suppressMoveUntilRef = useRef(0); // timestamp (ms)
 
   // Store the opening drone height
   const openingDroneYRef = useRef(null);
@@ -247,7 +238,9 @@ const Map3D = ({
     return () => el.classList.remove('walk-mode');
   }, [gl, mode]);
 
-  // Mouse look: update targets only (we'll smooth to them in useFrame)
+  /* =======================
+     POINTER / MOUSE LOOK
+     ======================= */
   useEffect(() => {
     let isDragging = false;
     let prev = { x: 0, y: 0 };
@@ -274,7 +267,115 @@ const Map3D = ({
     };
   }, [gl]);
 
-  // Keyboard
+  /* =======================
+     TOUCH (iPad / tablets)
+     One finger: rotate (look)
+     Two fingers: strafe + zoom + ALTITUDE (INVERTED VERTICAL)
+     ======================= */
+  useEffect(() => {
+    const el = gl.domElement;
+
+    let touchMode = null;           // 'rotate' | 'panzoom' | null
+    let prevTouches = [];           // [{x,y}, {x,y}]
+    let prevDist = null;            // pinch distance
+
+    const avg = (arr) => {
+      if (!arr.length) return { x: 0, y: 0 };
+      let x = 0, y = 0;
+      for (const t of arr) { x += t.x; y += t.y; }
+      return { x: x / arr.length, y: y / arr.length };
+    };
+
+    const toPts = (touchList) => Array.from(touchList).map(t => ({ x: t.clientX, y: t.clientY }));
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        touchMode = 'rotate';
+        prevTouches = toPts(e.touches);
+      } else if (e.touches.length === 2) {
+        touchMode = 'panzoom';
+        prevTouches = toPts(e.touches);
+        const [a, b] = prevTouches;
+        prevDist = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (touchMode === 'rotate' && e.touches.length === 1) {
+        const curr = toPts(e.touches)[0];
+        const prev = prevTouches[0];
+        const dx = curr.x - prev.x;
+        const dy = curr.y - prev.y;
+        prevTouches = [curr];
+
+        // rotate look
+        yawTargetRef.current -= dx * SMOOTH.mouseSens * 1.2;
+        pitchTargetRef.current -= dy * SMOOTH.mouseSens * 1.2;
+        const HALF = Math.PI / 2;
+        pitchTargetRef.current = Math.max(-HALF, Math.min(HALF, pitchTargetRef.current));
+      } else if (touchMode === 'panzoom' && e.touches.length === 2) {
+        e.preventDefault(); // we manage panning/zooming ourselves
+        const currTouches = toPts(e.touches);
+        const [a, b] = currTouches;
+        const centerCurr = avg(currTouches);
+        const centerPrev = avg(prevTouches);
+
+        const dx = centerCurr.x - centerPrev.x;
+        const dy = centerCurr.y - centerPrev.y;
+
+        // Compute orientation vectors
+        const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+        const right = new THREE.Vector3(1, 0, 0).applyEuler(yawOnly);
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
+
+        // Two-finger horizontal drag -> strafe L/R
+        const panScale = 0.02 * (mode === 'drone' ? 1 : 0.3);
+        camera.position.addScaledVector(right, -dx * panScale);
+
+        // Two-finger vertical drag -> ALTITUDE (INVERTED)
+        // User request: drag UP => camera goes DOWN ; drag DOWN => camera goes UP
+        if (mode === 'drone') {
+          const altScale = 0.05;
+          camera.position.y += (-dy) * altScale * -1; // double negative makes it inverted
+          // simpler/readable: camera.position.y += dy * (-altScale);
+        }
+
+        // Pinch distance -> zoom forward/back
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        const dd = dist - (prevDist ?? dist);
+        const zoomScale = 0.04;
+        camera.position.addScaledVector(forward, -dd * zoomScale);
+
+        prevTouches = currTouches;
+        prevDist = dist;
+      }
+    };
+
+    const onTouchEnd = () => {
+      // reset if no fingers left, or we changed finger count
+      if (el) {
+        touchMode = null;
+        prevTouches = [];
+        prevDist = null;
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [gl, camera, mode]);
+
+  /* =======================
+     KEYBOARD (WASD + arrows)
+     ======================= */
   const keys = useRef({});
   useEffect(() => {
     const down = (e) => {
@@ -295,7 +396,9 @@ const Map3D = ({
     };
   }, [highlightedGroup, setPopupData]);
 
-  // Smooth movement + ground lock + nudges
+  /* =======================
+     PHYSICS / INTEGRATION
+     ======================= */
   const lastNudgeTick = useRef(-1);
   useFrame((_, delta) => {
     const now = performance.now();
@@ -407,7 +510,7 @@ const Map3D = ({
     }
   });
 
-  // --- Initial fit BEFORE PAINT (no tween) to avoid boot "jump" ---
+  // --- Initial fit BEFORE PAINT (no tween) ---
   useLayoutEffect(() => {
     if (initialFocusBox && !didFitRef.current) {
       const aspect = size.width / size.height;
@@ -434,7 +537,7 @@ const Map3D = ({
     }
   }, [initialFocusBox, camera, size]);
 
-  // Mode height adjust — skip during boot to avoid any extra jump
+  // Mode height adjust
   useEffect(() => {
     if (!bootDoneRef.current) return;
 
@@ -586,7 +689,7 @@ const Map3D = ({
     return () => { gl.domElement.removeEventListener('click', onClick); };
   }, [camera, scene, gl, highlightedGroup, highlightGroup, setPopupData, hideByNames, restoreGroupColors]);
 
-  // Respond to "close popup" from App: restore colors & hidden floors
+  // Respond to "close popup"
   useEffect(() => {
     if (!resetColors) return;
     if (highlightedGroup) {
