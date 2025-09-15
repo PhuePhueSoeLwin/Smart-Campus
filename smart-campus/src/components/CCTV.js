@@ -28,7 +28,7 @@ const PeopleIcon = ({ size = 14 }) => (
   </svg>
 );
 
-/* Bigger, clearer player icons */
+/* Player icons */
 const PlayIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>);
 const PauseIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>);
 const VolumeIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" strokeWidth="2"/></svg>);
@@ -43,6 +43,15 @@ const BUILDINGS = ['E1','E2','E3','E4','C1','C2','C3','C5','AD1','AD2','AS','AV'
 
 const CCTV = () => {
   const navigate = useNavigate();
+
+  /* Theme (Dark/Light) */
+  const [theme, setTheme] = useState(() => localStorage.getItem('cctv-theme') || 'dark');
+  useEffect(() => {
+    localStorage.setItem('cctv-theme', theme);
+  }, [theme]);
+
+  /* Keep Eyes mode (grid video previews) */
+  const [keepEyes, setKeepEyes] = useState(false);
 
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [buildingQuery, setBuildingQuery] = useState('');
@@ -89,7 +98,7 @@ const CCTV = () => {
       const n = 12;
       return Array.from({ length: n }, (_, i) => {
         const z = rand(zones);
-               const id = `${b}-${String(i + 1).padStart(2,'0')}`;
+        const id = `${b}-${String(i + 1).padStart(2,'0')}`;
         return { id, name: `${b} ${rand(places)}`, zone: z, status: Math.random() < 0.88 ? 'Online' : 'Offline' };
       });
     };
@@ -352,16 +361,30 @@ const CCTV = () => {
   };
 
   return (
-    <div className="cctv-page">
+    <div className={`cctv-page ${theme === 'light' ? 'theme-light' : 'theme-dark'}`}>
       {/* Top bar */}
       <header className="cctv-topbar">
         <button className="cctv-back-btn" onClick={() => navigate('/')}>Back</button>
+
         <div className="cctv-title">
-          <CameraIcon size={18} />
+          <img src="/assets/logo.png" alt="MFU Logo" className="cctv-logo" />
           <span>CCTV on Campus</span>
           {selectedBuilding && <span className="bld-badge">{selectedBuilding}</span>}
         </div>
-        <img src="/assets/mfu_logo.png" alt="MFU Logo" className="cctv-logo" />
+
+        {/* Theme switch (right side) */}
+        <div className="topbar-right">
+          <span className="switch-text">{theme === 'light' ? 'Light' : 'Dark'} Mode</span>
+          <label className="switch theme-toggle">
+            <input
+              type="checkbox"
+              checked={theme === 'light'}
+              onChange={(e) => setTheme(e.target.checked ? 'light' : 'dark')}
+              aria-label="Toggle dark / light mode"
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </header>
 
       {/* KPIs */}
@@ -447,57 +470,125 @@ const CCTV = () => {
         <>
           {perBld && (
             <div className="bld-stats-row">
-              <div className="pill people big"><PeopleIcon /> {perBld.students.toLocaleString()} students</div>
-              <div className="pill ok big">{perBld.online} online</div>
-              <div className="pill off big">{perBld.offline} offline</div>
-              <div className="pill neutral big">{perBld.total} cameras</div>
+              <div className="bld-stats-left">
+                <div className="pill people big"><PeopleIcon /> {perBld.students.toLocaleString()} students</div>
+                <div className="pill ok big">{perBld.online} online</div>
+                <div className="pill off big">{perBld.offline} offline</div>
+                <div className="pill neutral big">{perBld.total} cameras</div>
+              </div>
+
+              {/* Keep Eyes switch on the right side */}
+              <div className="bld-stats-right">
+                <span className="switch-text">{keepEyes ? 'Keep Eyes' : 'Normal'}</span>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={keepEyes}
+                    onChange={(e) => setKeepEyes(e.target.checked)}
+                    aria-label="Toggle Keep Eyes grid previews"
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
             </div>
           )}
 
-          {/* Uniform camera tiles */}
-          <section className="cctv-grid">
+          {/* Camera tiles */}
+          <section className={`cctv-grid ${keepEyes ? 'eyes-on' : ''}`}>
             {filteredCams.map((cam) => {
               const safeName = (cam?.name && cam.name.trim()) ? cam.name : `${selectedBuilding} #${cam?.id}`;
-              return (
-                <article
-                  className={`cam-card ${cam.status === 'Online' ? 'ok' : 'off'}`}
-                  key={cam.id}
-                  onClick={() => openPlayer(cam)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
-                >
-                  {/* Row 1: thumbnail */}
-                  <div className="thumb">
-                    <div className="stream-placeholder">
-                      <div className="scanline" />
-                      <div className={`overlay ${cam.status === 'Online' ? 'live' : 'offline'}`}>
-                        <CameraIcon size={18} />
-                        <span>{cam.status === 'Online' ? 'Live' : 'Offline'}</span>
-                      </div>
-                      <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
-                        <span className="thumb-name">{safeName}</span>
-                        <span className="thumb-id">#{cam.id}</span>
-                      </div>
-                    </div>
-                  </div>
+              const live = cam.status === 'Online';
+              const streamUrl = live ? getStreamUrl(cam) : null;
 
-                  {/* Row 2: footer */}
-                  <div className="card-footer">
-                    <div className="cf-left">
-                      <div className="cf-name" title={safeName}>{safeName}</div>
-                      <div className="cf-sub" title={`#${cam.id} • ${cam.zone}`}>
-                        <span className="cf-id">#{cam.id}</span>
-                        <span className="cf-sep">•</span>
-                        <span className="cf-zone">{cam.zone}</span>
+              if (!keepEyes) {
+                /* NORMAL MODE CARD */
+                return (
+                  <article
+                    className={`cam-card ${live ? 'ok' : 'off'}`}
+                    key={cam.id}
+                    onClick={() => openPlayer(cam)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
+                  >
+                    <div className="thumb">
+                      <div className="stream-placeholder">
+                        <div className="scanline" />
+                        <div className={`overlay ${live ? 'live' : 'offline'}`}>
+                          <CameraIcon size={18} />
+                          <span>{live ? 'Live' : 'Offline'}</span>
+                        </div>
+                        <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
+                          <span className="thumb-name">{safeName}</span>
+                          <span className="thumb-id">#{cam.id}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className={`cf-status ${cam.status === 'Online' ? 'ok' : 'off'}`}>
-                      {cam.status}
+
+                    <div className="card-footer">
+                      <div className="cf-left">
+                        <div className="cf-name" title={safeName}>{safeName}</div>
+                        <div className="cf-sub" title={`#${cam.id} • ${cam.zone}`}>
+                          <span className="cf-id">#{cam.id}</span>
+                          <span className="cf-sep">•</span>
+                          <span className="cf-zone">{cam.zone}</span>
+                        </div>
+                      </div>
+                      <div className={`cf-status ${live ? 'ok' : 'off'}`}>{cam.status}</div>
                     </div>
-                  </div>
-                </article>
-              );
+                  </article>
+                );
+              }
+
+             /* KEEP EYES MODE CARD */
+return (
+  <article
+    key={cam.id}
+    className={`cam-card keep-eyes ${live ? 'ok' : 'off'}`}
+    onClick={() => openPlayer(cam)}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
+    title={safeName}
+  >
+    <div className="eyes-thumb">
+      {live && streamUrl ? (
+        <>
+          <video
+            className="eyes-video"
+            src={streamUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+          <div className="eyes-badge live">LIVE</div>
+        </>
+      ) : (
+        <div className="no-signal">
+          <div className="no-signal-wrap">
+            <div className="no-signal-bars" />
+            <div className="no-signal-text">NO SIGNAL</div>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Name OUTSIDE the video container */}
+    <div className="eyes-name" title={`${safeName} • #${cam.id}`}>{safeName}</div>
+
+    <div className="eyes-footer">
+      <div className="eyes-meta" title={`${safeName} • ${cam.zone}`}>
+        <span className="eyes-id">#{cam.id}</span>
+        <span className="cf-sep">•</span>
+        <span className="eyes-zone">{cam.zone}</span>
+      </div>
+      <div className={`cf-status ${live ? 'ok' : 'off'}`}>{cam.status}</div>
+    </div>
+  </article>
+);
+
+
             })}
             {filteredCams.length === 0 && <div className="empty"><p>No cameras match your filters.</p></div>}
           </section>
