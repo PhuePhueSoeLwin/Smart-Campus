@@ -1,3 +1,4 @@
+// CCTV.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CCTV.css';
@@ -44,11 +45,9 @@ const BUILDINGS = ['E1','E2','E3','E4','C1','C2','C3','C5','AD1','AD2','AS','AV'
 const CCTV = () => {
   const navigate = useNavigate();
 
-  /* Theme (Dark/Light) */
   const [theme, setTheme] = useState(() => localStorage.getItem('cctv-theme') || 'dark');
-  useEffect(() => localStorage.setItem('cctv-theme', theme), [theme]);
+  useEffect(() => { localStorage.setItem('cctv-theme', theme); }, [theme]);
 
-  /* Keep Eyes mode (grid video previews) */
   const [keepEyes, setKeepEyes] = useState(false);
 
   const [selectedBuilding, setSelectedBuilding] = useState(null);
@@ -57,7 +56,7 @@ const CCTV = () => {
   const [zone, setZone] = useState('All');
   const [status, setStatus] = useState('All');
 
-  // Player overlay
+  // Player
   const [selectedCam, setSelectedCam] = useState(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const videoRef = useRef(null);
@@ -238,7 +237,7 @@ const CCTV = () => {
     };
   }, [playerOpen, selectedCam?.streamUrl, muted, volume, isLoop, speed, useCrossOrigin]);
 
-  /* Fullscreen listeners (incl. iOS video fullscreen) */
+  /* Fullscreen listeners */
   useEffect(() => {
     const onFs = () => {
       const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
@@ -370,7 +369,7 @@ const CCTV = () => {
           {selectedBuilding && <span className="bld-badge">{selectedBuilding}</span>}
         </div>
 
-        {/* Theme switch (right side) */}
+        {/* Theme switch */}
         <div className="topbar-right">
           <span className="switch-text">{theme === 'light' ? 'Light' : 'Dark'} Mode</span>
           <label className="switch theme-toggle">
@@ -475,7 +474,6 @@ const CCTV = () => {
                 <div className="pill neutral big">{perBld.total} cameras</div>
               </div>
 
-              {/* Keep Eyes switch on the right side */}
               <div className="bld-stats-right">
                 <span className="switch-text">{keepEyes ? 'Keep Eyes' : 'Normal'}</span>
                 <label className="switch">
@@ -499,7 +497,7 @@ const CCTV = () => {
               const streamUrl = live ? getStreamUrl(cam) : null;
 
               if (!keepEyes) {
-                /* NORMAL MODE CARD */
+                /* NORMAL MODE CARD (footer removed) */
                 return (
                   <article
                     className={`cam-card ${live ? 'ok' : 'off'}`}
@@ -522,23 +520,11 @@ const CCTV = () => {
                         </div>
                       </div>
                     </div>
-
-                    <div className="card-footer">
-                      <div className="cf-left">
-                        <div className="cf-name" title={safeName}>{safeName}</div>
-                        <div className="cf-sub" title={`#${cam.id} • ${cam.zone}`}>
-                          <span className="cf-id">#{cam.id}</span>
-                          <span className="cf-sep">•</span>
-                          <span className="cf-zone">{cam.zone}</span>
-                        </div>
-                      </div>
-                      <div className={`cf-status ${live ? 'ok' : 'off'}`}>{cam.status}</div>
-                    </div>
                   </article>
                 );
               }
 
-              /* KEEP EYES MODE CARD */
+              /* KEEP EYES MODE CARD — unchanged */
               return (
                 <article
                   key={cam.id}
@@ -549,42 +535,34 @@ const CCTV = () => {
                   onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
                   title={safeName}
                 >
-                  <div className="eyes-thumb" data-status={live ? 'live' : 'offline'}>
+                  <div className="eyes-thumb">
                     {live && streamUrl ? (
-                      <>
-                        <video
-                          className="eyes-video"
-                          src={streamUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                        />
-                        <div className="eyes-badge live">LIVE</div>
-                        {/* CCTV corner markers + glare */}
-                        <span className="cctv-corner tl" />
-                        <span className="cctv-corner tr" />
-                        <span className="cctv-corner bl" />
-                        <span className="cctv-corner br" />
-                        <span className="cctv-glare" />
-                      </>
+                      <video
+                        className="eyes-video"
+                        src={streamUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                      />
                     ) : (
                       <div className="no-signal">
                         <div className="no-signal-wrap">
                           <div className="no-signal-bars" />
                           <div className="no-signal-text">NO SIGNAL</div>
                         </div>
-                        <span className="cctv-corner tl" />
-                        <span className="cctv-corner tr" />
-                        <span className="cctv-corner bl" />
-                        <span className="cctv-corner br" />
-                        <span className="cctv-glare" />
                       </div>
                     )}
-                  </div>
 
-                  {/* Name OUTSIDE the video container */}
-                  <div className="eyes-name" title={`${safeName} • #${cam.id}`}>{safeName}</div>
+                    <div className={`overlay ${live ? 'live' : 'offline'}`}>
+                      <CameraIcon size={18} />
+                      <span>{live ? 'Live' : 'Offline'}</span>
+                    </div>
+                    <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
+                      <span className="thumb-name">{safeName}</span>
+                      <span className="thumb-id">#{cam.id}</span>
+                    </div>
+                  </div>
 
                   <div className="eyes-footer">
                     <div className="eyes-meta" title={`${safeName} • ${cam.zone}`}>
