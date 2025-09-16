@@ -46,9 +46,7 @@ const CCTV = () => {
 
   /* Theme (Dark/Light) */
   const [theme, setTheme] = useState(() => localStorage.getItem('cctv-theme') || 'dark');
-  useEffect(() => {
-    localStorage.setItem('cctv-theme', theme);
-  }, [theme]);
+  useEffect(() => localStorage.setItem('cctv-theme', theme), [theme]);
 
   /* Keep Eyes mode (grid video previews) */
   const [keepEyes, setKeepEyes] = useState(false);
@@ -540,55 +538,64 @@ const CCTV = () => {
                 );
               }
 
-             /* KEEP EYES MODE CARD */
-return (
-  <article
-    key={cam.id}
-    className={`cam-card keep-eyes ${live ? 'ok' : 'off'}`}
-    onClick={() => openPlayer(cam)}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
-    title={safeName}
-  >
-    <div className="eyes-thumb">
-      {live && streamUrl ? (
-        <>
-          <video
-            className="eyes-video"
-            src={streamUrl}
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
-          <div className="eyes-badge live">LIVE</div>
-        </>
-      ) : (
-        <div className="no-signal">
-          <div className="no-signal-wrap">
-            <div className="no-signal-bars" />
-            <div className="no-signal-text">NO SIGNAL</div>
-          </div>
-        </div>
-      )}
-    </div>
+              /* KEEP EYES MODE CARD */
+              return (
+                <article
+                  key={cam.id}
+                  className={`cam-card keep-eyes ${live ? 'ok' : 'off'}`}
+                  onClick={() => openPlayer(cam)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
+                  title={safeName}
+                >
+                  <div className="eyes-thumb" data-status={live ? 'live' : 'offline'}>
+                    {live && streamUrl ? (
+                      <>
+                        <video
+                          className="eyes-video"
+                          src={streamUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                        />
+                        <div className="eyes-badge live">LIVE</div>
+                        {/* CCTV corner markers + glare */}
+                        <span className="cctv-corner tl" />
+                        <span className="cctv-corner tr" />
+                        <span className="cctv-corner bl" />
+                        <span className="cctv-corner br" />
+                        <span className="cctv-glare" />
+                      </>
+                    ) : (
+                      <div className="no-signal">
+                        <div className="no-signal-wrap">
+                          <div className="no-signal-bars" />
+                          <div className="no-signal-text">NO SIGNAL</div>
+                        </div>
+                        <span className="cctv-corner tl" />
+                        <span className="cctv-corner tr" />
+                        <span className="cctv-corner bl" />
+                        <span className="cctv-corner br" />
+                        <span className="cctv-glare" />
+                      </div>
+                    )}
+                  </div>
 
-    {/* Name OUTSIDE the video container */}
-    <div className="eyes-name" title={`${safeName} • #${cam.id}`}>{safeName}</div>
+                  {/* Name OUTSIDE the video container */}
+                  <div className="eyes-name" title={`${safeName} • #${cam.id}`}>{safeName}</div>
 
-    <div className="eyes-footer">
-      <div className="eyes-meta" title={`${safeName} • ${cam.zone}`}>
-        <span className="eyes-id">#{cam.id}</span>
-        <span className="cf-sep">•</span>
-        <span className="eyes-zone">{cam.zone}</span>
-      </div>
-      <div className={`cf-status ${live ? 'ok' : 'off'}`}>{cam.status}</div>
-    </div>
-  </article>
-);
-
-
+                  <div className="eyes-footer">
+                    <div className="eyes-meta" title={`${safeName} • ${cam.zone}`}>
+                      <span className="eyes-id">#{cam.id}</span>
+                      <span className="cf-sep">•</span>
+                      <span className="eyes-zone">{cam.zone}</span>
+                    </div>
+                    <div className={`cf-status ${live ? 'ok' : 'off'}`}>{cam.status}</div>
+                  </div>
+                </article>
+              );
             })}
             {filteredCams.length === 0 && <div className="empty"><p>No cameras match your filters.</p></div>}
           </section>

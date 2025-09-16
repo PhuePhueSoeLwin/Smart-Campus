@@ -1,13 +1,12 @@
 /* =========================
    CCTV.css — full stylesheet
-   Dark/Light themes, Keep Eyes mode,
-   CRT “NO SIGNAL” for offline, and
-   camera name under tiles in Keep Eyes.
+   Themes, Keep Eyes name OUTSIDE tile,
+   CRT NO SIGNAL, CCTV bezel & markers,
+   moon/sun knob icons.
    ========================= */
 
 /* ========== THEME TOKENS ========== */
 :root{
-  /* dark as default tokens (overridden in .theme-light) */
   --bg-grad-1: radial-gradient(1200px 600px at 50% -200px, rgba(77,174,244,0.12), transparent 60%);
   --bg-grad-2: linear-gradient(180deg, #0b1326, #0a1020 40%, #0b1326);
 
@@ -56,8 +55,6 @@
   --switch-on-grad: linear-gradient(90deg,#2e90ff,#12d1b8);
   --switch-knob: #ffffff;
 }
-
-/* Light theme overrides */
 .theme-light{
   --bg-grad-1: radial-gradient(1200px 600px at 50% -200px, rgba(46,144,255,0.10), transparent 60%);
   --bg-grad-2: linear-gradient(180deg, #edf2ff, #f7faff 50%, #edf2ff);
@@ -111,9 +108,7 @@
 /* ========== PAGE SHELL ========== */
 .cctv-page{
   position:fixed; inset:0;
-  background:
-    var(--bg-grad-1),
-    var(--bg-grad-2);
+  background: var(--bg-grad-1), var(--bg-grad-2);
   color:var(--text-primary);
   font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   overflow:hidden;
@@ -233,33 +228,14 @@ input:checked + .slider{background:var(--switch-on-grad); border-color:transpare
 input:checked + .slider:before{transform:translate(24px,-50%);}
 .slider.round{border-radius:999px;}
 
-/* === Theme toggle (sun/moon icons INSIDE knob) ===
-   Scoped to topbar only so Keep Eyes switch stays plain */
-.topbar-right .switch .slider:before{
+/* Theme toggle knob icons (moon/sun) */
+.theme-toggle .slider:before{
   background: var(--switch-knob) center/16px no-repeat;
-  /* Moon (unchecked / dark mode) */
-  background-image: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
-    <path fill='%230b254a' d='M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'/>\
-  </svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%230b254a' d='M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'/></svg>");
 }
-.topbar-right .switch input:checked + .slider:before{
-  /* Sun (checked / light mode) */
+.theme-toggle input:checked + .slider:before{
   background: var(--switch-knob) center/16px no-repeat;
-  background-image: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>\
-    <circle cx='12' cy='12' r='5' fill='%23f59e0b'/>\
-    <g stroke='%23f59e0b' stroke-width='2' stroke-linecap='round'>\
-      <line x1='12' y1='1' x2='12' y2='4'/>\
-      <line x1='12' y1='20' x2='12' y2='23'/>\
-      <line x1='1' y1='12' x2='4' y2='12'/>\
-      <line x1='20' y1='12' x2='23' y2='12'/>\
-      <line x1='4.22' y1='4.22' x2='6.34' y2='6.34'/>\
-      <line x1='17.66' y1='17.66' x2='19.78' y2='19.78'/>\
-      <line x1='4.22' y1='19.78' x2='6.34' y2='17.66'/>\
-      <line x1='17.66' y1='6.34' x2='19.78' y2='4.22'/>\
-    </g>\
-  </svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='5' fill='%23f59e0b'/><g stroke='%23f59e0b' stroke-width='2' stroke-linecap='round'><line x1='12' y1='1' x2='12' y2='4'/><line x1='12' y1='20' x2='12' y2='23'/><line x1='1' y1='12' x2='4' y2='12'/><line x1='20' y1='12' x2='23' y2='12'/><line x1='4.22' y1='4.22' x2='6.34' y2='6.34'/><line x1='17.66' y1='17.66' x2='19.78' y2='19.78'/><line x1='4.22' y1='19.78' x2='6.34' y2='17.66'/><line x1='17.66' y1='6.34' x2='19.78' y2='4.22'/></g></svg>");
 }
 
 /* Camera grid */
@@ -292,7 +268,7 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .stream-placeholder .overlay.live{background:var(--accent-1); color:#0b254a; border-color:rgba(138,208,255,.5);}
 .stream-placeholder .overlay.offline{background:#ff3b3b; color:#fff; border-color:rgba(255,0,0,.45); box-shadow:0 2px 12px rgba(255,0,0,.25);}
 
-/* Title overlay on thumbnail */
+/* Title overlay on thumbnail (Normal mode) */
 .thumb-title{
   position:absolute; left:8px; right:8px; bottom:36px;
   z-index:4;
@@ -325,25 +301,28 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .cf-status.off{color:var(--status-off-text); border-color:var(--status-off-border); background:var(--status-off-bg);}
 
 /* ===== KEEP EYES MODE ===== */
-
 /* 3 rows: [video] [name] [footer] */
-.cctv-grid.eyes-on .cam-card{
-  grid-template-rows: 200px 34px 66px;
+.cctv-grid.eyes-on .cam-card.keep-eyes{
+  grid-template-rows: 200px 34px 66px; /* name sits OUTSIDE the video area */
 }
-
 .cam-card.keep-eyes .eyes-thumb{
   position:relative; height:100%;
   background:#000; display:grid; place-items:center; overflow:hidden;
-  isolation: isolate; /* ensure ::before/::after overlays render on top */
+  isolation:isolate;
+  border-radius:12px 12px 0 0; /* CCTV bezel */
+  border:1px solid rgba(255,255,255,0.15);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 -60px 80px rgba(0,0,0,0.35);
 }
-.theme-light .cam-card.keep-eyes .eyes-thumb{background:#e5eefc;}
-
+.theme-light .cam-card.keep-eyes .eyes-thumb{
+  background:#e5eefc; border-color:rgba(0,0,0,0.12);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06), inset 0 -60px 80px rgba(0,0,0,0.08);
+}
 .cam-card.keep-eyes .eyes-video{
   width:100%; height:100%; object-fit:cover;
-  filter: contrast(1.05) brightness(0.95) saturate(1.05);
+  filter: contrast(1.04) saturate(1.05) brightness(0.98);
 }
 
-/* Name outside the video container (row 2) */
+/* Name row (outside) */
 .eyes-name{
   margin: 6px 12px 0;
   font-weight: 900;
@@ -355,17 +334,10 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
   text-overflow: ellipsis;
 }
 
-.eyes-badge.live{
-  position:absolute; top:10px; right:10px;
-  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
-  background:#ff3b3b; color:#fff; border:1px solid rgba(255,255,255,0.18);
-  box-shadow:0 2px 10px rgba(255,59,59,.35);
-}
-
+/* Keep Eyes footer */
 .eyes-footer{
   display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px;
-  padding:8px 12px 10px; /* slightly tighter to make room for the name row */
-  border-top:1px solid var(--divider);
+  padding:8px 12px 10px; border-top:1px solid var(--divider);
   background:radial-gradient(600px 240px at 50% -100%, rgba(77,174,244,0.08), transparent 60%), linear-gradient(180deg, var(--card-bg-1), var(--card-bg-2));
 }
 .eyes-meta{font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -373,7 +345,27 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .theme-light .eyes-id{color:#2a4f86;}
 .eyes-zone{opacity:.9;}
 
-/* ===== Keep Eyes: Offline “NO SIGNAL” CRT look ===== */
+/* CCTV vibe: corner markers + glare */
+.cctv-corner{position:absolute; width:16%; height:16%; pointer-events:none; border:2px solid rgba(255,255,255,.75); opacity:.5;}
+.cctv-corner.tl{left:8px; top:8px; border-right:none; border-bottom:none; border-radius:8px 0 0 0;}
+.cctv-corner.tr{right:8px; top:8px; border-left:none; border-bottom:none; border-radius:0 8px 0 0;}
+.cctv-corner.bl{left:8px; bottom:8px; border-right:none; border-top:none; border-radius:0 0 0 8px;}
+.cctv-corner.br{right:8px; bottom:8px; border-left:none; border-top:none; border-radius:0 0 8px 0;}
+.theme-light .cctv-corner{border-color:rgba(0,0,0,.5);}
+.cctv-glare{
+  position:absolute; inset:-10% -10% auto -10%; height:40%;
+  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+  pointer-events:none; filter:blur(2px);
+}
+
+.eyes-badge.live{
+  position:absolute; top:10px; right:10px;
+  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
+  background:#ff3b3b; color:#fff; border:1px solid rgba(255,255,255,0.18);
+  box-shadow:0 2px 10px rgba(255,59,59,.35);
+}
+
+/* ===== Keep Eyes: Offline “NO SIGNAL” ===== */
 .no-signal{ position:absolute; inset:0; display:grid; place-items:center; overflow:hidden; background:#111; }
 .theme-light .no-signal{ background:#b8c9ea; }
 .no-signal-wrap{position:absolute; inset:0; display:grid; place-items:center;}
@@ -385,35 +377,17 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
   text-transform:uppercase; font-size:12px;
 }
 .theme-light .no-signal-text{ color:#0b1a2e; background:rgba(255,255,255,0.7); border-color:rgba(0,0,0,0.12); }
-
 .no-signal-bars{
   position:absolute; inset:0;
   background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255,255,255,0.2) 0px,
-      rgba(255,255,255,0.2) 2px,
-      rgba(0,0,0,0.2) 4px,
-      rgba(0,0,0,0.2) 6px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255,0,0,0.12) 0 10%,
-      rgba(0,255,0,0.12) 10% 20%,
-      rgba(0,0,255,0.12) 20% 30%,
-      rgba(255,255,0,0.12) 30% 40%,
-      rgba(0,255,255,0.12) 40% 50%,
-      rgba(255,0,255,0.12) 50% 60%,
-      rgba(255,255,255,0.12) 60% 70%,
-      rgba(255,255,255,0.12) 70% 80%,
-      rgba(255,255,255,0.12) 80% 90%,
-      rgba(255,255,255,0.12) 90% 100%
-    );
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0px, rgba(255,255,255,0.2) 2px, rgba(0,0,0,0.2) 4px, rgba(0,0,0,0.2) 6px),
+    repeating-linear-gradient(90deg,
+      rgba(255,0,0,0.12) 0 10%, rgba(0,255,0,0.12) 10% 20%, rgba(0,0,255,0.12) 20% 30%,
+      rgba(255,255,0,0.12) 30% 40%, rgba(0,255,255,0.12) 40% 50%, rgba(255,0,255,0.12) 50% 60%,
+      rgba(255,255,255,0.12) 60% 70%, rgba(255,255,255,0.12) 70% 80%, rgba(255,255,255,0.12) 80% 90%, rgba(255,255,255,0.12) 90% 100%);
   animation: tvNoise 1.2s steps(6) infinite, crtVignette 8s ease-in-out infinite alternate;
   opacity:.9;
 }
-
-/* Extra CRT feel */
 .no-signal::before{
   content:""; position:absolute; inset:0;
   background:repeating-linear-gradient(180deg, rgba(0,0,0,.25) 0 1px, transparent 2px 3px);
@@ -426,47 +400,32 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
   filter:blur(2px); pointer-events:none;
 }
 
-/* Fallback: even without .no-signal markup, force CRT on offline tiles */
+/* Fallback: make sure offline tiles still show CRT even without markup */
 .cctv-grid.eyes-on .cam-card.off .eyes-thumb::after {
   content:"";
   position:absolute; inset:0;
   background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255,255,255,0.18) 0px,
-      rgba(255,255,255,0.18) 2px,
-      rgba(0,0,0,0.18) 4px,
-      rgba(0,0,0,0.18) 6px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255,0,0,0.12) 0 10%,
-      rgba(0,255,0,0.12) 10% 20%,
-      rgba(0,0,255,0.12) 20% 30%,
-      rgba(255,255,0,0.12) 30% 40%,
-      rgba(0,255,255,0.12) 40% 50%,
-      rgba(255,0,255,0.12) 50% 60%,
-      rgba(255,255,255,0.12) 60% 70%,
-      rgba(255,255,255,0.12) 70% 80%,
-      rgba(255,255,255,0.12) 80% 90%,
-      rgba(255,255,255,0.12) 90% 100%
-    );
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 2px, rgba(0,0,0,0.18) 4px, rgba(0,0,0,0.18) 6px),
+    repeating-linear-gradient(90deg,
+      rgba(255,0,0,0.12) 0 10%, rgba(0,255,0,0.12) 10% 20%, rgba(0,0,255,0.12) 20% 30%,
+      rgba(255,255,0,0.12) 30% 40%, rgba(0,255,255,0.12) 40% 50%, rgba(255,0,255,0.12) 50% 60%,
+      rgba(255,255,255,0.12) 60% 70%, rgba(255,255,255,0.12) 70% 80%, rgba(255,255,255,0.12) 80% 90%, rgba(255,255,255,0.12) 90% 100%);
   animation: tvNoise 1.2s steps(6) infinite, crtVignette 8s ease-in-out infinite alternate;
-  opacity:.95;
-  z-index:1;
+  opacity:.95; z-index:1;
 }
 .cctv-grid.eyes-on .cam-card.off .eyes-thumb::before {
   content: "NO SIGNAL";
-  position:absolute; left:50%; top:50%;
-  transform: translate(-50%,-50%);
-  padding:8px 12px; border-radius:8px;
-  font-weight:800; text-transform:uppercase; letter-spacing:.12em; font-size:12px;
+  position:absolute; left:50%; top:50%; transform: translate(-50%,-50%);
+  padding:8px 12px; border-radius:8px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; font-size:12px;
   color:#fff; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.2);
   z-index:2;
 }
 .theme-light .cctv-grid.eyes-on .cam-card.off .eyes-thumb::before {
   color:#0b1a2e; background:rgba(255,255,255,0.75); border-color:rgba(0,0,0,0.12);
 }
+
+/* Hide any leftover in-video name overlay when Keep Eyes is on */
+.cctv-grid.eyes-on .eyes-overlay-name{ display:none !important; }
 
 /* Empty */
 .empty{grid-column:1/-1; display:grid; place-items:center; padding:40px 0 20px; opacity:.85; color:#cfe6ff; font-weight:700;}
@@ -559,12 +518,6 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .theme-light .player-stage:fullscreen .yt-controls,
 .theme-light .player-stage:-webkit-full-screen .yt-controls{background:linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.35) 45%, rgba(255,255,255,.85) 100%);}
 
-/* Animations used above */
-@keyframes tvNoise {
-  0% { background-position: 0 0, 0 0; }
-  100% { background-position: 0 100%, 100% 0; }
-}
-@keyframes crtVignette{
-  0% { filter: saturate(1) contrast(1); }
-  100% { filter: saturate(1.05) contrast(1.05) brightness(.98); }
-}
+/* Animations */
+@keyframes tvNoise { 0% { background-position: 0 0, 0 0; } 100% { background-position: 0 100%, 100% 0; } }
+@keyframes crtVignette{ 0% { filter: saturate(1) contrast(1); } 100% { filter: saturate(1.05) contrast(1.05) brightness(.98); } }
