@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
@@ -47,6 +47,9 @@ ChartJS.defaults.color = '#fff';
 ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
+
+/** Popup gauge should be steady: memoize like in LeftDashboard */
+const StaticGauge = React.memo(GaugeChart, () => true);
 
 const Modal = ({ open, onClose, children, size = 'md' }) => {
   if (!open) return null;
@@ -153,7 +156,7 @@ const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }
 const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
-  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '' , period: ''});
+  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
 
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
@@ -347,7 +350,8 @@ const MapApp = () => {
   useEffect(() => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
-  }, []); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
 
@@ -842,7 +846,8 @@ const MapApp = () => {
           <div className="card gauge-card">
             <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
             <div className="gauge-holder">
-              <GaugeChart
+              {/* Use StaticGauge so it mounts once and stays steady while modal is open */}
+              <StaticGauge
                 id="building-speedometer"
                 nrOfLevels={5}
                 percent={selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5}
