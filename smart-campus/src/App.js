@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
+import gsap from 'gsap';
 import Map3D from './components/Map3D';
 import CCTV from './components/CCTV';
 import './App.css';
@@ -30,7 +31,6 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// Register Chart.js + datalabels
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -43,14 +43,11 @@ ChartJS.register(
   ArcElement,
   ChartDataLabels
 );
-
-// Defaults
 ChartJS.defaults.color = '#fff';
 ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
-/** Centered modal */
 const Modal = ({ open, onClose, children, size = 'md' }) => {
   if (!open) return null;
   return createPortal(
@@ -71,42 +68,30 @@ const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
-/** Tiny inline icons (+ walk/drone) */
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
-    case 'pin':
-      return (<svg {...common}><path d="M16 3l5 5-7 7-4 1 1-4 7-7z"/><path d="M2 22l10-10"/></svg>);
-    case 'download':
-      return (<svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>);
-    case 'route':
-      return (<svg {...common}><path d="M3 5h5a2 2 0 0 1 2 2v10a2 2 0 0 0 2 2h7"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg>);
-    case 'layers':
-      return (<svg {...common}><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>);
-    case 'x':
-      return (<svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
-    case 'user':   return (<svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
-    case 'therm':  return (<svg {...common}><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"/></svg>);
-    case 'leaf':   return (<svg {...common}><path d="M11 3C7 3 3 7 3 11s4 8 8 8 8-4 8-8V5l-4 4"/></svg>);
-    case 'wind':   return (<svg {...common}><path d="M9 5a3 3 0 1 1 3 3H2"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M4 18h10"/></svg>);
-    case 'walk':
-      return (<svg {...common}><circle cx="12" cy="5" r="2"/><path d="M12 7 9.6 11.5 7.5 13M12 7l2.2 4 3 2M8.5 14.5 10 19M14 13l-1 5"/><path d="M5.5 20H9M12.5 20H16"/></svg>);
-    case 'drone':
-      return (<svg {...common}><circle cx="12" cy="12" r="2"/><path d="M12 10V6M12 18v-4M10 12H6M18 12h-4"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>);
-    case 'camera':
-      return (<svg {...common}><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 10l5-3v8l-5-3"/><circle cx="9.5" cy="12" r="2.5"/></svg>);
+    case 'pin': return (<svg {...common}><path d="M16 3l5 5-7 7-4 1 1-4 7-7z"/><path d="M2 22l10-10"/></svg>);
+    case 'download': return (<svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>);
+    case 'route': return (<svg {...common}><path d="M3 5h5a2 2 0 0 1 2 2v10a2 2 0 0 0 2 2h7"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/></svg>);
+    case 'layers': return (<svg {...common}><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>);
+    case 'x': return (<svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
+    case 'user': return (<svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+    case 'therm': return (<svg {...common}><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z"/></svg>);
+    case 'leaf': return (<svg {...common}><path d="M11 3C7 3 3 7 3 11s4 8 8 8 8-4 8-8V5l-4 4"/></svg>);
+    case 'wind': return (<svg {...common}><path d="M9 5a3 3 0 1 1 3 3H2"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M4 18h10"/></svg>);
+    case 'walk': return (<svg {...common}><circle cx="12" cy="5" r="2"/><path d="M12 7 9.6 11.5 7.5 13M12 7l2.2 4 3 2M8.5 14.5 10 19M14 13l-1 5"/><path d="M5.5 20H9M12.5 20H16"/></svg>);
+    case 'drone': return (<svg {...common}><circle cx="12" cy="12" r="2"/><path d="M12 10V6M12 18v-4M10 12H6M18 12h-4"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>);
+    case 'camera': return (<svg {...common}><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 10l5-3v8l-5-3"/><circle cx="9.5" cy="12" r="2.5"/></svg>);
     default: return null;
   }
 };
 
-/* ---------- NAVBAR (shared shell) ---------- */
 const Navbar = ({ children }) => {
   const location = useLocation();
   const onCCTV = location.pathname === '/cctv';
-
   return (
     <nav className="navbar">
-      {/* Left: CCTV nav button */}
       <Link
         to={onCCTV ? '/' : '/cctv'}
         className={`cctv-nav-btn ${onCCTV ? 'active' : ''}`}
@@ -117,48 +102,75 @@ const Navbar = ({ children }) => {
         <Icon name="camera" size={16} />
         <span className="cctv-text">{onCCTV ? 'Back to Map' : 'CCTV'}</span>
       </Link>
-
-      {/* Center logo */}
-      <img
-        src="/assets/mfu_logo.png"
-        alt="MFU Logo"
-        className="navbar-logo"
-      />
-
-      {/* Right/overlay content passed from pages (time/help, mode switch, etc.) */}
+      <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
       {children}
     </nav>
   );
 };
 
-/* ===================== MAP PAGE ===================== */
+/* ===== In-Canvas helper: track & restore camera pose (anti-shake) ===== */
+const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }) => {
+  const { camera } = useThree();
+  const lastRestoreTick = useRef(0);
+
+  const takeSnapshot = () => ({
+    position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+    fov: camera.fov,
+  });
+
+  useFrame(() => { onSnapshot?.(takeSnapshot()); });
+
+  useEffect(() => {
+    if (!restoreSnapshot) return;
+    if (restoreTick === lastRestoreTick.current) return;
+    lastRestoreTick.current = restoreTick;
+
+    const { position, rotation, fov } = restoreSnapshot;
+    const dur = 1.2;
+    const ease = 'power3.inOut';
+
+    // Tell Map3D to freeze its per-frame logic while this tween runs
+    onRestoreStart?.(dur * 1000);
+
+    // Snap rotation first (no tween)
+    camera.rotation.order = 'YXZ';
+    camera.rotation.x = rotation.x ?? camera.rotation.x;
+    camera.rotation.y = rotation.y ?? camera.rotation.y;
+    camera.rotation.z = rotation.z ?? camera.rotation.z;
+
+    gsap.to(camera.position, { x: position.x, y: position.y, z: position.z, duration: dur, ease });
+    gsap.to(camera, {
+      fov: typeof fov === 'number' ? fov : camera.fov,
+      duration: dur, ease,
+      onUpdate: () => camera.updateProjectionMatrix(),
+    });
+  }, [restoreTick, restoreSnapshot, camera, onRestoreStart]);
+
+  return null;
+};
+
 const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
-  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
+  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '' , period: ''});
 
-  // Map interaction <> popup
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
   const [originalColors, setOriginalColors] = useState(new Map());
 
-  // Controller command (for on-screen pad)
   const [controllerCommand, setControllerCommand] = useState(null);
 
-  // View mode + step nudges for street-view arrows
-  const [navMode, setNavMode] = useState('drone'); // 'walk' | 'drone'
+  const [navMode, setNavMode] = useState('drone');
   const [stepNudge, setStepNudge] = useState(null);
   const [stepNudgeTick, setStepNudgeTick] = useState(0);
   const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
 
-  // Ensure controller stops sending commands when switching modes
   useEffect(() => { setControllerCommand(null); }, [navMode]);
 
-  // Pin state (lock popup)
   const [pinned, setPinned] = useState(false);
   const setPopupFromMap = useCallback((d) => { if (!pinned) setPopupData(d); }, [pinned]);
 
-  // Instructions, modals, etc...
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
     return dontShow === 'true' ? false : true;
@@ -174,6 +186,18 @@ const MapApp = () => {
   const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
   const [vehicleType, setVehicleType] = useState('Cars');
   const [schedule, setSchedule] = useState([]);
+
+  const [walkStepMeters, setWalkStepMeters] = useState(6);
+  const [walkVStepMeters, setWalkVStepMeters] = useState(2.6);
+  const [walkStickToFloor, setWalkStickToFloor] = useState(true);
+  const [walkYTick, setWalkYTick] = useState(0);
+  const [walkYDir, setWalkYDir] = useState(null);
+
+  const triggerWalkElevator = (dir) => {
+    if (walkStickToFloor) return;
+    setWalkYDir(dir);
+    setWalkYTick((t) => t + 1);
+  };
 
   const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
   const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
@@ -197,7 +221,6 @@ const MapApp = () => {
       schedule[0])
     : null;
 
-  // Weekly usage preset
   const [presetRange, setPresetRange] = useState(null);
   const setRangeDays = (days) => {
     const end = new Date();
@@ -279,7 +302,6 @@ const MapApp = () => {
     },
   };
 
-  // Water mock data
   const buildings = [
     'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2',
     'F1','F2','F3','F4','F5','F6','L1','L2','L3','L4','L5','L6','L7',
@@ -312,10 +334,10 @@ const MapApp = () => {
       { min: 1250, max: 1450 },
     ];
 
-    const usageData = buildings.map((building, index) => {
+    const usageData = buildings.map((bld, index) => {
       const range = ranges[index % ranges.length];
       const usage = range.min + Math.random() * (range.max - range.min);
-      return { building, usage };
+      return { building: bld, usage };
     });
 
     usageData.sort((a, b) => b.usage - a.usage);
@@ -324,11 +346,8 @@ const MapApp = () => {
 
   useEffect(() => {
     generateWaterUsage();
-    const id = setInterval(() => {
-      if (waterUsageData.length > 0) generateWaterUsage();
-    }, 5000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
+  }, []); // eslint-disable-line
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
 
@@ -384,9 +403,6 @@ const MapApp = () => {
     return () => { clearInterval(bgId); clearInterval(tId); };
   }, [hour24]);
 
-  const openInstructions = () => setShowInstructions(true);
-  const toggleTimeFormat = () => setHour24((prev) => !prev);
-
   useEffect(() => { if (popupData?.name) setSelectedBuilding(popupData.name); }, [popupData]);
 
   const dailyWaterTotal = buildings.reduce(
@@ -401,31 +417,28 @@ const MapApp = () => {
 
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
 
-  /** Derived “smart city” extras for the popup */
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
-
     const randTrend = () => {
       const n = Math.round((Math.random() * 6 - 3) * 10) / 10;
       return { value: n, dir: n === 0 ? 'eq' : n > 0 ? 'up' : 'down' };
     };
-
     const elec = popupData.electricity || { value: 0, unit: 'kWh', percent: 0, status: 'N/A' };
     const water = popupData.water || { value: 0, unit: 'm³', percent: 0, status: 'N/A' };
 
-    const THB_PER_KWH   = 4.19;
-    const THB_PER_M3    = 13.0;
+    const THB_PER_KWH = 4.19;
+    const THB_PER_M3 = 13.0;
     const GRID_CO2_KG_KWH = 0.45;
 
     const costTHB = elec.value * THB_PER_KWH;
     const waterTHB = water.value * THB_PER_M3;
     const co2kg = elec.value * GRID_CO2_KG_KWH;
 
-    const baseOcc = popupData.type?.toLowerCase().includes('library') ? 220 :
-                    popupData.type?.toLowerCase().includes('auditor') ? 350 :
-                    120;
-    const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4)));
+    const baseOcc =
+      popupData.type?.toLowerCase().includes('library') ? 220 :
+      popupData.type?.toLowerCase().includes('auditor') ? 350 : 120;
 
+    const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4)));
     const temperature = 24 + Math.round(Math.random()*4);
     const co2ppm = 420 + Math.round(Math.random()*200);
     const aqi = 18 + Math.round(Math.random()*12);
@@ -433,17 +446,11 @@ const MapApp = () => {
     return {
       trendElec: randTrend(),
       trendWater: randTrend(),
-      costTHB,
-      waterTHB,
-      co2kg,
-      occupancy,
-      temperature,
-      co2ppm,
-      aqi
+      costTHB, waterTHB, co2kg,
+      occupancy, temperature, co2ppm, aqi
     };
   }, [popupData]);
 
-  /** Export popup to JSON */
   const exportPopup = () => {
     if (!popupData) return;
     const payload = { ...popupData, derived: popupDerived, exportedAt: new Date().toISOString() };
@@ -456,7 +463,6 @@ const MapApp = () => {
     URL.revokeObjectURL(url);
   };
 
-  /** Copy coordinates */
   const copyCoords = async () => {
     if (!popupData?.world) return;
     const { x, y, z } = popupData.world;
@@ -464,16 +470,36 @@ const MapApp = () => {
     try { await navigator.clipboard.writeText(text); } catch {}
   };
 
-  /** Open a (future) deep link */
   const openAnalytics = () => {
     if (!popupData) return;
     window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
   };
 
+  /* === Camera restore plumbing === */
+  const latestCamRef = useRef(null);
+  const preFocusPoseRef = useRef(null);
+  const [restoreTick, setRestoreTick] = useState(0);
+  const [restoreSnapshot, setRestoreSnapshot] = useState(null);
+  const wasOpenRef = useRef(false);
+  const [restoreFreezeMs, setRestoreFreezeMs] = useState(0);
+
+  useEffect(() => {
+    const isOpen = !!popupData;
+    if (isOpen && !wasOpenRef.current) {
+      wasOpenRef.current = true;
+      preFocusPoseRef.current = latestCamRef.current;
+    } else if (!isOpen && wasOpenRef.current) {
+      wasOpenRef.current = false;
+      if (preFocusPoseRef.current) {
+        setRestoreSnapshot(preFocusPoseRef.current);
+        setRestoreTick((t) => t + 1);
+      }
+    }
+  }, [popupData]);
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       <Navbar>
-        {/* === WALK/DRONE SEGMENTED SWITCH (restored) === */}
         <div className="mode-switch" role="tablist" aria-label="View mode">
           <button
             className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
@@ -504,17 +530,16 @@ const MapApp = () => {
           />
         </div>
 
-        {/* Right side clock + help */}
         <div className="thailand-time">
           <div className="date">{thailandTime.date}</div>
           <div className="time-row">
             <div
               className="time"
-              onClick={toggleTimeFormat}
+              onClick={() => setHour24((prev) => !prev)}
               title="Toggle 24h/12h"
               role="button"
               tabIndex={0}
-              onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && toggleTimeFormat()}
+              onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && setHour24((prev)=>!prev)}
             >
               {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
               {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
@@ -524,7 +549,7 @@ const MapApp = () => {
               className="help-btn"
               title="Show instructions"
               aria-label="Show instructions"
-              onClick={openInstructions}
+              onClick={() => setShowInstructions(true)}
             >
               ?
             </button>
@@ -536,7 +561,6 @@ const MapApp = () => {
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
 
-      {/* 3D Map */}
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
           <Canvas
@@ -545,6 +569,13 @@ const MapApp = () => {
             camera={{ fov: 75, near: 0.1, far: 10000 }}
           >
             <PerformanceMonitor>
+              <CameraSync
+                onSnapshot={(snap) => { latestCamRef.current = snap; }}
+                restoreTick={restoreTick}
+                restoreSnapshot={restoreSnapshot}
+                onRestoreStart={(ms) => setRestoreFreezeMs(ms)}
+              />
+
               <Map3D
                 setPopupData={setPopupFromMap}
                 originalColors={originalColors}
@@ -555,12 +586,21 @@ const MapApp = () => {
                 mode={navMode}
                 stepNudge={stepNudge}
                 stepNudgeTick={stepNudgeTick}
+                walkStepMeters={walkStepMeters}
+                walkVStepMeters={walkVStepMeters}
+                walkStickToFloor={walkStickToFloor}
+                walkYTick={walkYTick}
+                walkYDir={walkYDir}
+                /* anti-shake coordination + ground-lock override while popup open */
+                restorePoseTick={restoreTick}
+                restorePose={restoreSnapshot}
+                restoreFreezeMs={restoreFreezeMs}
+                popupOpen={!!popupData}
               />
             </PerformanceMonitor>
           </Canvas>
         </Suspense>
 
-        {/* Street-View arrows — only in walk mode */}
         {navMode === 'walk' && (
           <div className="streetview-ui" aria-hidden="false">
             <button className="sv-arrow up" title="Move forward" onClick={() => doNudge('forward')}>▲</button>
@@ -570,9 +610,66 @@ const MapApp = () => {
             </div>
           </div>
         )}
+
+        {navMode === 'walk' && (
+          <div className="walk-fine-panel">
+            <div className="panel-title">Walking Controls</div>
+            <div className="row">
+              <label className="lbl">Stick to floor</label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={walkStickToFloor}
+                  onChange={(e) => setWalkStickToFloor(e.target.checked)}
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            <div className="row">
+              <label className="lbl">Step distance</label>
+              <input
+                type="range"
+                min="1" max="10" step="0.5"
+                value={walkStepMeters}
+                onChange={(e) => setWalkStepMeters(parseFloat(e.target.value))}
+              />
+              <div className="val">{walkStepMeters.toFixed(1)} m</div>
+            </div>
+
+            <div className="row">
+              <label className={`lbl ${walkStickToFloor ? 'muted' : ''}`}>Vertical step</label>
+              <input
+                type="range"
+                min="1.5" max="5" step="0.1"
+                value={walkVStepMeters}
+                onChange={(e) => setWalkVStepMeters(parseFloat(e.target.value))}
+                disabled={walkStickToFloor}
+              />
+              <div className={`val ${walkStickToFloor ? 'muted' : ''}`}>
+                {walkVStepMeters.toFixed(1)} m
+              </div>
+            </div>
+
+            <div className="elevator">
+              <button
+                className="elev-btn"
+                disabled={walkStickToFloor}
+                onClick={() => triggerWalkElevator('up')}
+                title="Step up (walking)"
+              >⬆</button>
+              <button
+                className="elev-btn"
+                disabled={walkStickToFloor}
+                onClick={() => triggerWalkElevator('down')}
+                title="Step down (walking)"
+              >⬇</button>
+            </div>
+            <div className="hint">{walkStickToFloor ? 'Disable to use elevator' : 'Use elevator to step floors'}</div>
+          </div>
+        )}
       </div>
 
-      {/* Dashboards */}
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -591,12 +688,10 @@ const MapApp = () => {
         </>
       )}
 
-      {/* Show controller pad ONLY when dashboards are hidden AND mode is DRONE */}
       {!showDashboards && navMode === 'drone' && (
         <Controller setControllerCommand={setControllerCommand} />
       )}
 
-      {/* Building popup */}
       {popupData && popupDerived && (
         <div
           className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
@@ -649,9 +744,6 @@ const MapApp = () => {
             <div className="chip">
               <Icon name="leaf" /><span>{popupDerived.co2ppm}</span><small>CO₂ ppm</small>
             </div>
-            <div className="chip">
-              <Icon name="wind" /><span>{popupDerived.aqi}</span><small>AQI</small>
-            </div>
           </div>
 
           <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
@@ -674,7 +766,7 @@ const MapApp = () => {
                 <span className="unit">{popupData.electricity.unit}</span>
               </div>
               <div className="meter">
-                <div className="bar" style={{ width: `${Math.max(0, Math.min(100, popupData.electricity.percent || 0))}%` }} />
+                <div className="bar" style={{ width: `${clampPct(popupData.electricity.percent)}%` }} />
               </div>
               <div className={`trend ${popupDerived.trendElec.dir}`}>
                 {popupDerived.trendElec.dir === 'up' ? '▲' : popupDerived.trendElec.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendElec.value)}%
@@ -693,7 +785,7 @@ const MapApp = () => {
                 <span className="unit">{popupData.water.unit}</span>
               </div>
               <div className="meter alt">
-                <div className="bar" style={{ width: `${Math.max(0, Math.min(100, popupData.water.percent || 0))}%` }} />
+                <div className="bar" style={{ width: `${clampPct(popupData.water.percent)}%` }} />
               </div>
               <div className={`trend ${popupDerived.trendWater.dir}`}>
                 {popupDerived.trendWater.dir === 'up' ? '▲' : popupDerived.trendWater.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendWater.value)}%
@@ -709,7 +801,6 @@ const MapApp = () => {
         </div>
       )}
 
-      {/* WEEKLY USAGE MODAL */}
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -736,7 +827,6 @@ const MapApp = () => {
         </div>
       </Modal>
 
-      {/* OVERALL CAMPUS (water) */}
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
@@ -793,7 +883,6 @@ const MapApp = () => {
         </div>
       </Modal>
 
-      {/* VEHICLE SCHEDULE — compact */}
       <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
         <div className="modal-header">
           <h3 className="modal-title">{vehicleType} Schedule</h3>
@@ -843,7 +932,6 @@ const MapApp = () => {
         )}
       </Modal>
 
-      {/* Instructions */}
       {showInstructions && (
         <div className="instructions-popup">
           <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
@@ -878,7 +966,6 @@ const MapApp = () => {
   );
 };
 
-/* ===================== APP (ROUTER) ===================== */
 const App = () => {
   return (
     <Router>

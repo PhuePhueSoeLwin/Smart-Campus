@@ -476,3 +476,61 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
   margin-top: 12px;
 }
+/* ===== Walk elevator (up/down/slider) ===== */
+.elevator-ui{
+  position: fixed;
+  right: 26px;
+  bottom: 88px;            /* sits above the Hide button */
+  display: grid;
+  grid-template-rows: auto 160px auto;  /* up button, slider, down button */
+  place-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 8px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  z-index: 1100;
+}
+
+.elev-btn{
+  width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+  font-size: 18px; color: #fff;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(255,255,255,.15)),
+              linear-gradient(180deg,#79b9ff,#4daef4);
+  box-shadow: 0 8px 18px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.3);
+  display: grid; place-items: center;
+  transition: transform .08s ease, filter .15s ease;
+}
+.elev-btn:hover{ filter:brightness(1.05); }
+.elev-btn:active{ transform: translateY(1px); }
+
+/* vertical slider */
+.elev-slider{
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: bt-lr;            /* vertical in modern browsers */
+  width: 8px;                     /* thickness */
+  height: 160px;                  /* length */
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  outline: none;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+.elev-slider::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #4daef4;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.6), 0 2px 8px rgba(0,0,0,.35);
+  cursor: grab;
+}
+.elev-slider::-moz-range-thumb{
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #4daef4;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.6), 0 2px 8px rgba(0,0,0,.35);
+  cursor: grab;
+}
