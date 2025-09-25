@@ -350,8 +350,7 @@ const MapApp = () => {
   useEffect(() => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // intentionally run once
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
 

@@ -1,3 +1,4 @@
+// components/Map3D.js
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
@@ -26,7 +27,7 @@ function baseKeyFrom(name) {
   return BUILDING_DATA[name] ? name : name;
 }
 
-/** Camera fit helper (for initial fit) */
+/** Camera fit helper (kept for initial fit) */
 function approachCameraToBox({
   camera,
   box,
@@ -199,16 +200,16 @@ const Map3D = ({
   mode = 'drone',
   stepNudge,
   stepNudgeTick,
-  // Walk fine controls
+  // walk fine controls
   walkStepMeters = WALK.stepMetersDefault,
   walkVStepMeters = 2.6,
   walkStickToFloor = true,
   walkYTick = 0,
   walkYDir = null,
-
-  // === RESTORE props (from App) ===
-  restorePoseTick,
-  restorePose,
+  // RECEIVE popup state from App: true while building popup is open
+  popupOpen = false,
+  // (legacy) external tick trigger for restore, still supported
+  restoreCameraTick = 0,
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
@@ -232,20 +233,20 @@ const Map3D = ({
 
   // Tweens / locks
   const nudgeTweenRef = useRef(null);
-  const suppressMoveUntilRef = useRef(0);
-  const focusUntilRef = useRef(0);
-  const focusLookAtRef = useRef(null);
+  const suppressMoveUntilRef = useRef(0); // timestamp (ms)
+  const focusUntilRef = useRef(0);        // while focusing/zooming, freeze control
+  const focusLookAtRef = useRef(null);    // where we look during focus tween
 
   // Store the opening drone height
   const openingDroneYRef = useRef(null);
   const bootDoneRef = useRef(false);
 
-  // NEW: walk elevator nudge state
+  // Walk elevator nudge state
   const lastWalkYTick = useRef(-1);
   const walkElevatorHoldUntilRef = useRef(0);
 
-  // NEW: Drone-mode temporary ground clamp disable while popup is open
-  const droneGroundClampDisabledRef = useRef(false);
+  // Snapshot of camera BEFORE focus (to restore on popup close)
+  const prevCamRef = useRef(null); // {pos, rot, fov}
 
   useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
 
@@ -298,7 +299,7 @@ const Map3D = ({
   }, [gl]);
 
   /* =======================
-     TOUCH
+     TOUCH (iPad / tablets)
      ======================= */
   useEffect(() => {
     const el = gl.domElement;
@@ -352,6 +353,7 @@ const Map3D = ({
 
         const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
         const right = new THREE.Vector3(1, 0, 0).applyEuler(yawOnly);
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
 
         const panScale = 0.02 * (mode === 'drone' ? 1 : 0.3);
         camera.position.addScaledVector(right, -dx * panScale);
@@ -363,7 +365,6 @@ const Map3D = ({
 
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
         const dd = dist - (prevDist ?? dist);
-        const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
         const zoomScale = 0.04;
         camera.position.addScaledVector(forward, -dd * zoomScale);
 
@@ -403,8 +404,6 @@ const Map3D = ({
         if (highlightedGroup) restoreGroupColors(highlightedGroup);
         setPopupData && setPopupData(null);
         setHighlightedGroup(null);
-        // Re-enable clamp if popup closed via ESC
-        droneGroundClampDisabledRef.current = false;
       }
     };
     const up = (e) => { keys.current[e.code] = false; };
@@ -429,49 +428,61 @@ const Map3D = ({
     return groundY;
   }, []);
 
-  /** Orbit-style focus at ~45° */
+  /** Focus-in: orbit-style above target at ~45° */
   const focusOnGroup = useCallback((group) => {
     if (!group) return;
+
+    // Snapshot camera ONCE per focus session (if nothing saved yet)
+    if (!prevCamRef.current) {
+      prevCamRef.current = {
+        pos: camera.position.clone(),
+        rot: new THREE.Euler(camera.rotation.x, camera.rotation.y, camera.rotation.z, 'YXZ'),
+        fov: camera.fov
+      };
+    }
 
     const box = new THREE.Box3().setFromObject(group);
     const center = box.getCenter(new THREE.Vector3());
 
+    // Bounding sphere for robust fit
     const sphere = new THREE.Sphere();
     box.getBoundingSphere(sphere);
 
-    const fovTarget = mode === 'walk' ? 50 : 42;
+    // Desired FOV (real zoom feel)
+    const fovTarget = mode === 'walk' ? 50 : 42; // smaller = more zoom
     const fovRad = THREE.MathUtils.degToRad(fovTarget);
 
+    // Distance so the sphere fits vertically; padding < 1.3 gives tighter frame
     const padding = 1.18;
     const distance = Math.max(3, (sphere.radius * padding) / Math.sin(fovRad / 2));
 
+    // Elevation ≈ 45° above horizon
     const elevDeg = 45;
     const elevRad = THREE.MathUtils.degToRad(elevDeg);
 
+    // Use current yaw so approach feels consistent
     const yaw = camera.rotation.y;
+
+    // Build a direction from center->camera:
     const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, yaw, 0, 'YXZ'));
     const backHoriz = forward.clone().setY(0).normalize().multiplyScalar(-1);
     const dir = backHoriz.multiplyScalar(Math.cos(elevRad));
     dir.y = Math.sin(elevRad);
     dir.normalize();
 
+    // Target position & minimal ground clearance (especially for walk)
     const targetPos = center.clone().add(dir.multiplyScalar(distance));
-
-    // Clamp Y by ground in WALK always; in DRONE only if clamp is enabled
     const groundY = groundYAt(targetPos.x, targetPos.z);
-    let minY;
-    if (mode === 'walk') {
-      minY = groundY + WALK.eyeHeight;
-    } else {
-      minY = droneGroundClampDisabledRef.current ? -Infinity : (groundY + WALK.clearance);
-    }
+    const minY = (mode === 'walk' ? groundY + WALK.eyeHeight : groundY + WALK.clearance);
     if (targetPos.y < minY) targetPos.y = minY + 0.5;
 
+    // Lock controls while focusing to avoid fighting the tween
     const animateMs = 1800;
     const now = performance.now();
     focusUntilRef.current = now + animateMs + 120;
     focusLookAtRef.current = center.clone();
 
+    // Animate FOV (zoom) and position in parallel
     const ease = 'power3.inOut';
     gsap.to(camera.position, {
       duration: animateMs / 1000,
@@ -492,6 +503,56 @@ const Map3D = ({
       onUpdate: () => camera.updateProjectionMatrix(),
     });
   }, [camera, mode, groundYAt]);
+
+  /** Smooth restore to previous camera snapshot (position + FOV + full orientation) */
+  const restoreCameraSmooth = useCallback(() => {
+    const snap = prevCamRef.current;
+    if (!snap) return;
+
+    const duration = 1.6; // seconds
+    const ease = 'power3.inOut';
+    const now = performance.now();
+    focusUntilRef.current = now + duration * 1000 + 80;
+    focusLookAtRef.current = null; // rotation interpolation handles orientation
+
+    // Position
+    gsap.to(camera.position, {
+      duration,
+      x: snap.pos.x, y: snap.pos.y, z: snap.pos.z,
+      ease,
+    });
+
+    // FOV
+    gsap.to(camera, {
+      duration,
+      fov: snap.fov,
+      ease,
+      onUpdate: () => camera.updateProjectionMatrix(),
+    });
+
+    // Drive smoothed yaw/pitch targets so useFrame eases camera.rotation back to exact original
+    gsap.to(yawTargetRef, {
+      duration,
+      current: snap.rot.y,
+      ease,
+    });
+    gsap.to(pitchTargetRef, {
+      duration,
+      current: snap.rot.x,
+      ease,
+      onComplete: () => {
+        // Final sync to guarantee exact match with original orientation
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = snap.rot.y;
+        camera.rotation.x = snap.rot.x;
+        camera.rotation.z = 0;
+        yawTargetRef.current = snap.rot.y;
+        pitchTargetRef.current = snap.rot.x;
+        // Clear snapshot so next click will capture again
+        prevCamRef.current = null;
+      }
+    });
+  }, [camera]);
 
   /* =======================
      PHYSICS / INTEGRATION
@@ -559,7 +620,7 @@ const Map3D = ({
     const tAcc = dampFactor(SMOOTH.accel, delta);
     velRef.current.lerp(desiredVel, tAcc);
 
-    // Soft nudges
+    // WALK step nudges
     if (mode === 'walk' && stepNudge && stepNudgeTick !== lastNudgeTick.current) {
       lastNudgeTick.current = stepNudgeTick;
 
@@ -581,7 +642,7 @@ const Map3D = ({
       });
     }
 
-    // Walk elevator steps (when stickToFloor = false)
+    // WALK elevator vertical step (only when stick-to-floor is off)
     if (mode === 'walk' && !walkStickToFloor && walkYDir && walkYTick !== lastWalkYTick.current) {
       lastWalkYTick.current = walkYTick;
       const dir = walkYDir === 'up' ? 1 : -1;
@@ -590,14 +651,17 @@ const Map3D = ({
       if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
       walkElevatorHoldUntilRef.current = now + 400;
 
-      gsap.to(camera.position, { y: toY, duration: 0.22, ease: 'power2.out' });
+      gsap.to(camera.position, {
+        y: toY, duration: 0.22, ease: 'power2.out',
+      });
     }
 
+    // Apply velocity if not frozen by tween/focus
     if (now > suppressMoveUntilRef.current && now > focusUntilRef.current) {
       camera.position.addScaledVector(velRef.current, delta);
     }
 
-    // Ground logic
+    // === Ground detection ===
     const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
     groundRay.current.set(origin, new THREE.Vector3(0,-1,0));
     let groundY = (sceneMinYRef.current ?? 0);
@@ -608,25 +672,36 @@ const Map3D = ({
     }
     lastGroundY.current = groundY;
 
+    // === Ground lock behavior ===
     if (mode === 'walk') {
+      // While focusing we skip Y adjustments entirely
       if (now < focusUntilRef.current) return;
 
       const baseY = groundY + WALK.eyeHeight;
 
-      if (walkStickToFloor) {
-        const tY = dampFactor(SMOOTH.yLock, delta);
-        camera.position.y = lerp(camera.position.y, baseY, tY);
-      } else {
+      // If popup is open: TEMPORARILY DISABLE ground lock (no snapping down).
+      // We still ensure a *minimum* height so we don't sink below the ground.
+      if (popupOpen) {
         if (camera.position.y < baseY) {
+          // gentle clamp up to baseY if user drops below terrain accidentally
           camera.position.y = lerp(camera.position.y, baseY, dampFactor(SMOOTH.yLock, delta));
+        }
+      } else {
+        // Normal ground lock behavior (when popup is closed)
+        if (walkStickToFloor) {
+          const tY = dampFactor(SMOOTH.yLock, delta);
+          camera.position.y = lerp(camera.position.y, baseY, tY);
+        } else {
+          // When stick-to-floor is off, prevent sinking below baseY
+          if (camera.position.y < baseY) {
+            camera.position.y = lerp(camera.position.y, baseY, dampFactor(SMOOTH.yLock, delta));
+          }
         }
       }
     } else {
-      // DRONE: clamp only if not disabled by popup focus
-      if (!droneGroundClampDisabledRef.current) {
-        const minY = groundY + WALK.clearance;
-        if (camera.position.y < minY) camera.position.y = minY;
-      }
+      // Drone: keep minimal clearance above ground
+      const minY = groundY + WALK.clearance;
+      if (camera.position.y < minY) camera.position.y = minY;
     }
   });
 
@@ -751,8 +826,6 @@ const Map3D = ({
         if (highlightedGroup) restoreGroupColors(highlightedGroup);
         setPopupData && setPopupData(null);
         setHighlightedGroup(null);
-        // Clicking empty space = close popup => re-enable clamp
-        droneGroundClampDisabledRef.current = false;
         return;
       }
 
@@ -805,56 +878,44 @@ const Map3D = ({
         water: info.water,
       });
 
-      // DRONE: temporarily disable ground clamp while popup is open/focusing
-      if (mode === 'drone') {
-        droneGroundClampDisabledRef.current = true;
-      }
-
       // Cinematic orbit-in at 45° above the building
       focusOnGroup(parentGroup);
     };
 
     gl.domElement.addEventListener('click', onClick);
     return () => { gl.domElement.removeEventListener('click', onClick); };
-  }, [camera, scene, gl, highlightedGroup, highlightGroup, setPopupData, hideByNames, restoreGroupColors, focusOnGroup, mode]);
+  }, [camera, scene, gl, highlightedGroup, highlightGroup, setPopupData, hideByNames, restoreGroupColors, focusOnGroup]);
 
-  // Respond to "close popup" from App (setResetColors)
+  // Respond to "close popup" color reset
   useEffect(() => {
     if (!resetColors) return;
     if (highlightedGroup) {
       restoreGroupColors(highlightedGroup);
       setHighlightedGroup(null);
     }
-    // Re-enable ground clamp when popup closes
-    droneGroundClampDisabledRef.current = false;
-
     setPopupData && setPopupData(null);
     setResetColors && setResetColors(false);
   }, [resetColors, highlightedGroup, restoreGroupColors, setPopupData, setResetColors]);
 
-  /* =========================================================
-     === RESTORE HOOK (sync to restored pose from App.js) ===
-     Kill focus/zoom tweens and set our internal targets/FOV
-     to the restored values so the camera doesn't tilt back.
-     ========================================================= */
+  // === Restore camera to the EXACT original pose when the popup closes ===
+  const wasPopupOpenRef = useRef(false);
   useEffect(() => {
-    if (!restorePose) return;
-    focusUntilRef.current = 0;
-    focusLookAtRef.current = null;
-    gsap.killTweensOf(camera.position);
-    gsap.killTweensOf(camera);
+    const was = wasPopupOpenRef.current;
+    // Transition from open -> closed
+    if (was && !popupOpen) {
+      restoreCameraSmooth();
+    }
+    wasPopupOpenRef.current = popupOpen;
+  }, [popupOpen, restoreCameraSmooth]);
 
-    if (typeof restorePose.rotation?.y === 'number') {
-      yawTargetRef.current = restorePose.rotation.y;
+  // (Optional legacy) external tick trigger for restore
+  const lastRestoreTick = useRef(restoreCameraTick);
+  useEffect(() => {
+    if (restoreCameraTick !== lastRestoreTick.current) {
+      lastRestoreTick.current = restoreCameraTick;
+      restoreCameraSmooth();
     }
-    if (typeof restorePose.rotation?.x === 'number') {
-      pitchTargetRef.current = restorePose.rotation.x;
-    }
-    if (typeof restorePose.fov === 'number') {
-      camera.fov = restorePose.fov;
-      camera.updateProjectionMatrix();
-    }
-  }, [restorePoseTick, restorePose, camera]);
+  }, [restoreCameraTick, restoreCameraSmooth]);
 
   return (
     <>
