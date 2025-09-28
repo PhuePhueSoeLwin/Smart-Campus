@@ -4,15 +4,11 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  touch-action: none;                 /* key for good touch gestures */
-  overscroll-behavior: contain;       /* prevent iOS elastic scroll over canvas */
+  touch-action: none;
+  overscroll-behavior: contain;
   cursor: grab;
 }
-.map3d-canvas:active {
-  cursor: grabbing;
-}
+.map3d-canvas:active { cursor: grabbing; }
 
 /* Cursor hint while in walking mode */
-.walk-mode {
-  cursor: crosshair;
-}
+.walk-mode { cursor: crosshair; }

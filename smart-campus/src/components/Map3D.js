@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import './Map3D.css';
 
-/** Sample data — replace with live values */
+/** ---------- Sample data ---------- */
 const BUILDING_DATA = {
   E1: { type: 'Academic', electricity: { value: 1820, unit: 'kWh', percent: 64, status: 'Normal' }, water: { value: 38.6, unit: 'm³', percent: 42, status: 'Normal' } },
   E2: { type: 'Academic', electricity: { value: 2115, unit: 'kWh', percent: 73, status: 'High' },  water: { value: 41.2, unit: 'm³', percent: 49, status: 'Normal' } },
@@ -14,8 +14,41 @@ const BUILDING_DATA = {
   Library3: { type: 'Library', electricity: { value: 1180, unit: 'kWh', percent: 44, status: 'Normal' }, water: { value: 25.9, unit: 'm³', percent: 31, status: 'Normal' } },
   Library4: { type: 'Library', electricity: { value: 1275, unit: 'kWh', percent: 47, status: 'Normal' }, water: { value: 28.1, unit: 'm³', percent: 34, status: 'Normal' } },
   Library5: { type: 'Library', electricity: { value: 1408, unit: 'kWh', percent: 52, status: 'Normal' }, water: { value: 29.7, unit: 'm³', percent: 36, status: 'Normal' } },
-  AV: { type: 'Auditorium', electricity: { value: 2750, unit: 'kWh', percent: 88, status: 'High' }, water: { value: 58.2, unit: 'm³', percent: 69, status: 'High' } },
+  AV: { type: 'Library', electricity: { value: 1120, unit: 'kWh', percent: 39, status: 'Normal' }, water: { value: 24.2, unit: 'm³', percent: 29, status: 'Normal' } },
   'Exabation Hall': { type: 'Exhibition', electricity: { value: 1620, unit: 'kWh', percent: 58, status: 'Normal' }, water: { value: 33.4, unit: 'm³', percent: 38, status: 'Normal' } },
+};
+
+/** ---------- E1/E2/Library helpers ---------- */
+const E1_CANON = ['E1', 'E1-1', 'E1-2', 'E1-3', 'E1-4', 'E1-G'];
+const E1_FLOOR_ORDER = ['E1-G', 'E1-1', 'E1-2', 'E1-3', 'E1-4'];
+
+const E2_CANON = ['E2', 'E2-1', 'E2-2', 'E2-3', 'E2-4', 'E2-G'];
+const E2_FLOOR_ORDER = ['E2-G', 'E2-1', 'E2-2', 'E2-3', 'E2-4'];
+
+/** Library building has NO parent "Library" node; only these floors */
+const LIB_CANON = ['AV', 'Library2', 'Library3', 'Library4', 'Library5'];
+const LIB_FLOOR_ORDER = ['AV', 'Library2', 'Library3', 'Library4', 'Library5']; // bottom → top
+
+const canonE1 = (name = '') => {
+  const s = String(name);
+  for (const c of E1_CANON) if (new RegExp(`^${c}($|[^a-z0-9])`, 'i').test(s)) return c;
+  const m = s.match(/^E1(?:-([1-4]|G))?/i);
+  if (!m) return null;
+  return m[1] ? `E1-${m[1].toUpperCase()}`.replace('E1-g', 'E1-G') : 'E1';
+};
+
+const canonE2 = (name = '') => {
+  const s = String(name);
+  for (const c of E2_CANON) if (new RegExp(`^${c}($|[^a-z0-9])`, 'i').test(s)) return c;
+  const m = s.match(/^E2(?:-([1-4]|G))?/i);
+  if (!m) return null;
+  return m[1] ? `E2-${m[1].toUpperCase()}`.replace('E2-g', 'E2-G') : 'E2';
+};
+
+const canonLib = (name = '') => {
+  const s = String(name);
+  for (const c of LIB_CANON) if (new RegExp(`^${c}($|[^a-z0-9])`, 'i').test(s)) return c;
+  return null;
 };
 
 function baseKeyFrom(name) {
@@ -24,26 +57,17 @@ function baseKeyFrom(name) {
   if (m1) return m1[1];
   const m2 = name.match(/^(Library\d+)/i);
   if (m2) return m2[1];
+  if (/^AV($|[^a-z0-9])/i.test(name)) return 'AV';
   return BUILDING_DATA[name] ? name : name;
 }
 
-/** Camera fit helper (kept for initial fit) */
+/** ---------- Initial fit helper ---------- */
 function approachCameraToBox({
-  camera,
-  box,
-  aspect,
-  azimuthDeg = 0,
-  offset = 6.6,
-  proximity = 1.2,
-  eyeAboveBaseFrac = 5.0,
-  floorFrac = 0.0,
-  animateMs = 1500,
-  ensureForward = true,
-  onFinish = null,
-  immediate = false,
-  ease = 'power3.inOut',
-  fovTarget = null,
-  fovMs = null,
+  camera, box, aspect,
+  azimuthDeg = 0, offset = 6.6, proximity = 1.2,
+  eyeAboveBaseFrac = 5.0, floorFrac = 0.0,
+  animateMs = 0, ensureForward = false, immediate = true,
+  onFinish = null, ease = 'power3.inOut', fovTarget = null, fovMs = null,
 }) {
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -61,18 +85,8 @@ function approachCameraToBox({
 
   const baseY = box.min.y + size.y * floorFrac;
   const eyeY  = Math.max(baseY, box.min.y + size.y * eyeAboveBaseFrac);
-
   const targetPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance));
   targetPos.y = eyeY;
-
-  if (ensureForward && !immediate) {
-    const currentDist = camera.position.clone().sub(center).length();
-    if (currentDist <= targetDistance) {
-      const farPos = new THREE.Vector3().copy(center).add(dir.clone().multiplyScalar(targetDistance * 2.2));
-      farPos.y = eyeY;
-      camera.position.copy(farPos);
-    }
-  }
 
   camera.near = Math.max(0.05, targetDistance / 300);
   camera.far  = Math.max(camera.far, targetDistance * 200);
@@ -103,8 +117,8 @@ function approachCameraToBox({
   }
 }
 
-/** GLTF + ground detection */
-function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
+/** ---------- GLTF + ground + E1/E2/Library tagging ---------- */
+function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes, setE1Index, setE2Index, setLibIndex }) {
   const { scene } = useGLTF('/assets/final4.glb', true);
   const originalColors = useRef(new Map());
 
@@ -119,6 +133,8 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
       }
       child.material = child.material.clone();
       child.userData.name = child.name;
+    } else {
+      if (child.name && !child.userData.name) child.userData.name = child.name;
     }
   });
 
@@ -126,7 +142,39 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
     setOriginalColors && setOriginalColors(originalColors.current);
     scene.updateMatrixWorld(true);
 
-    // Initial focus on (E1,E2)
+    /** Generic tagger */
+    const tagBuilding = (canonList, floorOrder, tagKey) => {
+      const roots = new Map();
+      for (const lab of canonList) {
+        const node = scene.getObjectByName(lab);
+        if (node) roots.set(lab, node);
+      }
+      // Tag each floor under tagKey (lowercase) namespace
+      for (const lab of (roots.size ? canonList : floorOrder)) {
+        const node = scene.getObjectByName(lab);
+        if (node) node.traverse((n) => { n.userData[`${tagKey.toLowerCase()}Tag`] = lab; });
+      }
+      // Build index: label -> Set of roots
+      const idx = new Map();
+      for (const lab of canonList) idx.set(lab, new Set());
+      for (const [lab, node] of roots) idx.get(lab).add(node);
+      // If some label has no explicit root, pick first seen node with that tag
+      scene.traverse((n) => {
+        const t = n.userData?.[`${tagKey.toLowerCase()}Tag`];
+        if (t && idx.has(t) && idx.get(t).size === 0) idx.get(t).add(n);
+      });
+      return idx;
+    };
+
+    const e1Idx = tagBuilding(E1_CANON, E1_FLOOR_ORDER, 'E1');
+    const e2Idx = tagBuilding(E2_CANON, E2_FLOOR_ORDER, 'E2');
+    const libIdx = tagBuilding(LIB_CANON, LIB_FLOOR_ORDER, 'Library');
+
+    setE1Index?.(e1Idx);
+    setE2Index?.(e2Idx);
+    setLibIndex?.(libIdx);
+
+    /** Initial focus on (E1, E2) */
     const matches = [];
     const startsWithE1orE2 = (name) =>
       !!name && (/^E1($|[^a-z0-9])/i.test(name) || /^E2($|[^a-z0-9])/i.test(name));
@@ -144,7 +192,7 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
     }
     setInitialFocusBox && setInitialFocusBox(targetBox);
 
-    // Detect likely ground meshes
+    /** Detect ground meshes */
     const groundNameRe = /(terrain|ground|gis|base|map|sat|earth)/i;
     const buildingLikeRe = /^(e\d|library|av|exabation|exhibition|hall|block|building)/i;
     const candidates = [];
@@ -172,13 +220,14 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes }) {
       .map((c) => c.mesh);
 
     setGroundMeshes && setGroundMeshes(grounds);
-  }, [scene, setOriginalColors, setInitialFocusBox, setGroundMeshes]);
+  }, [scene, setOriginalColors, setInitialFocusBox, setGroundMeshes, setE1Index, setE2Index, setLibIndex]);
 
   return <primitive object={scene} />;
 }
 
+/** ---------- Original control constants ---------- */
 const WALK = { eyeHeight: 1.7, clearance: 0.25, stepMetersDefault: 6, moveSpeed: 6 };
-const DRONE = { raiseMin: 120, speed: 18, defaultY: 320 };
+const DRONE = { speed: 18, defaultY: 320 };
 const ROTATE = { yaw: 1.0, pitch: 0.8 };
 const SMOOTH = { accel: 5.0, rot: 8.0, mouseSens: 0.0013, nudgeMs: 240, yLock: 10.0 };
 
@@ -190,67 +239,74 @@ function lerpAngle(a, b, t) {
   return a + diff * t;
 }
 
+/** ---------- Main ---------- */
 const Map3D = ({
   setPopupData,
-  originalColors,
-  resetColors,
-  setResetColors,
   setOriginalColors,
   controllerCommand,
   mode = 'drone',
   stepNudge,
   stepNudgeTick,
-  // walk fine controls
   walkStepMeters = WALK.stepMetersDefault,
   walkVStepMeters = 2.6,
   walkStickToFloor = true,
   walkYTick = 0,
   walkYDir = null,
-  // RECEIVE popup state from App: true while building popup is open
   popupOpen = false,
-  // (legacy) external tick trigger for restore, still supported
   restoreCameraTick = 0,
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
   const didFitRef = useRef(false);
 
-  const [highlightedGroup, setHighlightedGroup] = useState(null);
-  const savedColors = useRef(null);
+  // Isolation + background
+  const isolatedActiveRef = useRef(false);
+  const visibilityBackupRef = useRef(new Map());
+  const bgBackupRef = useRef(null);
+  const BLACK = new THREE.Color(0x000000);
+  const isolatedKeepSetRef = useRef(null);
+  const currentIsolationKeyRef = useRef(null); // 'E1' | 'E2' | 'Library' | other key
 
-  // Ground lock
+  // E1/E2/Library indices (label -> Set roots)
+  const e1IndexRef = useRef(new Map());
+  const e2IndexRef = useRef(new Map());
+  const libIndexRef = useRef(new Map());
+
+  // Camera snapshot (for restore)
+  const prevCamRef = useRef(null);
+
+  // Ground helpers
   const groundMeshesRef = useRef([]);
   const groundRay = useRef(new THREE.Raycaster());
   const tmp = useRef(new THREE.Vector3());
   const DOWN = useRef(new THREE.Vector3(0, -1, 0));
   const sceneMinYRef = useRef(null);
-  const lastGroundY = useRef(null);
 
-  // Smooth movement & look
+  // Smooth control
   const velRef = useRef(new THREE.Vector3());
   const yawTargetRef = useRef(0);
   const pitchTargetRef = useRef(0);
 
-  // Tweens / locks
-  const nudgeTweenRef = useRef(null);
-  const suppressMoveUntilRef = useRef(0); // timestamp (ms)
-  const focusUntilRef = useRef(0);        // while focusing/zooming, freeze control
-  const focusLookAtRef = useRef(null);    // where we look during focus tween
+  // Control locks
+  const suppressMoveUntilRef = useRef(0);
+  const focusUntilRef = useRef(0);
 
-  // Store the opening drone height
+  // Tweens
+  const nudgeTweenRef = useRef(null);
+  const orbitTweenRef = useRef(null);
+  const moveTweenRef = useRef(null);
+  const fovTweenRef = useRef(null);
+
+  // Walk vertical
+  const lastWalkYTick = useRef(-1);
+
+  // Boot height
   const openingDroneYRef = useRef(null);
   const bootDoneRef = useRef(false);
 
-  // Walk elevator nudge state
-  const lastWalkYTick = useRef(-1);
-  const walkElevatorHoldUntilRef = useRef(0);
-
-  // Snapshot of camera BEFORE focus (to restore on popup close)
-  const prevCamRef = useRef(null); // {pos, rot, fov}
-
   useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
 
-  // Fallback scene floor
+  // Scene floor fallback
   useEffect(() => {
     const id = setTimeout(() => {
       try {
@@ -261,7 +317,7 @@ const Map3D = ({
     return () => clearTimeout(id);
   }, [scene]);
 
-  // Cursor hint in walk mode
+  // Cursor hint
   useEffect(() => {
     const el = gl.domElement;
     if (mode === 'walk') el.classList.add('walk-mode');
@@ -269,19 +325,17 @@ const Map3D = ({
     return () => el.classList.remove('walk-mode');
   }, [gl, mode]);
 
-  /* =======================
-     POINTER / MOUSE LOOK
-     ======================= */
+  /* ============ Mouse look ============ */
   useEffect(() => {
     let isDragging = false;
     let prev = { x: 0, y: 0 };
     const onDown = (e) => { isDragging = true; prev = { x: e.clientX, y: e.clientY }; };
     const onMove = (e) => {
       if (!isDragging) return;
-      const dx = e.clientX - prev.x;
-      const dy = e.clientY - prev.y;
-      prev = { x: e.clientX, y: e.clientY };
-
+      const curr = { x: e.clientX, y: e.clientY };
+      const dx = curr.x - prev.x;
+      const dy = curr.y - prev.y;
+      prev = curr;
       yawTargetRef.current -= dx * SMOOTH.mouseSens;
       pitchTargetRef.current -= dy * SMOOTH.mouseSens;
       const HALF = Math.PI / 2;
@@ -298,12 +352,9 @@ const Map3D = ({
     };
   }, [gl]);
 
-  /* =======================
-     TOUCH (iPad / tablets)
-     ======================= */
+  /* ============ Touch look / pan / zoom ============ */
   useEffect(() => {
     const el = gl.domElement;
-
     let touchMode = null;
     let prevTouches = [];
     let prevDist = null;
@@ -314,7 +365,6 @@ const Map3D = ({
       for (const t of arr) { x += t.x; y += t.y; }
       return { x: x / arr.length, y: y / arr.length };
     };
-
     const toPts = (touchList) => Array.from(touchList).map(t => ({ x: t.clientX, y: t.clientY }));
 
     const onTouchStart = (e) => {
@@ -336,7 +386,6 @@ const Map3D = ({
         const dx = curr.x - prev.x;
         const dy = curr.y - prev.y;
         prevTouches = [curr];
-
         yawTargetRef.current -= dx * SMOOTH.mouseSens * 1.2;
         pitchTargetRef.current -= dy * SMOOTH.mouseSens * 1.2;
         const HALF = Math.PI / 2;
@@ -347,7 +396,6 @@ const Map3D = ({
         const [a, b] = currTouches;
         const centerCurr = avg(currTouches);
         const centerPrev = avg(prevTouches);
-
         const dx = centerCurr.x - centerPrev.x;
         const dy = centerCurr.y - centerPrev.y;
 
@@ -373,17 +421,12 @@ const Map3D = ({
       }
     };
 
-    const onTouchEnd = () => {
-      touchMode = null;
-      prevTouches = [];
-      prevDist = null;
-    };
+    const onTouchEnd = () => { touchMode = null; prevTouches = []; prevDist = null; };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove', onTouchMove, { passive: false });
     el.addEventListener('touchend', onTouchEnd, { passive: true });
     el.addEventListener('touchcancel', onTouchEnd, { passive: true });
-
     return () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
@@ -392,18 +435,16 @@ const Map3D = ({
     };
   }, [gl, camera, mode]);
 
-  /* =======================
-     KEYBOARD (WASD + arrows)
-     ======================= */
+  /* ============ Keyboard ============ */
   const keys = useRef({});
   useEffect(() => {
     const down = (e) => {
       keys.current[e.code] = true;
       if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
       if (e.code === 'Escape') {
-        if (highlightedGroup) restoreGroupColors(highlightedGroup);
+        restoreIsolation();
+        if (prevCamRef.current) restoreCameraSmooth();
         setPopupData && setPopupData(null);
-        setHighlightedGroup(null);
       }
     };
     const up = (e) => { keys.current[e.code] = false; };
@@ -413,158 +454,184 @@ const Map3D = ({
       document.removeEventListener('keydown', down);
       document.removeEventListener('keyup', up);
     };
-  }, [highlightedGroup, setPopupData]);
+  }, [setPopupData]);
 
-  /** Helper: ground Y at (x,z) */
-  const groundYAt = useCallback((x, z) => {
-    const origin = tmp.current.set(x, 1e6, z);
-    groundRay.current.set(origin, new THREE.Vector3(0, -1, 0));
-    let groundY = (sceneMinYRef.current ?? 0);
-    const grounds = groundMeshesRef.current;
-    if (grounds?.length) {
-      const hits = groundRay.current.intersectObjects(grounds, true);
-      if (hits.length) groundY = hits[0].point.y;
+  /* ===== Helpers ===== */
+  const boxFromObjects = (objs) => {
+    const box = new THREE.Box3();
+    let init = false;
+    for (const o of objs) {
+      try {
+        if (!init) { box.setFromObject(o); init = true; }
+        else { box.expandByObject(o); }
+      } catch {}
     }
-    return groundY;
-  }, []);
+    if (!init) box.makeEmpty();
+    return box;
+  };
 
-  /** Focus-in: orbit-style above target at ~45° */
-  const focusOnGroup = useCallback((group) => {
-    if (!group) return;
+  const buildKeepSetWithAncestors = (objs) => {
+    const keep = new Set();
+    for (const obj of objs) {
+      if (!obj) continue;
+      obj.traverse((n) => keep.add(n));
+      let p = obj.parent;
+      while (p) { keep.add(p); p = p.parent; }
+    }
+    return keep;
+  };
 
-    // Snapshot camera ONCE per focus session (if nothing saved yet)
+  const isIsolated = () => isolatedActiveRef.current === true;
+
+  const setVisibleDeep = (obj, flag) => { if (!obj) return; obj.traverse((n) => { if ('visible' in n) n.visible = flag; }); };
+  const setVisibleDeepSet = (setNodes, flag) => { if (!setNodes) return; for (const root of setNodes) setVisibleDeep(root, flag); };
+
+  // Ensure node and its ancestors are visible
+  const forceVisibleUpAndDown = (node) => {
+    if (!node) return;
+    let p = node;
+    while (p) { if ('visible' in p) p.visible = true; p = p.parent; }
+    setVisibleDeep(node, true);
+  };
+  const forceVisibleSetUpAndDown = (setNodes) => {
+    if (!setNodes) return;
+    for (const root of setNodes) forceVisibleUpAndDown(root);
+  };
+
+  /** ---------- Isolation helpers ---------- */
+  const isolateWithObjects = useCallback((objs, keyForThis = null) => {
+    if (!objs?.length) return;
+
+    if (!isIsolated()) bgBackupRef.current = scene.background ?? null;
+    scene.background = BLACK.clone();
+
+    if (!isIsolated()) visibilityBackupRef.current.clear();
+    scene.traverse((obj) => {
+      if (obj.isLight) return;
+      if (!isIsolated()) visibilityBackupRef.current.set(obj, obj.visible);
+      obj.visible = false;
+    });
+
+    const keep = buildKeepSetWithAncestors(objs);
+    keep.forEach((node) => { if (node && node.visible !== undefined) node.visible = true; });
+
+    isolatedActiveRef.current = true;
+    isolatedKeepSetRef.current = keep;
+    currentIsolationKeyRef.current = keyForThis ?? null;
+  }, [scene]);
+
+  const restoreIsolation = useCallback(() => {
+    if (!isIsolated()) return;
+
+    scene.background = bgBackupRef.current ?? null;
+    bgBackupRef.current = null;
+
+    if (visibilityBackupRef.current.size) {
+      visibilityBackupRef.current.forEach((wasVisible, obj) => {
+        if (obj && obj.visible !== undefined) obj.visible = wasVisible;
+      });
+      visibilityBackupRef.current.clear();
+    }
+
+    isolatedActiveRef.current = false;
+    isolatedKeepSetRef.current = null;
+    currentIsolationKeyRef.current = null;
+  }, [scene]);
+
+  /** ---------- Camera focus + fast 360° orbit (Step 1 only) ---------- */
+  const focusAndOrbitCamera = useCallback((objs) => {
+    if (!objs?.length) return;
+
     if (!prevCamRef.current) {
       prevCamRef.current = {
         pos: camera.position.clone(),
         rot: new THREE.Euler(camera.rotation.x, camera.rotation.y, camera.rotation.z, 'YXZ'),
-        fov: camera.fov
+        fov: camera.fov,
       };
     }
 
-    const box = new THREE.Box3().setFromObject(group);
+    const box = boxFromObjects(objs);
     const center = box.getCenter(new THREE.Vector3());
-
-    // Bounding sphere for robust fit
     const sphere = new THREE.Sphere();
     box.getBoundingSphere(sphere);
 
-    // Desired FOV (real zoom feel)
-    const fovTarget = mode === 'walk' ? 50 : 42; // smaller = more zoom
+    const fovTarget = 42;
     const fovRad = THREE.MathUtils.degToRad(fovTarget);
-
-    // Distance so the sphere fits vertically; padding < 1.3 gives tighter frame
     const padding = 1.18;
-    const distance = Math.max(3, (sphere.radius * padding) / Math.sin(fovRad / 2));
+    const radius = Math.max(6, (sphere.radius * padding) / Math.sin(fovRad / 2));
 
-    // Elevation ≈ 45° above horizon
-    const elevDeg = 45;
+    const elevDeg = 40;
     const elevRad = THREE.MathUtils.degToRad(elevDeg);
+    const startYaw = camera.rotation.y;
+    const startAngle = startYaw;
+    const endAngle = startAngle + Math.PI * 2;
 
-    // Use current yaw so approach feels consistent
-    const yaw = camera.rotation.y;
+    const posFromAngle = (ang) => {
+      const rHoriz = radius * Math.cos(elevRad);
+      const x = center.x + rHoriz * Math.sin(ang);
+      const z = center.z + rHoriz * Math.cos(ang);
+      const y = center.y + radius * Math.sin(elevRad);
+      return new THREE.Vector3(x, y, z);
+    };
 
-    // Build a direction from center->camera:
-    const forward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, yaw, 0, 'YXZ'));
-    const backHoriz = forward.clone().setY(0).normalize().multiplyScalar(-1);
-    const dir = backHoriz.multiplyScalar(Math.cos(elevRad));
-    dir.y = Math.sin(elevRad);
-    dir.normalize();
+    const startPos = posFromAngle(startAngle);
 
-    // Target position & minimal ground clearance (especially for walk)
-    const targetPos = center.clone().add(dir.multiplyScalar(distance));
-    const groundY = groundYAt(targetPos.x, targetPos.z);
-    const minY = (mode === 'walk' ? groundY + WALK.eyeHeight : groundY + WALK.clearance);
-    if (targetPos.y < minY) targetPos.y = minY + 0.5;
+    camera.near = Math.max(0.05, radius / 300);
+    camera.far = Math.max(camera.far, radius * 200);
+    camera.updateProjectionMatrix();
 
-    // Lock controls while focusing to avoid fighting the tween
-    const animateMs = 1800;
+    if (orbitTweenRef.current) orbitTweenRef.current.kill();
+    if (moveTweenRef.current) moveTweenRef.current.kill();
+    if (fovTweenRef.current) fovTweenRef.current.kill();
+
+    const flyMs = 700;
+    const orbitMs = 2500;
+
     const now = performance.now();
-    focusUntilRef.current = now + animateMs + 120;
-    focusLookAtRef.current = center.clone();
+    focusUntilRef.current = now + flyMs + orbitMs + 160;
 
-    // Animate FOV (zoom) and position in parallel
-    const ease = 'power3.inOut';
-    gsap.to(camera.position, {
-      duration: animateMs / 1000,
-      x: targetPos.x, y: targetPos.y, z: targetPos.z,
-      ease,
+    moveTweenRef.current = gsap.to(camera.position, {
+      duration: flyMs / 1000,
+      x: startPos.x, y: startPos.y, z: startPos.z,
+      ease: 'power3.inOut',
       onUpdate: () => camera.lookAt(center),
-      onComplete: () => {
+      onComplete: () => { camera.lookAt(center); },
+    });
+
+    fovTweenRef.current = gsap.to(camera, {
+      duration: flyMs / 1000,
+      fov: fovTarget,
+      ease: 'power3.inOut',
+      onUpdate: () => camera.updateProjectionMatrix(),
+    });
+
+    const angleProxy = { a: startAngle };
+    orbitTweenRef.current = gsap.to(angleProxy, {
+      duration: orbitMs / 1000,
+      a: endAngle,
+      ease: 'power0.none',
+      delay: flyMs / 1000,
+      onUpdate: () => {
+        const p = posFromAngle(angleProxy.a);
+        camera.position.set(p.x, p.y, p.z);
         camera.lookAt(center);
+      },
+      onComplete: () => {
+        orbitTweenRef.current = null;
         yawTargetRef.current = camera.rotation.y;
         pitchTargetRef.current = camera.rotation.x;
-      }
-    });
-
-    gsap.to(camera, {
-      duration: animateMs / 1000,
-      fov: fovTarget,
-      ease,
-      onUpdate: () => camera.updateProjectionMatrix(),
-    });
-  }, [camera, mode, groundYAt]);
-
-  /** Smooth restore to previous camera snapshot (position + FOV + full orientation) */
-  const restoreCameraSmooth = useCallback(() => {
-    const snap = prevCamRef.current;
-    if (!snap) return;
-
-    const duration = 1.6; // seconds
-    const ease = 'power3.inOut';
-    const now = performance.now();
-    focusUntilRef.current = now + duration * 1000 + 80;
-    focusLookAtRef.current = null; // rotation interpolation handles orientation
-
-    // Position
-    gsap.to(camera.position, {
-      duration,
-      x: snap.pos.x, y: snap.pos.y, z: snap.pos.z,
-      ease,
-    });
-
-    // FOV
-    gsap.to(camera, {
-      duration,
-      fov: snap.fov,
-      ease,
-      onUpdate: () => camera.updateProjectionMatrix(),
-    });
-
-    // Drive smoothed yaw/pitch targets so useFrame eases camera.rotation back to exact original
-    gsap.to(yawTargetRef, {
-      duration,
-      current: snap.rot.y,
-      ease,
-    });
-    gsap.to(pitchTargetRef, {
-      duration,
-      current: snap.rot.x,
-      ease,
-      onComplete: () => {
-        // Final sync to guarantee exact match with original orientation
-        camera.rotation.order = 'YXZ';
-        camera.rotation.y = snap.rot.y;
-        camera.rotation.x = snap.rot.x;
-        camera.rotation.z = 0;
-        yawTargetRef.current = snap.rot.y;
-        pitchTargetRef.current = snap.rot.x;
-        // Clear snapshot so next click will capture again
-        prevCamRef.current = null;
-      }
+      },
     });
   }, [camera]);
 
-  /* =======================
-     PHYSICS / INTEGRATION
-     ======================= */
+  /* ============ Frame (movement, locking, ground) ============ */
   const lastNudgeTick = useRef(-1);
   useFrame((_, delta) => {
     const now = performance.now();
-    const focusing = now < focusUntilRef.current;
+    const locked = now < focusUntilRef.current;
 
-    if (focusing && focusLookAtRef.current) {
-      camera.lookAt(focusLookAtRef.current);
-    } else {
+    // Rotate camera with keys (disabled while locked)
+    if (!locked) {
       const yawLeft  = keys.current['ArrowLeft']  ? 1 : 0;
       const yawRight = keys.current['ArrowRight'] ? 1 : 0;
       const pitchUp  = keys.current['ArrowUp']    ? 1 : 0;
@@ -584,7 +651,8 @@ const Map3D = ({
       camera.rotation.z = 0;
     }
 
-    const wish = new THREE.Vector3(0, 0, 0);
+    // Movement wish
+    const wish = new THREE.Vector3(0,0,0);
     if (keys.current['KeyW']) wish.z -= 1;
     if (keys.current['KeyS']) wish.z += 1;
     if (keys.current['KeyA']) wish.x -= 1;
@@ -620,8 +688,8 @@ const Map3D = ({
     const tAcc = dampFactor(SMOOTH.accel, delta);
     velRef.current.lerp(desiredVel, tAcc);
 
-    // WALK step nudges
-    if (mode === 'walk' && stepNudge && stepNudgeTick !== lastNudgeTick.current) {
+    // Step nudges (disabled while locked)
+    if (!locked && mode === 'walk' && stepNudge && stepNudgeTick !== lastNudgeTick.current) {
       lastNudgeTick.current = stepNudgeTick;
 
       const worldUp = new THREE.Vector3(0,1,0);
@@ -632,7 +700,6 @@ const Map3D = ({
       if (stepNudge.dir === 'right') stepDir = left.clone().multiplyScalar(-1);
 
       const to = camera.position.clone().add(stepDir.multiplyScalar(walkStepMeters));
-
       if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
       suppressMoveUntilRef.current = now + SMOOTH.nudgeMs + 20;
 
@@ -642,26 +709,12 @@ const Map3D = ({
       });
     }
 
-    // WALK elevator vertical step (only when stick-to-floor is off)
-    if (mode === 'walk' && !walkStickToFloor && walkYDir && walkYTick !== lastWalkYTick.current) {
-      lastWalkYTick.current = walkYTick;
-      const dir = walkYDir === 'up' ? 1 : -1;
-      const toY = camera.position.y + dir * walkVStepMeters;
-
-      if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
-      walkElevatorHoldUntilRef.current = now + 400;
-
-      gsap.to(camera.position, {
-        y: toY, duration: 0.22, ease: 'power2.out',
-      });
-    }
-
-    // Apply velocity if not frozen by tween/focus
-    if (now > suppressMoveUntilRef.current && now > focusUntilRef.current) {
+    // Apply velocity if not locked
+    if (now > suppressMoveUntilRef.current && !locked) {
       camera.position.addScaledVector(velRef.current, delta);
     }
 
-    // === Ground detection ===
+    // Minimal ground clearance for drone
     const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
     groundRay.current.set(origin, new THREE.Vector3(0,-1,0));
     let groundY = (sceneMinYRef.current ?? 0);
@@ -670,57 +723,19 @@ const Map3D = ({
       const hits = groundRay.current.intersectObjects(grounds, true);
       if (hits.length) groundY = hits[0].point.y;
     }
-    lastGroundY.current = groundY;
-
-    // === Ground lock behavior ===
-    if (mode === 'walk') {
-      // While focusing we skip Y adjustments entirely
-      if (now < focusUntilRef.current) return;
-
-      const baseY = groundY + WALK.eyeHeight;
-
-      // If popup is open: TEMPORARILY DISABLE ground lock (no snapping down).
-      // We still ensure a *minimum* height so we don't sink below the ground.
-      if (popupOpen) {
-        if (camera.position.y < baseY) {
-          // gentle clamp up to baseY if user drops below terrain accidentally
-          camera.position.y = lerp(camera.position.y, baseY, dampFactor(SMOOTH.yLock, delta));
-        }
-      } else {
-        // Normal ground lock behavior (when popup is closed)
-        if (walkStickToFloor) {
-          const tY = dampFactor(SMOOTH.yLock, delta);
-          camera.position.y = lerp(camera.position.y, baseY, tY);
-        } else {
-          // When stick-to-floor is off, prevent sinking below baseY
-          if (camera.position.y < baseY) {
-            camera.position.y = lerp(camera.position.y, baseY, dampFactor(SMOOTH.yLock, delta));
-          }
-        }
-      }
-    } else {
-      // Drone: keep minimal clearance above ground
+    if (mode !== 'walk') {
       const minY = groundY + WALK.clearance;
       if (camera.position.y < minY) camera.position.y = minY;
     }
   });
 
-  // --- Initial fit BEFORE PAINT (no tween) ---
+  // Initial fit
   useLayoutEffect(() => {
     if (initialFocusBox && !didFitRef.current) {
       const aspect = size.width / size.height;
       approachCameraToBox({
-        camera,
-        box: initialFocusBox,
-        aspect,
-        azimuthDeg: 0,
-        offset: 6.6,
-        proximity: 1.2,
-        eyeAboveBaseFrac: 5.0,
-        floorFrac: 0,
-        animateMs: 0,
-        ensureForward: false,
-        immediate: true,
+        camera, box: initialFocusBox, aspect,
+        animateMs: 0, immediate: true, ensureForward: false,
         onFinish: () => {
           yawTargetRef.current = camera.rotation.y;
           pitchTargetRef.current = camera.rotation.x;
@@ -735,7 +750,6 @@ const Map3D = ({
   // Mode height adjust
   useEffect(() => {
     if (!bootDoneRef.current) return;
-
     const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
     groundRay.current.set(origin, DOWN.current);
 
@@ -745,11 +759,9 @@ const Map3D = ({
       const hits = groundRay.current.intersectObjects(grounds, true);
       if (hits.length) groundY = hits[0].point.y;
     }
-    lastGroundY.current = groundY;
 
     if (mode === 'walk') {
-      const targetY = groundY + WALK.eyeHeight;
-      gsap.to(camera.position, { y: targetY, duration: 0.35, ease: 'power2.out' });
+      gsap.to(camera.position, { y: groundY + WALK.eyeHeight, duration: 0.35, ease: 'power2.out' });
     } else {
       const wantY = openingDroneYRef.current ?? DRONE.defaultY;
       const safeY = Math.max(groundY + WALK.clearance, wantY);
@@ -757,60 +769,115 @@ const Map3D = ({
     }
   }, [mode, camera]);
 
-  // Helpers show/hide
-  const showByNames = useCallback((names) => {
-    names.forEach((name) => { const b = scene.getObjectByName(name); if (b) b.visible = true; });
-  }, [scene]);
-  const hideByNames = useCallback((names) => {
-    names.forEach((name) => { const b = scene.getObjectByName(name); if (b) b.visible = false; });
-  }, [scene]);
+  /** ---------- Generic Step-2 floor filter (no camera move) ---------- */
+  const applyFloorFilter = useCallback((buildingKey, clickedLabel) => {
+    if (!isIsolated() || currentIsolationKeyRef.current !== buildingKey) return;
 
-  const restoreCascadesForName = useCallback((n) => {
-    if (!n) return;
-    if (n === 'Library2') showByNames(['AV', 'Library5', 'Library4', 'Library3']);
-    else if (n === 'Library3') showByNames(['AV', 'Library5', 'Library4']);
-    else if (n === 'Library4') showByNames(['AV', 'Library5']);
-    else if (n === 'Library5') showByNames(['AV']);
-    else if (n === 'E1-4') showByNames(['E1']);
-    else if (n === 'E1-3') showByNames(['E1', 'E1-4']);
-    else if (n === 'E1-2') showByNames(['E1', 'E1-4', 'E1-3']);
-    else if (n === 'E1-1') showByNames(['E1', 'E1-4', 'E1-3', 'E1-2']);
-    else if (n === 'E1-G') showByNames(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
-    else if (n === 'E2-4') showByNames(['E2']);
-    else if (n === 'E2-3') showByNames(['E2', 'E2-4']);
-    else if (n === 'E2-2') showByNames(['E2', 'E2-4', 'E2-3']);
-    else if (n === 'E2-1') showByNames(['E2', 'E2-4', 'E2-3', 'E2-2']);
-    else if (n === 'E2-G') showByNames(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
-  }, [showByNames]);
+    if (orbitTweenRef.current) { orbitTweenRef.current.kill(); orbitTweenRef.current = null; }
+    if (moveTweenRef.current)  { moveTweenRef.current.kill();  moveTweenRef.current  = null; }
+    if (fovTweenRef.current)   { fovTweenRef.current.kill();   fovTweenRef.current   = null; }
+    focusUntilRef.current = 0;
 
-  const restoreGroupColors = useCallback((group) => {
-    if (!group || !savedColors.current) return;
-    group.traverse((child) => {
-      if (child.isMesh) {
-        const orig = savedColors.current.get(child);
-        if (orig) {
-          gsap.killTweensOf(child.material.color);
-          child.material.color.copy(orig);
-        }
-        if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = true;
+    // pick index + lists
+    let idxRef = null, CANON = [], FLOORS = [];
+    if (buildingKey === 'E1') { idxRef = e1IndexRef; CANON = E1_CANON; FLOORS = E1_FLOOR_ORDER; }
+    else if (buildingKey === 'E2') { idxRef = e2IndexRef; CANON = E2_CANON; FLOORS = E2_FLOOR_ORDER; }
+    else if (buildingKey === 'Library') { idxRef = libIndexRef; CANON = LIB_CANON; FLOORS = LIB_FLOOR_ORDER; }
+    else return;
+
+    const get = (k) => idxRef.current.get(k);
+    // Hide everything first (all floors)
+    for (const k of CANON) setVisibleDeepSet(get(k), false);
+
+    if (buildingKey === 'Library') {
+      // Special cascade rules, with NO Library parent node
+      if (clickedLabel === 'Library5') {
+        // hide AV only; show 5,4,3,2
+        setVisibleDeepSet(get('Library5'), true);
+        setVisibleDeepSet(get('Library4'), true);
+        setVisibleDeepSet(get('Library3'), true);
+        setVisibleDeepSet(get('Library2'), true);
+      } else if (clickedLabel === 'Library4') {
+        // hide AV, 5; show 4,3,2
+        setVisibleDeepSet(get('Library4'), true);
+        setVisibleDeepSet(get('Library3'), true);
+        setVisibleDeepSet(get('Library2'), true);
+      } else if (clickedLabel === 'Library3') {
+        // hide AV, 5, 4; show 3,2
+        setVisibleDeepSet(get('Library3'), true);
+        setVisibleDeepSet(get('Library2'), true);
+      } else if (clickedLabel === 'Library2') {
+        // show ONLY Library2 (hide AV,5,4,3)
+        setVisibleDeepSet(get('Library2'), true);
+      } else if (clickedLabel === 'AV') {
+        // clicked AV: show only AV
+        setVisibleDeepSet(get('AV'), true);
       }
+    } else {
+      // E1/E2 standard: parent stays hidden; show clicked + everything below (groundward)
+      if (clickedLabel === buildingKey) {
+        for (const nm of FLOORS) setVisibleDeepSet(get(nm), true);
+      } else if (clickedLabel.endsWith('-G')) {
+        setVisibleDeepSet(get(`${buildingKey}-G`), true);
+      } else {
+        const idx = FLOORS.indexOf(clickedLabel);
+        FLOORS.forEach((nm, i) => { if (i <= idx) setVisibleDeepSet(get(nm), true); });
+      }
+    }
+
+    // pick popup info
+    let infoKey = clickedLabel;
+    if (buildingKey === 'E1' || buildingKey === 'E2') {
+      infoKey = buildingKey;
+    } else if (buildingKey === 'Library') {
+      if (!BUILDING_DATA[infoKey]) infoKey = 'Library5';
+    }
+
+    const info = BUILDING_DATA[infoKey] || { type: 'Facility',
+      electricity: { value: 0, unit: 'kWh', percent: 0, status: 'N/A' },
+      water: { value: 0, unit: 'm³', percent: 0, status: 'N/A' },
+    };
+
+    setPopupData?.({
+      name: clickedLabel,
+      type: buildingKey === 'Library' ? 'Library' : (info?.type || 'Academic'),
+      world: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      electricity: info?.electricity,
+      water: info?.water,
     });
-    restoreCascadesForName(group.userData.name);
-  }, [restoreCascadesForName]);
+  }, [setPopupData, camera]);
 
-  const highlightGroup = useCallback((group) => {
-    group.traverse((child) => {
-      if (child.isMesh) {
-        gsap.killTweensOf(child.material.color);
-        gsap.to(child.material.color, { r: 0, g: 0.28, b: 0.67, duration: 0.4, ease: 'power2.out' });
-      }
-      if (group.userData.name === 'Exabation Hall') {
-        if (child.name === 'ex_roof_1' || child.name === 'ex_roof_2') child.visible = false;
-      }
-    });
-  }, []);
+  /** Resolve E1/E2/Library label from any node */
+  const resolveLabelFromNode = (node) => {
+    let p = node;
+    while (p) {
+      if (p.userData?.e1Tag) return p.userData.e1Tag;
+      if (p.userData?.e2Tag) return p.userData.e2Tag;
+      if (p.userData?.libraryTag) return p.userData.libraryTag;
+      const n = p.userData?.name || p.name || '';
+      const c1 = canonE1(n); if (c1) return c1;
+      const c2 = canonE2(n); if (c2) return c2;
+      const c3 = canonLib(n); if (c3) return c3;
+      p = p.parent;
+    }
+    return null;
+  };
 
-  // Picking
+  /** Ground hit test (ignore clicks on GIS/terrain/ground) */
+  const groundNameRe = /(terrain|ground|gis|base|map|sat|earth)/i;
+  const isGroundNode = (node) => {
+    let p = node;
+    const grounds = groundMeshesRef.current || [];
+    while (p) {
+      if (grounds.includes(p)) return true;
+      const nm = (p.userData?.name || p.name || '').toLowerCase();
+      if (groundNameRe.test(nm)) return true;
+      p = p.parent;
+    }
+    return false;
+  };
+
+  /* ============ Picking ============ */
   useEffect(() => {
     const onClick = (event) => {
       const rect = gl.domElement.getBoundingClientRect();
@@ -821,101 +888,268 @@ const Map3D = ({
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
-      const intersects = raycaster.intersectObjects(scene.children, true);
-      if (!intersects.length) {
-        if (highlightedGroup) restoreGroupColors(highlightedGroup);
-        setPopupData && setPopupData(null);
-        setHighlightedGroup(null);
+      // Intersect then DROP all hits that belong to ground (GIS etc.)
+      const allHits = raycaster.intersectObjects(scene.children, true);
+      const intersects = allHits.filter(h => !isGroundNode(h.object));
+
+      // If isolated (black background shown):
+      if (isIsolated()) {
+        // Background/ground unclickable
+        if (!intersects.length) {
+          event.preventDefault();
+          if (typeof event.stopPropagation === 'function') event.stopPropagation();
+          return;
+        }
+
+        const key = currentIsolationKeyRef.current;
+        if (key === 'E1' || key === 'E2' || key === 'Library') {
+          const lab = resolveLabelFromNode(intersects[0].object);
+          // Only respond to clicks inside the same building
+          if (
+            !lab ||
+            (key === 'Library'
+              ? !(lab === 'AV' || /^Library[2345]$/.test(lab))
+              : !lab.startsWith(key))
+          ) {
+            event.preventDefault();
+            if (typeof event.stopPropagation === 'function') event.stopPropagation();
+            return;
+          }
+          applyFloorFilter(key, lab);
+          return;
+        }
+
+        // Isolated on other buildings, ignore clicks
         return;
       }
 
+      // Not isolated -> normal selection (Step 1)
+      if (!intersects.length) return;
+
       const hit = intersects[0];
-      const clickedObject = hit.object;
+      const label = resolveLabelFromNode(hit.object);
+
+      // E1 subtree
+      if (label && label.startsWith('E1')) {
+        const allRoots = [];
+        for (const k of E1_CANON) {
+          const setNodes = e1IndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => allRoots.push(n));
+        }
+        isolateWithObjects(allRoots, 'E1');
+        for (const k of E1_CANON) {
+          const setNodes = e1IndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => (n.visible = true));
+        }
+        focusAndOrbitCamera(allRoots);
+
+        const b = new THREE.Box3(); allRoots.forEach(o => b.expandByObject(o));
+        const c = b.getCenter(new THREE.Vector3());
+        setPopupData?.({
+          name: 'E1 Building',
+          type: BUILDING_DATA.E1.type,
+          world: { x: c.x, y: c.y, z: c.z },
+          electricity: BUILDING_DATA.E1.electricity,
+          water: BUILDING_DATA.E1.water,
+        });
+        return;
+      }
+
+      // E2 subtree
+      if (label && label.startsWith('E2')) {
+        const allRoots = [];
+        for (const k of E2_CANON) {
+          const setNodes = e2IndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => allRoots.push(n));
+        }
+        isolateWithObjects(allRoots, 'E2');
+        for (const k of E2_CANON) {
+          const setNodes = e2IndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => (n.visible = true));
+        }
+        focusAndOrbitCamera(allRoots);
+
+        const b = new THREE.Box3(); allRoots.forEach(o => b.expandByObject(o));
+        const c = b.getCenter(new THREE.Vector3());
+        setPopupData?.({
+          name: 'E2 Building',
+          type: BUILDING_DATA.E2.type,
+          world: { x: c.x, y: c.y, z: c.z },
+          electricity: BUILDING_DATA.E2.electricity,
+          water: BUILDING_DATA.E2.water,
+        });
+        return;
+      }
+
+      // Library subtree (AV or Library2..5)
+      if (label && (label === 'AV' || /^Library[2345]$/.test(label))) {
+        const allRoots = [];
+        for (const k of LIB_CANON) {
+          const setNodes = libIndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => allRoots.push(n));
+        }
+        isolateWithObjects(allRoots, 'Library');
+        for (const k of LIB_CANON) {
+          const setNodes = libIndexRef.current.get(k);
+          if (setNodes && setNodes.size) setNodes.forEach((n) => (n.visible = true));
+        }
+        focusAndOrbitCamera(allRoots);
+
+        const b = new THREE.Box3(); allRoots.forEach(o => b.expandByObject(o));
+        const c = b.getCenter(new THREE.Vector3());
+        const infoKey = BUILDING_DATA[label] ? label : 'Library5';
+        const info = BUILDING_DATA[infoKey] || BUILDING_DATA['Library5'];
+        setPopupData?.({
+          name: 'Library Building',
+          type: 'Library',
+          world: { x: c.x, y: c.y, z: c.z },
+          electricity: info.electricity,
+          water: info.water,
+        });
+        return;
+      }
+
+      // Generic building path
+      let clickedObject = hit.object;
       if (!clickedObject.userData.name) return;
 
       let parentGroup = clickedObject.parent;
       while (parentGroup && !parentGroup.userData.name) parentGroup = parentGroup.parent;
       if (!parentGroup) return;
 
-      if (highlightedGroup && highlightedGroup !== parentGroup) restoreGroupColors(highlightedGroup);
-      if (highlightedGroup === parentGroup) return;
+      const selectionKey = baseKeyFrom(parentGroup.userData.name) || parentGroup.userData.name;
 
-      setHighlightedGroup(parentGroup);
-      highlightGroup(parentGroup);
+      isolateWithObjects([parentGroup], selectionKey);
+      focusAndOrbitCamera([parentGroup]);
 
-      const n = parentGroup.userData.name;
-      if (n === 'Library5') hideByNames(['AV']);
-      if (n === 'Library4') hideByNames(['AV', 'Library5']);
-      if (n === 'Library3') hideByNames(['AV', 'Library5', 'Library4']);
-      if (n === 'Library2') hideByNames(['AV', 'Library5', 'Library4', 'Library3']);
-      if (n === 'E1-4') hideByNames(['E1']);
-      if (n === 'E1-3') hideByNames(['E1', 'E1-4']);
-      if (n === 'E1-2') hideByNames(['E1', 'E1-4', 'E1-3']);
-      if (n === 'E1-1') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2']);
-      if (n === 'E1-G') hideByNames(['E1', 'E1-4', 'E1-3', 'E1-2', 'E1-1']);
-      if (n === 'E2-4') hideByNames(['E2']);
-      if (n === 'E2-3') hideByNames(['E2', 'E2-4']);
-      if (n === 'E2-2') hideByNames(['E2', 'E2-4', 'E2-3']);
-      if (n === 'E2-1') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2']);
-      if (n === 'E2-G') hideByNames(['E2', 'E2-4', 'E2-3', 'E2-2', 'E2-1']);
-
-      // Popup data
       const box = new THREE.Box3().setFromObject(parentGroup);
       const center = box.getCenter(new THREE.Vector3());
-      const rawName = parentGroup.userData.name;
-      const key = baseKeyFrom(rawName);
-      const info = BUILDING_DATA[key] || {
+      const info = BUILDING_DATA[selectionKey] || {
         type: 'Facility',
         electricity: { value: 0, unit: 'kWh', percent: 0, status: 'N/A' },
         water: { value: 0, unit: 'm³', percent: 0, status: 'N/A' },
       };
 
-      setPopupData && setPopupData({
-        name: rawName,
+      setPopupData?.({
+        name: parentGroup.userData.name,
         type: info.type,
         world: { x: center.x, y: center.y, z: center.z },
         electricity: info.electricity,
         water: info.water,
       });
-
-      // Cinematic orbit-in at 45° above the building
-      focusOnGroup(parentGroup);
     };
 
-    gl.domElement.addEventListener('click', onClick);
-    return () => { gl.domElement.removeEventListener('click', onClick); };
-  }, [camera, scene, gl, highlightedGroup, highlightGroup, setPopupData, hideByNames, restoreGroupColors, focusOnGroup]);
+    gl.domElement.addEventListener('click', onClick, true);
+    return () => gl.domElement.removeEventListener('click', onClick, true);
+  }, [camera, scene, gl, setPopupData, isolateWithObjects, focusAndOrbitCamera, applyFloorFilter]);
 
-  // Respond to "close popup" color reset
+  /* ============ Return-to-Origin for E1/E2/Library (manual trigger only) ============ */
   useEffect(() => {
-    if (!resetColors) return;
-    if (highlightedGroup) {
-      restoreGroupColors(highlightedGroup);
-      setHighlightedGroup(null);
-    }
-    setPopupData && setPopupData(null);
-    setResetColors && setResetColors(false);
-  }, [resetColors, highlightedGroup, restoreGroupColors, setPopupData, setResetColors]);
+    const restoreAllFor = (key) => {
+      let idxRef = null, order = [];
+      if (key === 'E1') { idxRef = e1IndexRef; order = ['E1','E1-4','E1-3','E1-2','E1-1','E1-G']; }
+      else if (key === 'E2') { idxRef = e2IndexRef; order = ['E2','E2-4','E2-3','E2-2','E2-1','E2-G']; }
+      else if (key === 'Library') { idxRef = libIndexRef; order = ['Library5','Library4','Library3','Library2','AV']; }
+      else return;
 
-  // === Restore camera to the EXACT original pose when the popup closes ===
+      order.forEach((k) => {
+        const setNodes = idxRef.current.get(k);
+        if (setNodes && setNodes.size) forceVisibleSetUpAndDown(setNodes);
+      });
+
+      let info = null;
+      if (key === 'Library') {
+        info = BUILDING_DATA['Library5'];
+      } else {
+        info = BUILDING_DATA[key];
+      }
+
+      setPopupData?.({
+        name: `${key} Building`,
+        type: key === 'Library' ? 'Library' : (info?.type || 'Academic'),
+        world: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        electricity: (info && info.electricity) || { value: 0, unit: 'kWh', percent: 0, status: 'N/A' },
+        water: (info && info.water) || { value: 0, unit: 'm³', percent: 0, status: 'N/A' },
+      });
+    };
+
+    const onReturnE1Origin = () => {
+      if (!isIsolated() || currentIsolationKeyRef.current !== 'E1') return;
+      restoreAllFor('E1');
+    };
+    const onReturnE2Origin = () => {
+      if (!isIsolated() || currentIsolationKeyRef.current !== 'E2') return;
+      restoreAllFor('E2');
+    };
+    const onReturnLibraryOrigin = () => {
+      if (!isIsolated() || currentIsolationKeyRef.current !== 'Library') return;
+      restoreAllFor('Library');
+    };
+
+    window.addEventListener('mfu:returnE1Origin', onReturnE1Origin);
+    window.addEventListener('mfu:returnE2Origin', onReturnE2Origin);
+    window.addEventListener('mfu:returnLibraryOrigin', onReturnLibraryOrigin);
+    return () => {
+      window.removeEventListener('mfu:returnE1Origin', onReturnE1Origin);
+      window.removeEventListener('mfu:returnE2Origin', onReturnE2Origin);
+      window.removeEventListener('mfu:returnLibraryOrigin', onReturnLibraryOrigin);
+    };
+  }, [camera, setPopupData]);
+
+  /* ============ Restore triggers ============ */
   const wasPopupOpenRef = useRef(false);
   useEffect(() => {
     const was = wasPopupOpenRef.current;
-    // Transition from open -> closed
     if (was && !popupOpen) {
+      restoreIsolation();
       restoreCameraSmooth();
     }
     wasPopupOpenRef.current = popupOpen;
-  }, [popupOpen, restoreCameraSmooth]);
+  }, [popupOpen, restoreIsolation]);
 
-  // (Optional legacy) external tick trigger for restore
   const lastRestoreTick = useRef(restoreCameraTick);
   useEffect(() => {
     if (restoreCameraTick !== lastRestoreTick.current) {
       lastRestoreTick.current = restoreCameraTick;
+      restoreIsolation();
       restoreCameraSmooth();
     }
-  }, [restoreCameraTick, restoreCameraSmooth]);
+  }, [restoreCameraTick]);
+
+  /* ===== Smooth camera restore ===== */
+  const restoreCameraSmooth = useCallback(() => {
+    const snap = prevCamRef.current;
+    if (!snap) return;
+
+    if (orbitTweenRef.current) orbitTweenRef.current.kill();
+    if (moveTweenRef.current) moveTweenRef.current.kill();
+    if (fovTweenRef.current)  fovTweenRef.current.kill();
+
+    const duration = 1.2;
+    const ease = 'power3.inOut';
+    const now = performance.now();
+    focusUntilRef.current = now + duration * 1000 + 80;
+
+    gsap.to(camera.position, { duration, x: snap.pos.x, y: snap.pos.y, z: snap.pos.z, ease });
+    gsap.to(camera, {
+      duration, fov: snap.fov, ease,
+      onUpdate: () => camera.updateProjectionMatrix(),
+      onComplete: () => { prevCamRef.current = null; }
+    });
+
+    gsap.to(yawTargetRef, { duration, current: snap.rot.y, ease });
+    gsap.to(pitchTargetRef, {
+      duration, current: snap.rot.x, ease,
+      onComplete: () => {
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = snap.rot.y;
+        camera.rotation.x = snap.rot.x;
+        camera.rotation.z = 0;
+        yawTargetRef.current = snap.rot.y;
+        pitchTargetRef.current = snap.rot.x;
+      }
+    });
+  }, [camera]);
 
   return (
     <>
@@ -924,9 +1158,12 @@ const Map3D = ({
       <directionalLight position={[-10, 20, -10]} intensity={1.5} />
       <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xffffff)} intensity={0.8} />
       <Model
-        setOriginalColors={(map) => { savedColors.current = map; setOriginalColors && setOriginalColors(map); }}
+        setOriginalColors={(map) => { setOriginalColors && setOriginalColors(map); }}
         setInitialFocusBox={setInitialFocusBox}
         setGroundMeshes={(arr) => { groundMeshesRef.current = Array.isArray(arr) ? arr : []; }}
+        setE1Index={(idx) => { e1IndexRef.current = idx instanceof Map ? idx : new Map(); }}
+        setE2Index={(idx) => { e2IndexRef.current = idx instanceof Map ? idx : new Map(); }}
+        setLibIndex={(idx) => { libIndexRef.current = idx instanceof Map ? idx : new Map(); }}
       />
     </>
   );

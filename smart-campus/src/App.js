@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
@@ -71,6 +72,7 @@ const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
+/* ===== Icons (added moon, rain) ===== */
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -86,11 +88,15 @@ const Icon = ({ name, size = 14 }) => {
     case 'walk': return (<svg {...common}><circle cx="12" cy="5" r="2"/><path d="M12 7 9.6 11.5 7.5 13M12 7l2.2 4 3 2M8.5 14.5 10 19M14 13l-1 5"/><path d="M5.5 20H9M12.5 20H16"/></svg>);
     case 'drone': return (<svg {...common}><circle cx="12" cy="12" r="2"/><path d="M12 10V6M12 18v-4M10 12H6M18 12h-4"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/></svg>);
     case 'camera': return (<svg {...common}><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 10l5-3v8l-5-3"/><circle cx="9.5" cy="12" r="2.5"/></svg>);
+    case 'undo': return (<svg {...common}><path d="M9 13H5l4-4-4-4"/><path d="M20 20a8 8 0 0 0-8-8H5"/></svg>);
+    case 'sun': return (<svg {...common}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l-1.5-1.5M20.5 20.5 19 19M19 5l1.5-1.5M4.5 20.5 6 19"/></svg>);
+    case 'moon': return (<svg {...common}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>);
+    case 'cloud-rain': return (<svg {...common}><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11-1 4 4 0 0 0 1 9h10z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg>);
     default: return null;
   }
 };
 
-const Navbar = ({ children }) => {
+const Navbar = ({ children, isWeatherOpen, toggleWeather }) => {
   const location = useLocation();
   const onCCTV = location.pathname === '/cctv';
   return (
@@ -105,13 +111,35 @@ const Navbar = ({ children }) => {
         <Icon name="camera" size={16} />
         <span className="cctv-text">{onCCTV ? 'Back to Map' : 'CCTV'}</span>
       </Link>
-      <img src="/assets/mfu_logo.png" alt="MFU Logo" className="navbar-logo" />
-      {children}
+
+      <img
+        src="/assets/mfu_logo.png"
+        alt="MFU Logo"
+        className="navbar-logo"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      />
+
+      {/* Mode switch + Weather button */}
+      <div className="navbar-center-cluster">
+        <div className="mode-switch" role="tablist" aria-label="View mode">
+          {children}
+        </div>
+
+        <button
+          className={`weather-btn ${isWeatherOpen ? 'active' : ''}`}
+          onClick={toggleWeather}
+          title={isWeatherOpen ? 'Hide Weather Controls' : 'Show Weather Controls'}
+          aria-pressed={isWeatherOpen}
+        >
+          <Icon name="sun" size={16} />
+          <span>Weather</span>
+        </button>
+      </div>
     </nav>
   );
 };
 
-/* ===== In-Canvas helper: track & restore camera pose (anti-shake) ===== */
+/* ===== In-Canvas helper ===== */
 const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }) => {
   const { camera } = useThree();
   const lastRestoreTick = useRef(0);
@@ -133,10 +161,8 @@ const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }
     const dur = 1.2;
     const ease = 'power3.inOut';
 
-    // Tell Map3D to freeze its per-frame logic while this tween runs
     onRestoreStart?.(dur * 1000);
 
-    // Snap rotation first (no tween)
     camera.rotation.order = 'YXZ';
     camera.rotation.x = rotation.x ?? camera.rotation.x;
     camera.rotation.y = rotation.y ?? camera.rotation.y;
@@ -153,26 +179,162 @@ const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }
   return null;
 };
 
+/* ===== Helpers for Thailand time & sky ===== */
+function getThailandNow() {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false, year: 'numeric', month: 'short', day: '2-digit', weekday: 'short'
+  });
+  const parts = fmt.formatToParts(new Date());
+  const obj = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  const hour = parseInt(obj.hour, 10);
+  const minute = parseInt(obj.minute, 10);
+  const second = parseInt(obj.second, 10);
+  const dateStr = `${obj.day}/${obj.month}/${obj.year} ${obj.weekday}`;
+  return { hour, minute, second, dateStr };
+}
+
+function calcSkyByHour(hour) {
+  if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';        // dawn
+  if (hour >= 9 && hour < 17) return '#87CEEB';                                          // day
+  if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';      // dusk
+  return '#0B1526';                                                                      // night
+}
+
+/* ===== Weather Controls Panel (time + rain) ===== */
+const WeatherControlPanel = ({
+  thClock, envMode, setEnvMode, envHour, setEnvHour,
+  rainEnabled, setRainEnabled, rainIntensity, setRainIntensity,
+  onClose
+}) => {
+  return (
+    <div className="building-popup scientific weather-panel first" role="dialog" aria-label="Weather Controls">
+      <div className="popup-header">
+        <div className="head-left">
+          <div className="eyebrow">SMART CAMPUS · MFU</div>
+          <div className="title">Weather Controls</div>
+          <div className="subtitle">Thailand time: {thClock.dateStr}</div>
+        </div>
+
+        {/* Header toolbar simplified: only Close */}
+        <div className="toolbar">
+          <button className="tool-btn danger" title="Close weather panel" onClick={onClose}>
+            <Icon name="x" />
+          </button>
+        </div>
+      </div>
+
+      <div className="wc-sections">
+        {/* Realtime with mode switch */}
+        <div className="wc-card">
+          <div className="wc-card-title">Realtime (Thailand)</div>
+
+          <div className="wc-time-row">
+            <div className="wc-live-dot" aria-hidden="true" />
+            <div className="wc-live-time">
+              {String(thClock.hour).padStart(2,'0')}:{String(thClock.minute).padStart(2,'0')}:{String(thClock.second).padStart(2,'0')}
+              <span className="wc-live-label"> Asia/Bangkok</span>
+            </div>
+          </div>
+
+          <div className="wc-mode-toggle">
+            <span className={`mode-label ${envMode === 'realtime' ? 'active' : ''}`}>Realtime</span>
+            <label className="switch" title="Switch between realtime and manual time">
+              <input
+                type="checkbox"
+                checked={envMode === 'manual'}
+                onChange={(e) => setEnvMode(e.target.checked ? 'manual' : 'realtime')}
+              />
+              <span className="slider" />
+            </label>
+            <span className={`mode-label ${envMode === 'manual' ? 'active' : ''}`}>Manual</span>
+          </div>
+
+          <p className="wc-hint">Use Manual to scrub the sun from day to night.</p>
+        </div>
+
+        {/* Manual time */}
+        <div className={`wc-card ${envMode === 'manual' ? '' : 'wc-disabled'}`}>
+          <div className="wc-card-title">Manual Time</div>
+          <div className="wc-manual-row">
+            <Icon name={envHour >= 19 || envHour < 6 ? 'moon' : 'sun'} />
+            <input
+              className="wc-hour-slider"
+              type="range"
+              min="0" max="23" step="1"
+              value={envHour}
+              onChange={(e) => setEnvHour(parseInt(e.target.value, 10))}
+              disabled={envMode !== 'manual'}
+            />
+            <div className="wc-hour-label">{String(envHour).padStart(2,'0')}:00</div>
+          </div>
+          <div className="wc-hour-markers">
+            <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+          </div>
+        </div>
+
+        {/* Rain controls */}
+        <div className={`wc-card ${rainEnabled ? '' : 'wc-muted'}`}>
+          <div className="wc-card-title">Rain</div>
+          <div className="wc-rain-row">
+            <label className="switch" title="Toggle rain">
+              <input
+                type="checkbox"
+                checked={rainEnabled}
+                onChange={(e)=>setRainEnabled(e.target.checked)}
+              />
+              <span className="slider" />
+            </label>
+            <div className={`wc-rain-badge ${rainEnabled ? 'on' : 'off'}`}>{rainEnabled ? 'On' : 'Off'}</div>
+          </div>
+
+          <div className="wc-rain-intensity">
+            <label>Intensity</label>
+            <input
+              type="range" min="0" max="1" step="0.05"
+              value={rainIntensity}
+              onChange={(e)=>setRainIntensity(parseFloat(e.target.value))}
+              disabled={!rainEnabled}
+            />
+            <div className="wc-rain-value">{Math.round(rainIntensity*100)}%</div>
+          </div>
+
+          <p className="wc-hint">Map3D listens to <code>rainEnabled</code> & <code>rainIntensity</code> to emit particles and wet surfaces.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
-  const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
-  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
 
+  /* ===== ENV / WEATHER CONTROL STATE ===== */
+  const [isWeatherOpen, setIsWeatherOpen] = useState(false);
+  const [envMode, setEnvMode] = useState('realtime'); // 'realtime' | 'manual'
+  const [envHour, setEnvHour] = useState(12);         // 0..23 (manual)
+  const [rainEnabled, setRainEnabled] = useState(false);
+  const [rainIntensity, setRainIntensity] = useState(0.5);
+
+  const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
+
+  const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
   const [originalColors, setOriginalColors] = useState(new Map());
-
   const [controllerCommand, setControllerCommand] = useState(null);
-
   const [navMode, setNavMode] = useState('drone');
   const [stepNudge, setStepNudge] = useState(null);
   const [stepNudgeTick, setStepNudgeTick] = useState(0);
   const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
-
   useEffect(() => { setControllerCommand(null); }, [navMode]);
 
   const [pinned, setPinned] = useState(false);
-  const setPopupFromMap = useCallback((d) => { if (!pinned) setPopupData(d); }, [pinned]);
+  const setPopupFromMap = useCallback((d) => {
+    if (!pinned) setPopupData(d);
+    setIsWeatherOpen(false); // close weather when a building popup opens
+  }, [pinned]);
 
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
@@ -196,11 +358,65 @@ const MapApp = () => {
   const [walkYTick, setWalkYTick] = useState(0);
   const [walkYDir, setWalkYDir] = useState(null);
 
-  const triggerWalkElevator = (dir) => {
-    if (walkStickToFloor) return;
-    setWalkYDir(dir);
-    setWalkYTick((t) => t + 1);
+  const toggleWeather = () => {
+    setIsWeatherOpen((s) => {
+      const next = !s;
+      if (next) { setPopupData(null); setPinned(false); }
+      return next;
+    });
   };
+
+  /* ===== Thailand clock (for display) ===== */
+  const updateThailandTime = () => {
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Bangkok',
+      day: '2-digit', month: 'short', year: 'numeric', weekday: 'short',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !hour24
+    });
+    const now = new Date();
+    const parts = fmt.formatToParts(now);
+    const get = (t) => parts.find((p)=>p.type===t)?.value;
+    const day = get('day'), month = get('month'), year = get('year'), weekday = get('weekday');
+    const dateStr = `${day}/${month}/${year} ${weekday}`;
+    const hourStr = get('hour') || '00';
+    const minStr = get('minute') || '00';
+    const secStr = get('second') || '00';
+    const period = hour24 ? '' : (get('dayPeriod') || '').toUpperCase();
+
+    setThailandTime({
+      date: dateStr,
+      hour: hourStr.padStart(2,'0'),
+      minute: minStr.padStart(2,'0'),
+      second: secStr.padStart(2,'0'),
+      period
+    });
+  };
+
+  /* ===== Compute the hour to drive sky/lighting ===== */
+  const [visualHour, setVisualHour] = useState(12);
+  useEffect(() => {
+    const tick = () => {
+      const th = getThailandNow();
+      const vh = envMode === 'realtime' ? th.hour : envHour;
+      setVisualHour(vh);
+      setBackgroundColor(calcSkyByHour(vh));
+    };
+    tick();
+    const bgId = setInterval(tick, 1000);
+    const tId = setInterval(updateThailandTime, 1000);
+    return () => { clearInterval(bgId); clearInterval(tId); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [envMode, envHour, hour24]);
+
+  /* Fire bus events so Map3D can hook without prop changes (optional) */
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('mfu:env', { detail: { mode: envMode, hour: visualHour } }));
+  }, [envMode, visualHour]);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('mfu:rain', { detail: { enabled: rainEnabled, intensity: rainIntensity } }));
+  }, [rainEnabled, rainIntensity]);
+
+  useEffect(() => { if (popupData?.name) setSelectedBuilding(popupData.name); }, [popupData]);
 
   const openVehiclePopup = (type) => { setVehicleType(type); setIsVehiclePopupVisible(true); };
   const closeVehiclePopup = () => setIsVehiclePopupVisible(false);
@@ -350,76 +566,16 @@ const MapApp = () => {
   useEffect(() => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
-  }, []); // intentionally run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
 
-  const calculateSkyColor = () => {
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';
-    else if (hour >= 9 && hour < 17) return '#87CEEB';
-    else if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';
-    else return '#2C3E50';
-  };
+  /* ===== Top navbar clock content reuses thailandTime ===== */
+  useEffect(() => { updateThailandTime(); }, []); // initialize
 
-  const padZero = (num) => (num < 10 ? '0' + num : num);
-
-  const updateThailandTime = () => {
-    const optionsDate = {
-      timeZone: 'Asia/Bangkok',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      weekday: 'short',
-    };
-    const formatterDate = new Intl.DateTimeFormat('en-GB', optionsDate);
-    const now = new Date();
-    const parts = formatterDate.formatToParts(now);
-    const day = parts.find((p) => p.type === 'day')?.value;
-    const month = parts.find((p) => p.type === 'month')?.value;
-    const year = parts.find((p) => p.type === 'year')?.value;
-    const weekday = parts.find((p) => p.type === 'weekday')?.value;
-    const dateStr = `${day}/${month}/${year} ${weekday}`;
-
-    let h = now.getHours();
-    let m = now.getMinutes();
-    let s = now.getSeconds();
-    const period = h >= 12 ? 'PM' : 'AM';
-    let hour12 = h % 12;
-    if (hour12 === 0) hour12 = 12;
-    const displayHour = hour24 ? padZero(h) : hour12.toString();
-
-    setThailandTime({
-      date: dateStr,
-      hour: displayHour,
-      minute: padZero(m),
-      second: padZero(s),
-      period: hour24 ? '' : period,
-    });
-  };
-
-  useEffect(() => {
-    setBackgroundColor(calculateSkyColor());
-    updateThailandTime();
-    const bgId = setInterval(() => setBackgroundColor(calculateSkyColor()), 60000);
-    const tId = setInterval(updateThailandTime, 1000);
-    return () => { clearInterval(bgId); clearInterval(tId); };
-  }, [hour24]);
-
-  useEffect(() => { if (popupData?.name) setSelectedBuilding(popupData.name); }, [popupData]);
-
-  const dailyWaterTotal = buildings.reduce(
-    (acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0),
-    0
-  );
-  const monthlyWaterTotal = dailyWaterTotal * 30;
-  const selectedBuildingUsage =
-    (selectedBuilding
-      ? (waterUsageData.find((d) => d.building === selectedBuilding)?.usage || 0)
-      : 0);
-
+  /* === Building popup derived === */
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
-
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
     const randTrend = () => {
@@ -500,65 +656,70 @@ const MapApp = () => {
     }
   }, [popupData]);
 
+  /* === Return buttons logic === */
+  const inE1Step2 = popupData && /^E1/i.test(popupData.name);
+  const inE2Step2 = popupData && /^E2/i.test(popupData.name);
+  const inLibraryStep2 = popupData && (/^Library/i.test(popupData.name) || /^AV$/i.test(popupData.name));
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
-      <Navbar>
-        <div className="mode-switch" role="tablist" aria-label="View mode">
-          <button
-            className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
-            onClick={() => setNavMode('walk')}
-            role="tab"
-            aria-selected={navMode === 'walk'}
-            aria-controls="mode-walk"
-          >
-            <Icon name="walk" size={14} />
-            <span>Walk</span>
-          </button>
+      <Navbar isWeatherOpen={isWeatherOpen} toggleWeather={toggleWeather}>
+        {/* Walk / Drone segmented */}
+        <button
+          className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
+          onClick={() => setNavMode('walk')}
+          role="tab"
+          aria-selected={navMode === 'walk'}
+          aria-controls="mode-walk"
+        >
+          <Icon name="walk" size={14} />
+          <span>Walk</span>
+        </button>
 
-          <button
-            className={`mode-seg ${navMode === 'drone' ? 'active' : ''}`}
-            onClick={() => setNavMode('drone')}
-            role="tab"
-            aria-selected={navMode === 'drone'}
-            aria-controls="mode-drone"
-          >
-            <Icon name="drone" size={14} />
-            <span>Drone</span>
-          </button>
+        <button
+          className={`mode-seg ${navMode === 'drone' ? 'active' : ''}`}
+          onClick={() => setNavMode('drone')}
+          role="tab"
+          aria-selected={navMode === 'drone'}
+          aria-controls="mode-drone"
+        >
+          <Icon name="drone" size={14} />
+          <span>Drone</span>
+        </button>
 
-          <div
-            className="mode-thumb"
-            style={{ transform: navMode === 'walk' ? 'translateX(0%)' : 'translateX(100%)' }}
-            aria-hidden="true"
-          />
-        </div>
-
-        <div className="thailand-time">
-          <div className="date">{thailandTime.date}</div>
-          <div className="time-row">
-            <div
-              className="time"
-              onClick={() => setHour24((prev) => !prev)}
-              title="Toggle 24h/12h"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && setHour24((prev)=>!prev)}
-            >
-              {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
-              {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
-            </div>
-
-            <button
-              className="help-btn"
-              title="Show instructions"
-              aria-label="Show instructions"
-              onClick={() => setShowInstructions(true)}
-            >
-              ?
-            </button>
-          </div>
-        </div>
+        <div
+          className="mode-thumb"
+          style={{ transform: navMode === 'walk' ? 'translateX(0%)' : 'translateX(100%)' }}
+          aria-hidden="true"
+        />
       </Navbar>
+
+      {/* Right: live clock + help */}
+      <div className="thailand-time" role="region" aria-label="Thailand time">
+        <div className="date">{thailandTime.date}</div>
+        <div className="time-row">
+          <div
+            className="time"
+            onClick={() => setHour24((prev) => !prev)}
+            title="Toggle 24h/12h"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && setHour24((prev)=>!prev)}
+          >
+            {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
+            {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
+          </div>
+
+          <button
+            className="help-btn"
+            title="Show instructions"
+            aria-label="Show instructions"
+            onClick={() => setShowInstructions(true)}
+          >
+            ?
+          </button>
+        </div>
+      </div>
 
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
@@ -594,11 +755,16 @@ const MapApp = () => {
                 walkStickToFloor={walkStickToFloor}
                 walkYTick={walkYTick}
                 walkYDir={walkYDir}
-                /* anti-shake coordination + ground-lock override while popup open */
                 restorePoseTick={restoreTick}
                 restorePose={restoreSnapshot}
                 restoreFreezeMs={restoreFreezeMs}
-                popupOpen={!!popupData}
+                popupOpen={!!popupData || isWeatherOpen}
+
+                /* NEW: Weather/Env props for Map3D */
+                envMode={envMode}            // 'realtime' | 'manual'
+                envHour={visualHour}         // 0..23 (already resolved to realtime/manual)
+                rainEnabled={rainEnabled}    // boolean
+                rainIntensity={rainIntensity} // 0..1
               />
             </PerformanceMonitor>
           </Canvas>
@@ -658,13 +824,13 @@ const MapApp = () => {
               <button
                 className="elev-btn"
                 disabled={walkStickToFloor}
-                onClick={() => triggerWalkElevator('up')}
+                onClick={() => { setWalkYDir('up'); setWalkYTick(t=>t+1); }}
                 title="Step up (walking)"
               >⬆</button>
               <button
                 className="elev-btn"
                 disabled={walkStickToFloor}
-                onClick={() => triggerWalkElevator('down')}
+                onClick={() => { setWalkYDir('down'); setWalkYTick(t=>t+1); }}
                 title="Step down (walking)"
               >⬇</button>
             </div>
@@ -695,7 +861,24 @@ const MapApp = () => {
         <Controller setControllerCommand={setControllerCommand} />
       )}
 
-      {popupData && popupDerived && (
+      {/* Weather Controls replaces Building popup position */}
+      {isWeatherOpen && (
+        <WeatherControlPanel
+          thClock={getThailandNow()}
+          envMode={envMode}
+          setEnvMode={setEnvMode}
+          envHour={envHour}
+          setEnvHour={setEnvHour}
+          rainEnabled={rainEnabled}
+          setRainEnabled={setRainEnabled}
+          rainIntensity={rainIntensity}
+          setRainIntensity={setRainIntensity}
+          onClose={() => setIsWeatherOpen(false)}
+        />
+      )}
+
+      {/* Building popup — hidden when Weather panel is open */}
+      {!isWeatherOpen && popupData && popupDerived && (
         <div
           className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
           role="dialog"
@@ -709,6 +892,33 @@ const MapApp = () => {
             </div>
 
             <div className="toolbar">
+              {inE1Step2 && (
+                <button
+                  className="tool-btn"
+                  title="Return to Origin (E1 + all floors)"
+                  onClick={() => window.dispatchEvent(new Event('mfu:returnE1Origin'))}
+                >
+                  <Icon name="undo" />
+                </button>
+              )}
+              {inE2Step2 && (
+                <button
+                  className="tool-btn"
+                  title="Return to Origin (E2 + all floors)"
+                  onClick={() => window.dispatchEvent(new Event('mfu:returnE2Origin'))}
+                >
+                  <Icon name="undo" />
+                </button>
+              )}
+              {inLibraryStep2 && (
+                <button
+                  className="tool-btn"
+                  title="Return to Origin (Library + all floors)"
+                  onClick={() => window.dispatchEvent(new Event('mfu:returnLibraryOrigin'))}
+                >
+                  <Icon name="undo" />
+                </button>
+              )}
               <button
                 className={`tool-btn ${pinned ? 'active' : ''}`}
                 title={pinned ? 'Unpin' : 'Pin'}
@@ -749,12 +959,14 @@ const MapApp = () => {
             </div>
           </div>
 
-          <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
-            <span className="loc-label">World</span>
-            <span className="coord">X {popupData.world.x.toFixed(2)}</span>
-            <span className="coord">Y {popupData.world.y.toFixed(2)}</span>
-            <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
-          </div>
+          {popupData.world && (
+            <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
+              <span className="loc-label">World</span>
+              <span className="coord">X {popupData.world.x.toFixed(2)}</span>
+              <span className="coord">Y {popupData.world.y.toFixed(2)}</span>
+              <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
+            </div>
+          )}
 
           <div className="metrics-grid">
             <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
@@ -804,6 +1016,7 @@ const MapApp = () => {
         </div>
       )}
 
+      {/* Weekly modal */}
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -830,14 +1043,15 @@ const MapApp = () => {
         </div>
       </Modal>
 
+      {/* Overall water modal */}
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
         </div>
 
         <div className="modal-kpis">
-          <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{dailyWaterTotal.toFixed(2)} liters/day</span></div>
-          <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{monthlyWaterTotal.toFixed(2)} liters/month</span></div>
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{(buildings.reduce((acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0), 0)).toFixed(2)} liters/day</span></div>
+          <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{(buildings.reduce((acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0), 0) * 30).toFixed(2)} liters/month</span></div>
           <div className="kpi"><span className="kpi-label">Selected Building</span><span className="kpi-value">{selectedBuilding || '—'}</span></div>
         </div>
 
@@ -845,11 +1059,10 @@ const MapApp = () => {
           <div className="card gauge-card">
             <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
             <div className="gauge-holder">
-              {/* Use StaticGauge so it mounts once and stays steady while modal is open */}
               <StaticGauge
                 id="building-speedometer"
                 nrOfLevels={5}
-                percent={selectedBuilding ? (selectedBuildingUsage / 1500) : 0.5}
+                percent={selectedBuilding ? ((waterUsageData.find((d)=>d.building===selectedBuilding)?.usage || 0) / 1500) : 0.5}
                 arcWidth={0.3}
                 textColor="#ffffff"
                 needleColor="#ff9800"
@@ -859,7 +1072,7 @@ const MapApp = () => {
                 animate={false}
                 hideText={true}
               />
-              {selectedBuilding && (<p className="big-stat">{selectedBuildingUsage.toFixed(2)} liters/day</p>)}
+              {selectedBuilding && (<p className="big-stat">{(waterUsageData.find((d)=>d.building===selectedBuilding)?.usage || 0).toFixed(2)} liters/day</p>)}
             </div>
           </div>
 
@@ -879,7 +1092,7 @@ const MapApp = () => {
             {selectedBuilding && (
               <div className="stat-box">
                 <div className="stat-label">Current Usage</div>
-                <div className="stat-value">{selectedBuildingUsage.toFixed(2)} liters/day</div>
+                <div className="stat-value">{(waterUsageData.find((d)=>d.building===selectedBuilding)?.usage || 0).toFixed(2)} liters/day</div>
               </div>
             )}
             <p className="muted-note">Tip: choosing a building updates the gauge on the left.</p>
@@ -887,6 +1100,7 @@ const MapApp = () => {
         </div>
       </Modal>
 
+      {/* Vehicle modal */}
       <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
         <div className="modal-header">
           <h3 className="modal-title">{vehicleType} Schedule</h3>
