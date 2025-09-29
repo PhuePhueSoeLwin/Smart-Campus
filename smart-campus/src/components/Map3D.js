@@ -4,6 +4,7 @@ import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import './Map3D.css';
 
 /** ---------- Sample data ---------- */
@@ -129,7 +130,7 @@ function Model({ setOriginalColors, setInitialFocusBox, setGroundMeshes, setE1In
   scene.traverse((child) => {
     if (child.isMesh) {
       if (!originalColors.current.has(child)) {
-        originalColors.current.set(child, child.material.color.clone());
+        originalColors.current.set(child, child.material.color?.clone?.() ?? new THREE.Color(1,1,1));
       }
       child.material = child.material.clone();
       child.userData.name = child.name;
@@ -254,6 +255,9 @@ const Map3D = ({
   walkYDir = null,
   popupOpen = false,
   restoreCameraTick = 0,
+
+  // Env from the new CloudSky integration
+  envHour = 12,             // 0..23
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
@@ -304,7 +308,11 @@ const Map3D = ({
   const openingDroneYRef = useRef(null);
   const bootDoneRef = useRef(false);
 
-  useEffect(() => { gl.toneMappingExposure = 1.25; }, [gl]);
+  // Tone mapping
+  useEffect(() => { gl.toneMappingExposure = 1.15; }, [gl]);
+
+  // SAFETY: kill any fog each frame to avoid refreshFogUniforms crash
+  useFrame(() => { if (scene.fog) scene.fog = null; });
 
   // Scene floor fallback
   useEffect(() => {
@@ -792,25 +800,20 @@ const Map3D = ({
     if (buildingKey === 'Library') {
       // Special cascade rules, with NO Library parent node
       if (clickedLabel === 'Library5') {
-        // hide AV only; show 5,4,3,2
         setVisibleDeepSet(get('Library5'), true);
         setVisibleDeepSet(get('Library4'), true);
         setVisibleDeepSet(get('Library3'), true);
         setVisibleDeepSet(get('Library2'), true);
       } else if (clickedLabel === 'Library4') {
-        // hide AV, 5; show 4,3,2
         setVisibleDeepSet(get('Library4'), true);
         setVisibleDeepSet(get('Library3'), true);
         setVisibleDeepSet(get('Library2'), true);
       } else if (clickedLabel === 'Library3') {
-        // hide AV, 5, 4; show 3,2
         setVisibleDeepSet(get('Library3'), true);
         setVisibleDeepSet(get('Library2'), true);
       } else if (clickedLabel === 'Library2') {
-        // show ONLY Library2 (hide AV,5,4,3)
         setVisibleDeepSet(get('Library2'), true);
       } else if (clickedLabel === 'AV') {
-        // clicked AV: show only AV
         setVisibleDeepSet(get('AV'), true);
       }
     } else {
@@ -1151,12 +1154,33 @@ const Map3D = ({
     });
   }, [camera]);
 
+  /* ============ Hour-based lights ============ */
+  const ambRef = useRef(); const dir1Ref = useRef(); const dir2Ref = useRef(); const hemiRef = useRef();
+  useEffect(() => {
+    const cols = skyColorsByHour(envHour);
+    if (hemiRef.current) {
+      hemiRef.current.color = cols.top.clone();
+      hemiRef.current.groundColor = cols.bottom.clone();
+      hemiRef.current.intensity = envHour >= 19 || envHour < 6 ? 0.45 : 0.85;
+    }
+    if (ambRef.current) ambRef.current.intensity = envHour >= 19 || envHour < 6 ? 0.7 : 1.0;
+    if (dir1Ref.current) { dir1Ref.current.intensity = envHour >= 19 || envHour < 6 ? 0.5 : 1.4; dir1Ref.current.color = cols.sunTint.clone(); }
+    if (dir2Ref.current) { dir2Ref.current.intensity = envHour >= 19 || envHour < 6 ? 0.4 : 1.0; dir2Ref.current.color = cols.haze.clone(); }
+  }, [envHour]);
+
   return (
     <>
-      <ambientLight intensity={1.0} />
-      <directionalLight position={[10, 20, 10]} intensity={2.0} />
-      <directionalLight position={[-10, 20, -10]} intensity={1.5} />
-      <hemisphereLight skyColor={new THREE.Color(0x87CEEB)} groundColor={new THREE.Color(0xffffff)} intensity={0.8} />
+      {/* Realistic sky & slowly morphing cloud field (no scene fog) */}
+      <SkyDome hour={envHour} />
+      <RealCloudField hour={envHour} />
+
+      {/* Lights */}
+      <ambientLight ref={ambRef} intensity={1.0} />
+      <directionalLight ref={dir1Ref} position={[10, 300, 150]} intensity={1.4} />
+      <directionalLight ref={dir2Ref} position={[-120, 240, -180]} intensity={1.0} />
+      <hemisphereLight ref={hemiRef} intensity={0.8} />
+
+      {/* Campus model */}
       <Model
         setOriginalColors={(map) => { setOriginalColors && setOriginalColors(map); }}
         setInitialFocusBox={setInitialFocusBox}

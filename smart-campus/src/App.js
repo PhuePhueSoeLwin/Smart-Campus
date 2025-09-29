@@ -196,10 +196,10 @@ function getThailandNow() {
 }
 
 function calcSkyByHour(hour) {
-  if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';        // dawn
-  if (hour >= 9 && hour < 17) return '#87CEEB';                                          // day
-  if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';      // dusk
-  return '#0B1526';                                                                      // night
+  if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';
+  if (hour >= 9 && hour < 17) return '#87CEEB';
+  if (hour >= 17 && hour < 19) return 'linear-gradient(180deg, #FF4500, #FF6347)';
+  return '#0B1526';
 }
 
 /* ===== Weather Controls Panel (time + rain) ===== */
@@ -217,7 +217,6 @@ const WeatherControlPanel = ({
           <div className="subtitle">Thailand time: {thClock.dateStr}</div>
         </div>
 
-        {/* Header toolbar simplified: only Close */}
         <div className="toolbar">
           <button className="tool-btn danger" title="Close weather panel" onClick={onClose}>
             <Icon name="x" />
@@ -226,7 +225,6 @@ const WeatherControlPanel = ({
       </div>
 
       <div className="wc-sections">
-        {/* Realtime with mode switch */}
         <div className="wc-card">
           <div className="wc-card-title">Realtime (Thailand)</div>
 
@@ -254,7 +252,6 @@ const WeatherControlPanel = ({
           <p className="wc-hint">Use Manual to scrub the sun from day to night.</p>
         </div>
 
-        {/* Manual time */}
         <div className={`wc-card ${envMode === 'manual' ? '' : 'wc-disabled'}`}>
           <div className="wc-card-title">Manual Time</div>
           <div className="wc-manual-row">
@@ -274,7 +271,6 @@ const WeatherControlPanel = ({
           </div>
         </div>
 
-        {/* Rain controls */}
         <div className={`wc-card ${rainEnabled ? '' : 'wc-muted'}`}>
           <div className="wc-card-title">Rain</div>
           <div className="wc-rain-row">
@@ -333,7 +329,7 @@ const MapApp = () => {
   const [pinned, setPinned] = useState(false);
   const setPopupFromMap = useCallback((d) => {
     if (!pinned) setPopupData(d);
-    setIsWeatherOpen(false); // close weather when a building popup opens
+    setIsWeatherOpen(false);
   }, [pinned]);
 
   const [showInstructions, setShowInstructions] = useState(() => {
@@ -408,7 +404,6 @@ const MapApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envMode, envHour, hour24]);
 
-  /* Fire bus events so Map3D can hook without prop changes (optional) */
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('mfu:env', { detail: { mode: envMode, hour: visualHour } }));
   }, [envMode, visualHour]);
@@ -571,10 +566,8 @@ const MapApp = () => {
 
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
 
-  /* ===== Top navbar clock content reuses thailandTime ===== */
   useEffect(() => { updateThailandTime(); }, []); // initialize
 
-  /* === Building popup derived === */
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
@@ -634,7 +627,6 @@ const MapApp = () => {
     window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
   };
 
-  /* === Camera restore plumbing === */
   const latestCamRef = useRef(null);
   const preFocusPoseRef = useRef(null);
   const [restoreTick, setRestoreTick] = useState(0);
@@ -656,7 +648,6 @@ const MapApp = () => {
     }
   }, [popupData]);
 
-  /* === Return buttons logic === */
   const inE1Step2 = popupData && /^E1/i.test(popupData.name);
   const inE2Step2 = popupData && /^E2/i.test(popupData.name);
   const inLibraryStep2 = popupData && (/^Library/i.test(popupData.name) || /^AV$/i.test(popupData.name));
@@ -664,7 +655,6 @@ const MapApp = () => {
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       <Navbar isWeatherOpen={isWeatherOpen} toggleWeather={toggleWeather}>
-        {/* Walk / Drone segmented */}
         <button
           className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
           onClick={() => setNavMode('walk')}
@@ -694,7 +684,6 @@ const MapApp = () => {
         />
       </Navbar>
 
-      {/* Right: live clock + help */}
       <div className="thailand-time" role="region" aria-label="Thailand time">
         <div className="date">{thailandTime.date}</div>
         <div className="time-row">
@@ -755,16 +744,14 @@ const MapApp = () => {
                 walkStickToFloor={walkStickToFloor}
                 walkYTick={walkYTick}
                 walkYDir={walkYDir}
-                restorePoseTick={restoreTick}
-                restorePose={restoreSnapshot}
-                restoreFreezeMs={restoreFreezeMs}
+                restoreCameraTick={restoreTick}
                 popupOpen={!!popupData || isWeatherOpen}
 
-                /* NEW: Weather/Env props for Map3D */
-                envMode={envMode}            // 'realtime' | 'manual'
-                envHour={visualHour}         // 0..23 (already resolved to realtime/manual)
-                rainEnabled={rainEnabled}    // boolean
-                rainIntensity={rainIntensity} // 0..1
+                /* Weather/Env props for Map3D */
+                envMode={envMode}
+                envHour={visualHour}
+                rainEnabled={rainEnabled}
+                rainIntensity={rainIntensity}
               />
             </PerformanceMonitor>
           </Canvas>
@@ -861,7 +848,6 @@ const MapApp = () => {
         <Controller setControllerCommand={setControllerCommand} />
       )}
 
-      {/* Weather Controls replaces Building popup position */}
       {isWeatherOpen && (
         <WeatherControlPanel
           thClock={getThailandNow()}
@@ -877,7 +863,6 @@ const MapApp = () => {
         />
       )}
 
-      {/* Building popup — hidden when Weather panel is open */}
       {!isWeatherOpen && popupData && popupDerived && (
         <div
           className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
@@ -1016,7 +1001,6 @@ const MapApp = () => {
         </div>
       )}
 
-      {/* Weekly modal */}
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -1043,7 +1027,6 @@ const MapApp = () => {
         </div>
       </Modal>
 
-      {/* Overall water modal */}
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
@@ -1100,55 +1083,56 @@ const MapApp = () => {
         </div>
       </Modal>
 
-      {/* Vehicle modal */}
-      <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
-        <div className="modal-header">
-          <h3 className="modal-title">{vehicleType} Schedule</h3>
-          <div className="button-group">
-            <button
-              className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
-              onClick={() => setVehicleType('Cars')}
-              title="Show Cars"
-            >🚗</button>
-            <button
-              className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
-              onClick={() => setVehicleType('Motorcycles')}
-              title="Show Motorcycles"
-            >🏍️</button>
-          </div>
-        </div>
-
-        <p className="modal-note">Here is the schedule for the whole day.</p>
-
-        <div className="schedule-scroll">
-          <table className="schedule-table">
-            <thead>
-              <tr><th>Time</th><th>{vehicleType}</th></tr>
-            </thead>
-            <tbody>
-              {schedule.map((entry) => (
-                <tr key={entry.time}>
-                  <td>{entry.time}</td>
-                  <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {peakTime && (
-          <div className="peak-row">
-            <div className="kpi mini">
-              <span className="kpi-label">Peak Time</span>
-              <span className="kpi-value">{peakTime.time}</span>
-            </div>
-            <div className="kpi mini">
-              <span className="kpi-label">Vehicles</span>
-              <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
+      {isVehiclePopupVisible && (
+        <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
+          <div className="modal-header">
+            <h3 className="modal-title">{vehicleType} Schedule</h3>
+            <div className="button-group">
+              <button
+                className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
+                onClick={() => setVehicleType('Cars')}
+                title="Show Cars"
+              >🚗</button>
+              <button
+                className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
+                onClick={() => setVehicleType('Motorcycles')}
+                title="Show Motorcycles"
+              >🏍️</button>
             </div>
           </div>
-        )}
-      </Modal>
+
+          <p className="modal-note">Here is the schedule for the whole day.</p>
+
+          <div className="schedule-scroll">
+            <table className="schedule-table">
+              <thead>
+                <tr><th>Time</th><th>{vehicleType}</th></tr>
+              </thead>
+              <tbody>
+                {schedule.map((entry) => (
+                  <tr key={entry.time}>
+                    <td>{entry.time}</td>
+                    <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {peakTime && (
+            <div className="peak-row">
+              <div className="kpi mini">
+                <span className="kpi-label">Peak Time</span>
+                <span className="kpi-value">{peakTime.time}</span>
+              </div>
+              <div className="kpi mini">
+                <span className="kpi-label">Vehicles</span>
+                <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
 
       {showInstructions && (
         <div className="instructions-popup">
