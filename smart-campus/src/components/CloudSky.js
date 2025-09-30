@@ -1,7 +1,7 @@
 // src/components/CloudSky.js
 import React, { useMemo, useEffect } from "react";
 import * as THREE from "three";
-import { useThree, useFrame } from "@react-three/fiber";
+import { useThree } from "@react-three/fiber";
 
 /* ---------------------------------------
    Sky colors by hour (dawn/day/dusk/night)
@@ -40,12 +40,11 @@ export function skyColorsByHour(hour) {
 }
 
 /* ---------------------------------------
-   Helpers to derive cloud tints from sky
+   Helpers
 --------------------------------------- */
 function lerpColor(a, b, t) {
   return a.clone().lerp(b, THREE.MathUtils.clamp(t, 0, 1));
 }
-
 function desaturate(color, amount = 0.5) {
   const hsl = { h: 0, s: 0, l: 0 };
   color.getHSL(hsl);
@@ -55,18 +54,14 @@ function desaturate(color, amount = 0.5) {
   return out;
 }
 
-/**
- * cloudTintsByHour:
- * - Day: mix white with sunTint and bottom to get warm tops/cool bottoms.
- * - Dawn/Dusk: stronger warm mix.
- * - Night: blend towards bottom/haze and desaturate for soft grey-blue.
- */
+/* ---------------------------------------
+   Cloud palette (derives tints from sky)
+--------------------------------------- */
 function cloudTintsByHour(hour) {
   const sky = skyColorsByHour(hour);
   const isNight = hour >= 19 || hour < 6;
   const isGolden = hour >= 6 && hour < 9;
   const isAfternoon = hour >= 9 && hour < 16;
-  const isDusk = hour >= 16 && hour < 19;
 
   if (isNight) {
     const base = desaturate(lerpColor(sky.bottom, sky.haze, 0.35), 0.35).multiplyScalar(1.06);
@@ -74,7 +69,6 @@ function cloudTintsByHour(hour) {
     const top = desaturate(lerpColor(sky.top, sky.haze, 0.15), 0.55).multiplyScalar(1.0);
     return { base, mid, top, fogNear: 650, fogFar: 4700 };
   }
-
   if (isGolden) {
     const warm = sky.sunTint.clone();
     const base = lerpColor(new THREE.Color("#ffffff"), warm, 0.35);
@@ -82,14 +76,12 @@ function cloudTintsByHour(hour) {
     const top = lerpColor(new THREE.Color("#f5f9ff"), sky.bottom, 0.2);
     return { base, mid, top, fogNear: 700, fogFar: 4800 };
   }
-
   if (isAfternoon) {
     const base = lerpColor(new THREE.Color("#ffffff"), sky.sunTint, 0.18);
     const mid = lerpColor(new THREE.Color("#f7fbff"), sky.bottom, 0.12);
     const top = lerpColor(new THREE.Color("#f5f9ff"), sky.top, 0.08);
     return { base, mid, top, fogNear: 750, fogFar: 5000 };
   }
-
   // Dusk
   const warm = sky.sunTint.clone();
   const base = lerpColor(new THREE.Color("#ffffff"), warm, 0.28);
@@ -164,292 +156,273 @@ export function SkyDome({ hour = 12 }) {
 }
 
 /* =========================================================================
-   Internal instanced layer (organic puffs with slow drift + morph)
-   ======================================================================== */
-function Layer({
-  hour,
-  puffCount,
-  altitude,
-  spread,
-  sizeRange,
-  wind,
-  evolveSpeed,
-  density,
-  tint,
-  seedJitter = 0,
+   Clustered cloud groups (cumulus-style) — FROZEN (no drift, no morph)
+   Keeps your original sprite look, but no per-frame billboarding.
+   Uses DoubleSide to avoid the center seam.
+========================================================================== */
+
+function makeCloudMaterial(uniforms) {
+  return new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,       // important: no seam when viewing from behind
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    fog: true,
+    uniforms,
+    blending: THREE.NormalBlending,
+    vertexShader: /* glsl */ `
+      #include <common>
+      #include <fog_pars_vertex>
+      attribute vec3 instanceOffset;
+      attribute float instanceScale;
+      attribute vec2 instanceSeed;
+      uniform vec3 uCamRight;   // FROZEN axes (captured once)
+      uniform vec3 uCamUp;
+      varying vec2 vUv;
+      varying vec2 vSeed;
+      void main() {
+        vUv = uv;
+        vSeed = instanceSeed;
+        vec3 worldPos = instanceOffset
+          + uCamRight * (position.x * instanceScale)
+          + uCamUp    * (position.y * instanceScale);
+        gl_Position = projectionMatrix * viewMatrix * vec4(worldPos, 1.0);
+        #include <fog_vertex>
+      }`,
+    fragmentShader: /* glsl */ `
+      #include <common>
+      #include <fog_pars_fragment>
+      precision highp float;
+      varying vec2 vUv;
+      varying vec2 vSeed;
+      uniform vec3  uTint;
+      uniform float uDensity;
+
+      // ORIGINAL static fbm (no time)
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+      float noise(vec2 p){
+        vec2 i = floor(p), f = fract(p);
+        float a = hash(i);
+        float b = hash(i + vec2(1.0,0.0));
+        float c = hash(i + vec2(0.0,1.0));
+        float d = hash(i + vec2(1.0,1.0));
+        vec2 u = f*f*(3.0-2.0*f);
+        return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+      }
+      float fbm(vec2 p){
+        float v = 0.0, a = 0.5;
+        mat2 m = mat2(1.6,-1.2, 1.2,1.6);
+        for (int i=0;i<6;i++){
+          v += a * noise(p);
+          p = m * p + 0.028;
+          a *= 0.55;
+        }
+        return v;
+      }
+
+      void main() {
+        vec2 cuv = vUv * 2.0 - 1.0;
+        float r = length(cuv);
+        float edge = smoothstep(1.0, 0.12, r);
+
+        vec2 p = cuv * 1.55 + vSeed;
+        float n = fbm(p);
+
+        float alpha = clamp((n * 1.20 - 0.30), 0.0, 1.0);
+        alpha *= edge;
+        alpha = pow(alpha, 1.25) * uDensity;
+
+        if (alpha < 0.016) discard;
+        gl_FragColor = vec4(uTint, alpha);
+        #include <fog_fragment>
+      }`,
+  });
+}
+
+function CloudGroup({
+  center,
+  radius = 240,
+  puffCount = 140,
+  altitude = 520,
+  thickness = 90,
+  anisotropy = 1.45,
+  density = 1.0,
+  tint = new THREE.Color("#ffffff"),
+  seed = 1.0,
 }) {
-  const { camera, scene } = useThree();
+  const { camera } = useThree();
 
-  // Keep scene fog consistent with sky and hour, avoids "refreshFogUniforms" errors
-  useEffect(() => {
-    const sky = skyColorsByHour(hour);
-    // Slightly brighten fog color toward haze for realistic depth
-    const fogCol = lerpColor(sky.bottom, sky.haze, 0.15);
-    scene.fog = new THREE.Fog(fogCol, 650, 4900);
-  }, [scene, hour]);
+  const { geometry, uniforms } = useMemo(() => {
+    const offsets = new Float32Array(puffCount * 3);
+    const scales  = new Float32Array(puffCount);
+    const seeds   = new Float32Array(puffCount * 2);
 
-  const offsets = useMemo(() => {
-    const arr = new Float32Array(puffCount * 3);
+    const rand = (s) => {
+      const r = (Math.sin(s * 123.45 + 76.54) * 43758.5453) % 1;
+      return r < 0 ? r + 1 : r;
+    };
+
     for (let i = 0; i < puffCount; i++) {
-      arr[i * 3 + 0] = (Math.random() * 2 - 1) * spread;
-      arr[i * 3 + 1] = altitude + (Math.random() * 2 - 1) * 38; // tighter vertical band
-      arr[i * 3 + 2] = (Math.random() * 2 - 1) * spread;
-    }
-    return arr;
-  }, [puffCount, spread, altitude]);
+      const a = rand(seed + i * 2.1);
+      const b = rand(seed + i * 3.7);
+      const c = rand(seed + i * 5.9);
 
-  const scales = useMemo(() => {
-    const [a, b] = sizeRange;
-    const arr = new Float32Array(puffCount);
-    for (let i = 0; i < puffCount; i++) {
-      const t = Math.random();
-      arr[i] = THREE.MathUtils.lerp(a, b, Math.pow(t, 0.5)); // bias to larger for thickness
-    }
-    return arr;
-  }, [puffCount, sizeRange]);
+      const theta = a * Math.PI * 2.0;
+      const phi   = Math.acos(2.0 * b - 1.0);
+      const u     = Math.pow(c, 0.55);
+      const rr    = u * radius;
 
-  const seeds = useMemo(() => {
-    const arr = new Float32Array(puffCount * 2);
-    for (let i = 0; i < puffCount; i++) {
-      arr[i * 2 + 0] = Math.random() * 1000.0 + seedJitter;
-      arr[i * 2 + 1] = Math.random() * 1000.0 + seedJitter * 2.123;
-    }
-    return arr;
-  }, [puffCount, seedJitter]);
+      const x = Math.sin(phi) * Math.cos(theta) * rr * anisotropy;
+      const z = Math.sin(phi) * Math.sin(theta) * rr;
+      const y = (Math.cos(phi) * rr * 0.25) + (rand(seed + i * 6.3) * 2 - 1) * (thickness * 0.5);
 
-  const geom = useMemo(() => {
-    const g = new THREE.InstancedBufferGeometry();
+      offsets[i * 3 + 0] = center[0] + x;
+      offsets[i * 3 + 1] = altitude + y;
+      offsets[i * 3 + 2] = center[2] + z;
+
+      const edge = Math.min(1.0, rr / (radius + 1e-5));
+      const size = THREE.MathUtils.lerp(260, 520, Math.pow(1.0 - edge, 0.65));
+      scales[i] = size * THREE.MathUtils.lerp(0.75, 1.12, rand(seed + i * 4.9));
+
+      seeds[i * 2 + 0] = rand(seed + i * 7.3) * 1000.0 + seed * 11.0;
+      seeds[i * 2 + 1] = rand(seed + i * 9.1) * 1000.0 + seed * 23.0;
+    }
+
     const quad = new THREE.PlaneGeometry(1, 1);
+    const g = new THREE.InstancedBufferGeometry();
     g.index = quad.index;
     g.attributes.position = quad.attributes.position;
     g.attributes.uv = quad.attributes.uv;
     g.setAttribute("instanceOffset", new THREE.InstancedBufferAttribute(offsets, 3));
-    g.setAttribute("instanceScale", new THREE.InstancedBufferAttribute(scales, 1));
-    g.setAttribute("instanceSeed", new THREE.InstancedBufferAttribute(seeds, 2));
+    g.setAttribute("instanceScale",  new THREE.InstancedBufferAttribute(scales, 1));
+    g.setAttribute("instanceSeed",   new THREE.InstancedBufferAttribute(seeds, 2));
     g.instanceCount = puffCount;
-    return g;
-  }, [offsets, scales, seeds, puffCount]);
 
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uTint: { value: tint.clone() },
-      uDensity: { value: density },
-      uWind: { value: new THREE.Vector2(wind[0], wind[1]) },
-      uSpread: { value: spread },
-      uCamRight: { value: new THREE.Vector3(1, 0, 0) },
-      uCamUp: { value: new THREE.Vector3(0, 1, 0) },
-    }),
-    [tint, density, wind, spread]
-  );
-
-  useEffect(() => {
-    uniforms.uTint.value.copy(tint);
-  }, [tint, uniforms]);
-
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        depthTest: true,
-        fog: true,
-        uniforms,
-        blending: THREE.NormalBlending,
-        vertexShader: /* glsl */ `
-          #include <common>
-          #include <fog_pars_vertex>
-          attribute vec3 instanceOffset;
-          attribute float instanceScale;
-          attribute vec2 instanceSeed;
-
-          uniform vec3 uCamRight;
-          uniform vec3 uCamUp;
-          uniform float uSpread;
-          uniform vec2 uWind;
-          uniform float uTime;
-
-          varying vec2 vUv;
-          varying vec2 vSeed;
-
-          void main() {
-            vUv = uv;
-            vSeed = instanceSeed;
-
-            vec3 drift = vec3(uWind.x, 0.0, uWind.y) * uTime;
-            vec3 center = instanceOffset + drift;
-
-            // seamless wrap
-            if (center.x >  uSpread) center.x -= 2.0 * uSpread;
-            if (center.x < -uSpread) center.x += 2.0 * uSpread;
-            if (center.z >  uSpread) center.z -= 2.0 * uSpread;
-            if (center.z < -uSpread) center.z += 2.0 * uSpread;
-
-            // true billboard toward camera
-            vec3 worldPos = center
-              + uCamRight * (position.x * instanceScale)
-              + uCamUp    * (position.y * instanceScale);
-
-            gl_Position = projectionMatrix * viewMatrix * vec4(worldPos, 1.0);
-            #include <fog_vertex>
-          }`,
-        fragmentShader: /* glsl */ `
-          #include <common>
-          #include <fog_pars_fragment>
-          precision highp float;
-
-          varying vec2 vUv;
-          varying vec2 vSeed;
-
-          uniform vec3  uTint;
-          uniform float uDensity;
-          uniform float uTime;
-
-          // fbm noise for organic shape + subtle evolution
-          float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
-          float noise(vec2 p){
-            vec2 i = floor(p), f = fract(p);
-            float a = hash(i);
-            float b = hash(i + vec2(1.0,0.0));
-            float c = hash(i + vec2(0.0,1.0));
-            float d = hash(i + vec2(1.0,1.0));
-            vec2 u = f*f*(3.0-2.0*f);
-            return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
-          }
-          float fbm(vec2 p){
-            float v = 0.0, a = 0.5;
-            mat2 m = mat2(1.6,-1.2, 1.2,1.6);
-            for (int i=0;i<6;i++){
-              v += a * noise(p);
-              p = m * p + 0.028;
-              a *= 0.55;
-            }
-            return v;
-          }
-
-          void main() {
-            vec2 cuv = vUv * 2.0 - 1.0;
-            float r = length(cuv);
-            float feather = smoothstep(1.0, 0.10, r); // reduce paper-like edges
-
-            // extremely slow evolution + slight lateral slide
-            float t = uTime * 0.025;
-            vec2 p = cuv * 1.55 + vSeed + vec2(t, -t*0.83);
-            float n = fbm(p);
-
-            // thick, fluffy alpha
-            float alpha = clamp((n * 1.22 - 0.31), 0.0, 1.0);
-            alpha *= feather;
-            alpha = pow(alpha, 1.28) * uDensity;
-
-            if (alpha < 0.016) discard;
-
-            gl_FragColor = vec4(uTint, alpha);
-            #include <fog_fragment>
-          }`,
-      }),
-    [uniforms]
-  );
-
-  useFrame((_, dt) => {
-    // crawl-speed morph (frame-rate independent but very slow)
-    uniforms.uTime.value += evolveSpeed * (dt > 0 ? Math.min(dt, 0.033) * 60.0 : 1.0);
-    // billboard orientation
+    // Freeze the billboard axes ONCE (no per-frame updates)
     const m = camera.matrixWorld.elements;
-    uniforms.uCamRight.value.set(m[0], m[1], m[2]).normalize();
-    uniforms.uCamUp.value.set(m[4], m[5], m[6]).normalize();
-  });
+    const right = new THREE.Vector3(m[0], m[1], m[2]).normalize();
+    const up    = new THREE.Vector3(m[4], m[5], m[6]).normalize();
+
+    const uniforms = {
+      uTint:     { value: tint.clone() },
+      uDensity:  { value: density },
+      uCamRight: { value: right },
+      uCamUp:    { value: up },
+    };
+
+    return { geometry: g, uniforms };
+  }, [center, radius, puffCount, altitude, thickness, anisotropy, density, tint, seed, camera]);
+
+  const material = useMemo(() => makeCloudMaterial(uniforms), [uniforms]);
 
   return (
-    <mesh geometry={geom} frustumCulled={false}>
+    <mesh geometry={geometry} frustumCulled={false}>
       <primitive object={material} attach="material" />
     </mesh>
   );
 }
 
-/* ---------------------------------------
-   Public: RealCloudField
-   - Cloud colors/tints come from sky palette
-   - Lower altitude, more clouds (three layers)
-   - Very slow drift & morphing
---------------------------------------- */
+/** The full sky: many groups with varied sizes & altitudes (FROZEN) */
 export function RealCloudField({
   hour = 12,
+  spread = 2400,
 
-  // Lower base deck
-  altitude = 520,           // ↓ low ceiling
-  spread = 2500,
+  lowGroups = 14,
+  midGroups = 10,
+  highGroups = 7,
 
-  // Population (tweak down if GPU is weak)
-  baseCount = 520,
-  midCount  = 360,
-  topCount  = 220,
+  lowAlt = 520,
+  midAlt = 620,
+  highAlt = 720,
 
-  // Size ranges for variety and thickness
-  baseSize = [240, 560],
-  midSize  = [170, 360],
-  topSize  = [120, 260],
+  lowRadius = [170, 360],
+  midRadius = [230, 440],
+  highRadius = [270, 540],
 
-  // Very slow drift (world units / second)
-  baseWind = [0.025, -0.018],
-  midWind  = [0.028, -0.020],
-  topWind  = [0.030, -0.022],
+  lowPuffs = [80, 140],
+  midPuffs = [110, 180],
+  highPuffs = [130, 210],
 
-  // Very slow evolution
-  baseEvolve = 0.005,
-  midEvolve  = 0.0055,
-  topEvolve  = 0.006,
-
-  // Densities (alpha multipliers)
-  baseDensity = 1.18,
-  midDensity  = 0.92,
-  topDensity  = 0.62,
+  cloudBoost = 1.15,
 }) {
+  const { scene } = useThree();
   const tints = useMemo(() => cloudTintsByHour(hour), [hour]);
+
+  useEffect(() => {
+    const sky = skyColorsByHour(hour);
+    const fogCol = lerpColor(sky.bottom, sky.haze, 0.15);
+    scene.fog = new THREE.Fog(fogCol, 650, 4900);
+  }, [scene, hour]);
+
+  const groups = useMemo(() => {
+    const scaled = (v) => Math.max(1, Math.round(v * cloudBoost));
+    const makeDeck = (count, alt, radRange, puffRange, tint, seedOffset) => {
+      const arr = [];
+      const deckCount = scaled(count);
+
+      // deterministic RNG so positions don't shuffle between reloads
+      const rng = (i) => {
+        const s = Math.sin((i + seedOffset) * 12.9898) * 43758.5453;
+        return s - Math.floor(s);
+      };
+
+      for (let i = 0; i < deckCount; i++) {
+        const cx = (rng(i * 3.1) * 2 - 1) * spread;
+        const cz = (rng(i * 5.7) * 2 - 1) * spread;
+
+        const radius = THREE.MathUtils.lerp(radRange[0], radRange[1], rng(i * 7.3));
+        const puffsBase = THREE.MathUtils.lerp(puffRange[0], puffRange[1], rng(i * 9.9));
+        const puffCount = scaled(puffsBase);
+
+        const density = THREE.MathUtils.lerp(0.85, 1.25, rng(i * 11.1));
+        const thickness = THREE.MathUtils.lerp(65, 115, rng(i * 13.7));
+        const anisotropy = THREE.MathUtils.lerp(1.1, 1.7, rng(i * 15.5));
+
+        arr.push({
+          center: [cx, 0, cz],
+          radius,
+          puffCount,
+          altitude: alt + THREE.MathUtils.lerp(-28, 28, rng(i * 17.2)),
+          thickness,
+          anisotropy,
+          density,
+          tint,
+          seed: 1000 + seedOffset + i * 17.123,
+        });
+      }
+      return arr;
+    };
+
+    return [
+      ...makeDeck(lowGroups,  lowAlt,  lowRadius,  lowPuffs,  tints.base, 11),
+      ...makeDeck(midGroups,  midAlt,  midRadius,  midPuffs,  tints.mid,  77),
+      ...makeDeck(highGroups, highAlt, highRadius, highPuffs, tints.top, 133),
+    ];
+  }, [
+    lowGroups, midGroups, highGroups,
+    lowAlt, midAlt, highAlt,
+    lowRadius, midRadius, highRadius,
+    lowPuffs, midPuffs, highPuffs,
+    spread, tints.base, tints.mid, tints.top, cloudBoost, hour,
+  ]);
 
   return (
     <>
-      {/* Thick base deck (warmest, heaviest) */}
-      <Layer
-        hour={hour}
-        puffCount={baseCount}
-        altitude={altitude}
-        spread={spread}
-        sizeRange={baseSize}
-        wind={baseWind}
-        evolveSpeed={baseEvolve}
-        density={baseDensity}
-        tint={tints.base}
-        seedJitter={111.0}
-      />
+      {groups.map((g, idx) => (
+        <CloudGroup key={idx} {...g} />
+      ))}
+    </>
+  );
+}
 
-      {/* Middle layer for depth */}
-      <Layer
-        hour={hour}
-        puffCount={midCount}
-        altitude={altitude + 52}
-        spread={spread * 1.02}
-        sizeRange={midSize}
-        wind={midWind}
-        evolveSpeed={midEvolve}
-        density={midDensity}
-        tint={tints.mid}
-        seedJitter={555.0}
-      />
-
-      {/* Light top veil (cooler) */}
-      <Layer
-        hour={hour}
-        puffCount={topCount}
-        altitude={altitude + 112}
-        spread={spread * 1.05}
-        sizeRange={topSize}
-        wind={topWind}
-        evolveSpeed={topEvolve}
-        density={topDensity}
-        tint={tints.top}
-        seedJitter={999.0}
-      />
+/* ---------------------------------------
+   Default export: convenient wrapper
+--------------------------------------- */
+export default function CloudSky({ hour = 12, cloudBoost = 1.15, ...props }) {
+  return (
+    <>
+      <SkyDome hour={hour} />
+      <RealCloudField hour={hour} cloudBoost={cloudBoost} {...props} />
     </>
   );
 }
