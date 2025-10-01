@@ -163,7 +163,7 @@ export function SkyDome({ hour = 12 }) {
 
 function makeCloudMaterial(uniforms) {
   return new THREE.ShaderMaterial({
-    side: THREE.DoubleSide,       // important: no seam when viewing from behind
+    side: THREE.DoubleSide,       // no seam when viewing from behind
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -198,7 +198,6 @@ function makeCloudMaterial(uniforms) {
       uniform vec3  uTint;
       uniform float uDensity;
 
-      // ORIGINAL static fbm (no time)
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
       float noise(vec2 p){
         vec2 i = floor(p), f = fract(p);
@@ -322,7 +321,9 @@ function CloudGroup({
   );
 }
 
-/** The full sky: many groups with varied sizes & altitudes (FROZEN) */
+/** The full sky: many groups with varied sizes & altitudes (FROZEN)
+ *  Now includes a rainFactor (0..1) that deepens fog and slightly boosts density.
+ */
 export function RealCloudField({
   hour = 12,
   spread = 2400,
@@ -344,18 +345,23 @@ export function RealCloudField({
   highPuffs = [130, 210],
 
   cloudBoost = 1.15,
+  rainFactor = 0,  // <-- 0..1 from Map3D
 }) {
   const { scene } = useThree();
   const tints = useMemo(() => cloudTintsByHour(hour), [hour]);
 
   useEffect(() => {
     const sky = skyColorsByHour(hour);
-    const fogCol = lerpColor(sky.bottom, sky.haze, 0.15);
-    scene.fog = new THREE.Fog(fogCol, 650, 4900);
-  }, [scene, hour]);
+    // Fog becomes closer & a bit greyer during rain
+    const baseFogCol = lerpColor(sky.bottom, sky.haze, 0.15);
+    const rainyFogCol = baseFogCol.clone().lerp(new THREE.Color('#9db0bf'), 0.35 * rainFactor);
+    const near = THREE.MathUtils.lerp(750, 520, rainFactor);
+    const far  = THREE.MathUtils.lerp(5000, 3600, rainFactor);
+    scene.fog = new THREE.Fog(rainyFogCol, near, far);
+  }, [scene, hour, rainFactor]);
 
   const groups = useMemo(() => {
-    const scaled = (v) => Math.max(1, Math.round(v * cloudBoost));
+    const scaled = (v) => Math.max(1, Math.round(v * cloudBoost * (1.0 + 0.25 * rainFactor)));
     const makeDeck = (count, alt, radRange, puffRange, tint, seedOffset) => {
       const arr = [];
       const deckCount = scaled(count);
@@ -374,7 +380,8 @@ export function RealCloudField({
         const puffsBase = THREE.MathUtils.lerp(puffRange[0], puffRange[1], rng(i * 9.9));
         const puffCount = scaled(puffsBase);
 
-        const density = THREE.MathUtils.lerp(0.85, 1.25, rng(i * 11.1));
+        // Slightly denser + lower clouds when raining
+        const density = THREE.MathUtils.lerp(0.85, 1.25, rng(i * 11.1)) * (1.0 + 0.25 * rainFactor);
         const thickness = THREE.MathUtils.lerp(65, 115, rng(i * 13.7));
         const anisotropy = THREE.MathUtils.lerp(1.1, 1.7, rng(i * 15.5));
 
@@ -382,7 +389,7 @@ export function RealCloudField({
           center: [cx, 0, cz],
           radius,
           puffCount,
-          altitude: alt + THREE.MathUtils.lerp(-28, 28, rng(i * 17.2)),
+          altitude: alt + THREE.MathUtils.lerp(-28, 28, rng(i * 17.2)) - 40 * rainFactor,
           thickness,
           anisotropy,
           density,
@@ -403,7 +410,7 @@ export function RealCloudField({
     lowAlt, midAlt, highAlt,
     lowRadius, midRadius, highRadius,
     lowPuffs, midPuffs, highPuffs,
-    spread, tints.base, tints.mid, tints.top, cloudBoost, hour,
+    spread, tints.base, tints.mid, tints.top, cloudBoost, hour, rainFactor,
   ]);
 
   return (
@@ -418,11 +425,11 @@ export function RealCloudField({
 /* ---------------------------------------
    Default export: convenient wrapper
 --------------------------------------- */
-export default function CloudSky({ hour = 12, cloudBoost = 1.15, ...props }) {
+export default function CloudSky({ hour = 12, cloudBoost = 1.15, rainFactor = 0, ...props }) {
   return (
     <>
       <SkyDome hour={hour} />
-      <RealCloudField hour={hour} cloudBoost={cloudBoost} {...props} />
+      <RealCloudField hour={hour} cloudBoost={cloudBoost} rainFactor={rainFactor} {...props} />
     </>
   );
 }
