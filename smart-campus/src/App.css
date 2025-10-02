@@ -68,18 +68,18 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   transition: transform .22s ease; z-index:1; pointer-events:none;
 }
 
-/* ===== Right-side date/time + help (make sure it's clickable) ===== */
+/* ===== Right-side date/time + help ===== */
 .thailand-time {
   position: absolute; right: 4%; top: 8px;
   display: flex; flex-direction: column; align-items: flex-end;
   text-align: right; color: #0ff; font-family: 'Courier New', Courier, monospace;
   font-weight: bold; line-height: 1.3; padding: 6px 12px; border-radius: 8px; user-select: none;
-  z-index: 1003; /* above navbar & dashboards */
+  z-index: 1003; cursor: pointer; /* opens weather panel */
 }
-.thailand-time .date { margin-bottom: 2px; }
+.thailand-time .date { margin-bottom: 2px; cursor: pointer; }
 .time-row { display: flex; align-items: center; gap: 0; }
 .thailand-time .time {
-  font-size: 20px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; line-height: 1;
+  font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; line-height: 1;
 }
 .thailand-time .time::after {
   content: ""; display: inline-block; width: 2px; height: 20px; margin: 0 10px;
@@ -95,7 +95,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   transform: translate(-50%, -50%) scale(0.85); background: rgba(255,255,255,0.18);
   border: 1px solid rgba(173,216,230,0.6); box-shadow: 0 0 0 0 rgba(77,174,244,0); opacity: 0; transition: opacity .15s ease, transform .15s ease, box-shadow .2s ease; pointer-events: none;
 }
-.help-btn:hover::before, .help-btn:focus-visible::before { opacity: 1; transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 3px rgba(77,174,244,0.2); }
+.help-btn:hover::before, .help-btn:focus-visible::before { opacity: 1; transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 3px rgba(77,174,244,0.2); cursor: pointer; }
 
 /* ===== Toggle dashboards button ===== */
 .hide-button {
@@ -174,13 +174,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   display:flex; align-items:center; gap:10px; z-index:1002;
 }
 .navbar-center-cluster .mode-switch{ position:relative; left:auto; top:auto; transform:none; }
+
+/* Weather button styles remain unused (safe to keep or remove) */
 .weather-btn{
-  display:inline-flex; align-items:center; gap:8px; height:28px; padding:0 12px; border-radius:999px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)),
-             radial-gradient(80% 140% at 0% 0%, rgba(120,90,255,0.22), transparent 60%),
-             radial-gradient(100% 160% at 100% 120%, rgba(69,199,255,0.22), transparent 60%);
-  border:1px solid rgba(160,185,255,0.42); color:#dfeaff; font-weight:800; letter-spacing:.2px; cursor:pointer;
-  box-shadow: 0 10px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.16);
+  display:none;
 }
 
 /* Weather cards */
@@ -229,21 +226,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   position:absolute; inset:0; border-radius:999px; background: rgba(255,255,255,.2);
   border:1px solid rgba(255,255,255,.25); transition: background .2s ease, border-color .2s ease;
   display:block;
-}
-.switch .slider .knob{
-  position:absolute; top:50%; left:3px; transform: translateY(-50%); width:18px; height:18px; border-radius:50%;
-  background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s ease, width .2s ease, left .2s ease;
-}
-.switch.switch-lg .slider .knob{ width:22px; height:22px; left:4px; }
-.switch input:checked + .slider{
-  background: linear-gradient(90deg, #3ba5ff, #21d1b1);
-  border-color: rgba(255,255,255,.35);
-}
-.switch input:checked + .slider .knob{
-  transform: translateY(-50%) translateX(22px);
-}
-.switch.switch-lg input:checked + .slider .knob{
-  transform: translateY(-50%) translateX(24px);
 }
 
 /* ===== Metrics/Popup parts ===== */

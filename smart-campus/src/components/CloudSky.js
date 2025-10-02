@@ -1,46 +1,10 @@
-// src/components/CloudSky.js
+// components/CloudSky.js
 import React, { useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 
 /* ---------------------------------------
-   Sky colors by hour (dawn/day/dusk/night)
---------------------------------------- */
-export function skyColorsByHour(hour) {
-  if (hour >= 6 && hour < 9) {
-    return {
-      top: new THREE.Color("#7ec8ff"),
-      bottom: new THREE.Color("#bfe5ff"),
-      haze: new THREE.Color("#ffffff"),
-      sunTint: new THREE.Color("#ffd18a"),
-    };
-  }
-  if (hour >= 9 && hour < 16) {
-    return {
-      top: new THREE.Color("#5eb2f7"),
-      bottom: new THREE.Color("#9fd4ff"),
-      haze: new THREE.Color("#ffffff"),
-      sunTint: new THREE.Color("#fff1c4"),
-    };
-  }
-  if (hour >= 16 && hour < 19) {
-    return {
-      top: new THREE.Color("#3c9de6"),
-      bottom: new THREE.Color("#ffc18a"),
-      haze: new THREE.Color("#ffe3c2"),
-      sunTint: new THREE.Color("#ffb26b"),
-    };
-  }
-  return {
-    top: new THREE.Color("#0b1a2f"),
-    bottom: new THREE.Color("#132a4d"),
-    haze: new THREE.Color("#0b1a2f"),
-    sunTint: new THREE.Color("#334b73"),
-  };
-}
-
-/* ---------------------------------------
-   Helpers
+   Utils
 --------------------------------------- */
 function lerpColor(a, b, t) {
   return a.clone().lerp(b, THREE.MathUtils.clamp(t, 0, 1));
@@ -48,70 +12,165 @@ function lerpColor(a, b, t) {
 function desaturate(color, amount = 0.5) {
   const hsl = { h: 0, s: 0, l: 0 };
   color.getHSL(hsl);
-  hsl.s *= 1 - amount;
+  hsl.s *= Math.max(0, 1 - amount);
   const out = new THREE.Color();
   out.setHSL(hsl.h, hsl.s, hsl.l);
   return out;
 }
+function darken(color, amt = 0.2) {
+  const c = color.clone();
+  c.multiplyScalar(1 - amt);
+  return c;
+}
+
+/* ---------------------------------------
+   Sky colors by hour (dawn/day/dusk/night)
+   Now rain-aware & lightning-aware
+--------------------------------------- */
+export function skyColorsByHour(hour, rainFactor = 0, lightningFlash = 0) {
+  let base;
+  if (hour >= 6 && hour < 9) {
+    base = {
+      top: new THREE.Color("#7ec8ff"),
+      bottom: new THREE.Color("#bfe5ff"),
+      haze: new THREE.Color("#ffffff"),
+      sunTint: new THREE.Color("#ffd18a"),
+    };
+  } else if (hour >= 9 && hour < 16) {
+    base = {
+      top: new THREE.Color("#5eb2f7"),
+      bottom: new THREE.Color("#9fd4ff"),
+      haze: new THREE.Color("#ffffff"),
+      sunTint: new THREE.Color("#fff1c4"),
+    };
+  } else if (hour >= 16 && hour < 19) {
+    base = {
+      top: new THREE.Color("#3c9de6"),
+      bottom: new THREE.Color("#ffc18a"),
+      haze: new THREE.Color("#ffe3c2"),
+      sunTint: new THREE.Color("#ffb26b"),
+    };
+  } else {
+    base = {
+      top: new THREE.Color("#0b1a2f"),
+      bottom: new THREE.Color("#132a4d"),
+      haze: new THREE.Color("#0b1a2f"),
+      sunTint: new THREE.Color("#334b73"),
+    };
+  }
+
+  // Make sky more grey/flat when raining
+  if (rainFactor > 0) {
+    const grey = new THREE.Color("#6f7a87"); // bluish grey
+    const chill = THREE.MathUtils.clamp(rainFactor, 0, 1);
+    const desatAmt = THREE.MathUtils.lerp(0.15, 0.55, chill);
+    const darkAmt = THREE.MathUtils.lerp(0.08, 0.36, chill);
+
+    base.top = desaturate(lerpColor(base.top, grey, 0.35 * chill), desatAmt);
+    base.bottom = desaturate(lerpColor(base.bottom, grey, 0.45 * chill), desatAmt);
+    base.haze = desaturate(lerpColor(base.haze, new THREE.Color("#a8b3c1"), 0.55 * chill), desatAmt);
+    base.sunTint = desaturate(lerpColor(base.sunTint, grey, 0.7 * chill), desatAmt * 0.6);
+
+    base.top = darken(base.top, darkAmt);
+    base.bottom = darken(base.bottom, darkAmt);
+    base.haze = darken(base.haze, darkAmt * 0.5);
+  }
+
+  // Lightning flash pushes sky toward bright cool white momentarily
+  if (lightningFlash > 0) {
+    const flashCol = new THREE.Color("#eaf2ff");
+    const f = THREE.MathUtils.clamp(lightningFlash, 0, 1);
+    base.top = lerpColor(base.top, flashCol, f * 0.8);
+    base.bottom = lerpColor(base.bottom, flashCol, f * 0.8);
+    base.haze = lerpColor(base.haze, flashCol, f * 0.9);
+  }
+
+  return base;
+}
 
 /* ---------------------------------------
    Cloud palette (derives tints from sky)
+   Rain + lightning aware
 --------------------------------------- */
-function cloudTintsByHour(hour) {
-  const sky = skyColorsByHour(hour);
+function cloudTintsByHour(hour, rainFactor = 0, lightningFlash = 0) {
+  const sky = skyColorsByHour(hour, rainFactor, 0);
   const isNight = hour >= 19 || hour < 6;
   const isGolden = hour >= 6 && hour < 9;
   const isAfternoon = hour >= 9 && hour < 16;
 
+  let base, mid, top;
+
   if (isNight) {
-    const base = desaturate(lerpColor(sky.bottom, sky.haze, 0.35), 0.35).multiplyScalar(1.06);
-    const mid = desaturate(lerpColor(sky.bottom, sky.top, 0.25), 0.45).multiplyScalar(1.02);
-    const top = desaturate(lerpColor(sky.top, sky.haze, 0.15), 0.55).multiplyScalar(1.0);
-    return { base, mid, top, fogNear: 650, fogFar: 4700 };
-  }
-  if (isGolden) {
+    base = desaturate(lerpColor(sky.bottom, sky.haze, 0.35), 0.35).multiplyScalar(1.06);
+    mid = desaturate(lerpColor(sky.bottom, sky.top, 0.25), 0.45).multiplyScalar(1.02);
+    top = desaturate(lerpColor(sky.top, sky.haze, 0.15), 0.55).multiplyScalar(1.0);
+  } else if (isGolden) {
     const warm = sky.sunTint.clone();
-    const base = lerpColor(new THREE.Color("#ffffff"), warm, 0.35);
-    const mid = lerpColor(new THREE.Color("#f7fbff"), warm, 0.25);
-    const top = lerpColor(new THREE.Color("#f5f9ff"), sky.bottom, 0.2);
-    return { base, mid, top, fogNear: 700, fogFar: 4800 };
+    base = lerpColor(new THREE.Color("#ffffff"), warm, 0.35);
+    mid = lerpColor(new THREE.Color("#f7fbff"), warm, 0.25);
+    top = lerpColor(new THREE.Color("#f5f9ff"), sky.bottom, 0.2);
+  } else if (isAfternoon) {
+    base = lerpColor(new THREE.Color("#ffffff"), sky.sunTint, 0.18);
+    mid = lerpColor(new THREE.Color("#f7fbff"), sky.bottom, 0.12);
+    top = lerpColor(new THREE.Color("#f5f9ff"), sky.top, 0.08);
+  } else {
+    const warm = sky.sunTint.clone();
+    base = lerpColor(new THREE.Color("#ffffff"), warm, 0.28);
+    mid = lerpColor(new THREE.Color("#f7fbff"), sky.bottom, 0.22);
+    top = lerpColor(new THREE.Color("#f5f9ff"), sky.top, 0.18);
   }
-  if (isAfternoon) {
-    const base = lerpColor(new THREE.Color("#ffffff"), sky.sunTint, 0.18);
-    const mid = lerpColor(new THREE.Color("#f7fbff"), sky.bottom, 0.12);
-    const top = lerpColor(new THREE.Color("#f5f9ff"), sky.top, 0.08);
-    return { base, mid, top, fogNear: 750, fogFar: 5000 };
+
+  // Rain greys & darkens clouds a touch
+  if (rainFactor > 0) {
+    const grey = new THREE.Color("#8893a3");
+    const chill = THREE.MathUtils.clamp(rainFactor, 0, 1);
+    const desatAmt = THREE.MathUtils.lerp(0.2, 0.5, chill);
+    const darkAmt = THREE.MathUtils.lerp(0.05, 0.22, chill);
+
+    base = darken(desaturate(lerpColor(base, grey, 0.35 * chill), desatAmt), darkAmt);
+    mid  = darken(desaturate(lerpColor(mid,  grey, 0.30 * chill), desatAmt), darkAmt);
+    top  = darken(desaturate(lerpColor(top,  grey, 0.25 * chill), desatAmt), darkAmt);
   }
-  // Dusk
-  const warm = sky.sunTint.clone();
-  const base = lerpColor(new THREE.Color("#ffffff"), warm, 0.28);
-  const mid = lerpColor(new THREE.Color("#f7fbff"), sky.bottom, 0.22);
-  const top = lerpColor(new THREE.Color("#f5f9ff"), sky.top, 0.18);
-  return { base, mid, top, fogNear: 700, fogFar: 4800 };
+
+  // Lightning brighten
+  if (lightningFlash > 0) {
+    const flashCol = new THREE.Color("#eaf2ff");
+    const f = THREE.MathUtils.clamp(lightningFlash, 0, 1);
+    base = lerpColor(base, flashCol, f * 0.7);
+    mid  = lerpColor(mid,  flashCol, f * 0.7);
+    top  = lerpColor(top,  flashCol, f * 0.6);
+  }
+
+  // Fog ranges (kept constant; Map3D clears scene fog each frame anyway)
+  const fogNear = 700;
+  const fogFar = 5000;
+  return { base, mid, top, fogNear, fogFar };
 }
 
 /* ---------------------------------------
    Skydome gradient (shader-based)
+   Accepts rainFactor + lightningFlash
 --------------------------------------- */
-export function SkyDome({ hour = 12 }) {
+export function SkyDome({ hour = 12, rainFactor = 0, lightningFlash = 0 }) {
   const uniforms = useMemo(() => {
-    const c = skyColorsByHour(hour);
+    const c = skyColorsByHour(hour, rainFactor, lightningFlash);
     return {
       topColor: { value: c.top.clone() },
       bottomColor: { value: c.bottom.clone() },
       hazeColor: { value: c.haze.clone() },
       offset: { value: 33.0 },
       exponent: { value: 0.8 },
-      hazeStrength: { value: 0.45 },
+      hazeStrength: { value: 0.5 + 0.35 * rainFactor }, // stronger low haze when raining
     };
-  }, []);
+  }, []); // uniforms object created once
 
   useEffect(() => {
-    const c = skyColorsByHour(hour);
+    const c = skyColorsByHour(hour, rainFactor, lightningFlash);
     uniforms.topColor.value.copy(c.top);
     uniforms.bottomColor.value.copy(c.bottom);
     uniforms.hazeColor.value.copy(c.haze);
-  }, [hour, uniforms]);
+    uniforms.hazeStrength.value = 0.5 + 0.35 * rainFactor;
+  }, [hour, rainFactor, lightningFlash, uniforms]);
 
   const material = useMemo(
     () =>
@@ -157,13 +216,12 @@ export function SkyDome({ hour = 12 }) {
 
 /* =========================================================================
    Clustered cloud groups (cumulus-style) — FROZEN (no drift, no morph)
-   Keeps your original sprite look, but no per-frame billboarding.
-   Uses DoubleSide to avoid the center seam.
+   Uses DoubleSide to avoid the center seam; tint/density are rain-aware.
 ========================================================================== */
 
 function makeCloudMaterial(uniforms) {
   return new THREE.ShaderMaterial({
-    side: THREE.DoubleSide,       // no seam when viewing from behind
+    side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -176,7 +234,7 @@ function makeCloudMaterial(uniforms) {
       attribute vec3 instanceOffset;
       attribute float instanceScale;
       attribute vec2 instanceSeed;
-      uniform vec3 uCamRight;   // FROZEN axes (captured once)
+      uniform vec3 uCamRight;
       uniform vec3 uCamUp;
       varying vec2 vUv;
       varying vec2 vSeed;
@@ -297,7 +355,7 @@ function CloudGroup({
     g.setAttribute("instanceSeed",   new THREE.InstancedBufferAttribute(seeds, 2));
     g.instanceCount = puffCount;
 
-    // Freeze the billboard axes ONCE (no per-frame updates)
+    // Freeze the billboard axes ONCE
     const m = camera.matrixWorld.elements;
     const right = new THREE.Vector3(m[0], m[1], m[2]).normalize();
     const up    = new THREE.Vector3(m[4], m[5], m[6]).normalize();
@@ -314,6 +372,14 @@ function CloudGroup({
 
   const material = useMemo(() => makeCloudMaterial(uniforms), [uniforms]);
 
+  useEffect(() => {
+    uniforms.uTint.value.copy(tint);
+  }, [tint, uniforms]);
+
+  useEffect(() => {
+    uniforms.uDensity.value = density;
+  }, [density, uniforms]);
+
   return (
     <mesh geometry={geometry} frustumCulled={false}>
       <primitive object={material} attach="material" />
@@ -322,7 +388,8 @@ function CloudGroup({
 }
 
 /** The full sky: many groups with varied sizes & altitudes (FROZEN)
- *  Now includes a rainFactor (0..1) that deepens fog and slightly boosts density.
+ *  Now includes a rainFactor (0..1) to grey/flatten cloud tints + slight density boost,
+ *  and lightningFlash (0..1) to temporarily brighten.
  */
 export function RealCloudField({
   hour = 12,
@@ -345,23 +412,19 @@ export function RealCloudField({
   highPuffs = [130, 210],
 
   cloudBoost = 1.15,
-  rainFactor = 0,  // <-- 0..1 from Map3D
+  rainFactor = 0,       // 0..1
+  lightningFlash = 0,   // 0..1
 }) {
-  const { scene } = useThree();
-  const tints = useMemo(() => cloudTintsByHour(hour), [hour]);
-
-  useEffect(() => {
-    const sky = skyColorsByHour(hour);
-    // Fog becomes closer & a bit greyer during rain
-    const baseFogCol = lerpColor(sky.bottom, sky.haze, 0.15);
-    const rainyFogCol = baseFogCol.clone().lerp(new THREE.Color('#9db0bf'), 0.35 * rainFactor);
-    const near = THREE.MathUtils.lerp(750, 520, rainFactor);
-    const far  = THREE.MathUtils.lerp(5000, 3600, rainFactor);
-    scene.fog = new THREE.Fog(rainyFogCol, near, far);
-  }, [scene, hour, rainFactor]);
+  const tints = useMemo(
+    () => cloudTintsByHour(hour, rainFactor, lightningFlash),
+    [hour, rainFactor, lightningFlash]
+  );
 
   const groups = useMemo(() => {
-    const scaled = (v) => Math.max(1, Math.round(v * cloudBoost * (1.0 + 0.25 * rainFactor)));
+    const scaled = (v) =>
+      Math.max(1, Math.round(v * cloudBoost * (1.0 + 0.25 * rainFactor)));
+    const flashWhite = new THREE.Color("#f2f7ff");
+
     const makeDeck = (count, alt, radRange, puffRange, tint, seedOffset) => {
       const arr = [];
       const deckCount = scaled(count);
@@ -381,9 +444,13 @@ export function RealCloudField({
         const puffCount = scaled(puffsBase);
 
         // Slightly denser + lower clouds when raining
-        const density = THREE.MathUtils.lerp(0.85, 1.25, rng(i * 11.1)) * (1.0 + 0.25 * rainFactor);
+        const density =
+          THREE.MathUtils.lerp(0.85, 1.25, rng(i * 11.1)) * (1.0 + 0.3 * rainFactor);
         const thickness = THREE.MathUtils.lerp(65, 115, rng(i * 13.7));
         const anisotropy = THREE.MathUtils.lerp(1.1, 1.7, rng(i * 15.5));
+
+        // Lightning brightening on tint (subtle)
+        const lightningTint = tint.clone().lerp(flashWhite, lightningFlash * 0.6);
 
         arr.push({
           center: [cx, 0, cz],
@@ -393,7 +460,7 @@ export function RealCloudField({
           thickness,
           anisotropy,
           density,
-          tint,
+          tint: lightningTint,
           seed: 1000 + seedOffset + i * 17.123,
         });
       }
@@ -410,7 +477,7 @@ export function RealCloudField({
     lowAlt, midAlt, highAlt,
     lowRadius, midRadius, highRadius,
     lowPuffs, midPuffs, highPuffs,
-    spread, tints.base, tints.mid, tints.top, cloudBoost, hour, rainFactor,
+    spread, tints.base, tints.mid, tints.top, cloudBoost, hour, rainFactor, lightningFlash,
   ]);
 
   return (
@@ -424,12 +491,25 @@ export function RealCloudField({
 
 /* ---------------------------------------
    Default export: convenient wrapper
+   Accepts rainFactor + lightningFlash and forwards to both Sky and Clouds
 --------------------------------------- */
-export default function CloudSky({ hour = 12, cloudBoost = 1.15, rainFactor = 0, ...props }) {
+export default function CloudSky({
+  hour = 12,
+  cloudBoost = 1.15,
+  rainFactor = 0,
+  lightningFlash = 0,
+  ...props
+}) {
   return (
     <>
-      <SkyDome hour={hour} />
-      <RealCloudField hour={hour} cloudBoost={cloudBoost} rainFactor={rainFactor} {...props} />
+      <SkyDome hour={hour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
+      <RealCloudField
+        hour={hour}
+        cloudBoost={cloudBoost}
+        rainFactor={rainFactor}
+        lightningFlash={lightningFlash}
+        {...props}
+      />
     </>
   );
 }

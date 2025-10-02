@@ -96,7 +96,8 @@ const Icon = ({ name, size = 14 }) => {
   }
 };
 
-const Navbar = ({ children, isWeatherOpen, toggleWeather }) => {
+/* Navbar without Weather button */
+const Navbar = ({ children }) => {
   const location = useLocation();
   const onCCTV = location.pathname === '/cctv';
   return (
@@ -119,21 +120,11 @@ const Navbar = ({ children, isWeatherOpen, toggleWeather }) => {
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       />
 
-      {/* Mode switch + Weather button */}
+      {/* Only the mode switch in the center now */}
       <div className="navbar-center-cluster">
         <div className="mode-switch" role="tablist" aria-label="View mode">
           {children}
         </div>
-
-        <button
-          className={`weather-btn ${isWeatherOpen ? 'active' : ''}`}
-          onClick={toggleWeather}
-          title={isWeatherOpen ? 'Hide Weather Controls' : 'Show Weather Controls'}
-          aria-pressed={isWeatherOpen}
-        >
-          <Icon name="sun" size={16} />
-          <span>Weather</span>
-        </button>
       </div>
     </nav>
   );
@@ -204,8 +195,12 @@ function calcSkyByHour(hour) {
 
 /* ===== Weather Controls Panel (time + rain) ===== */
 const WeatherControlPanel = ({
-  thClock, envMode, setEnvMode, envHour, setEnvHour,
-  rainEnabled, setRainEnabled, rainIntensity, setRainIntensity,
+  clock,                     // <- hour24-aware clock from parent
+  envMode, setEnvMode,
+  envHour, setEnvHour,
+  rainEnabled, setRainEnabled,
+  rainIntensity, setRainIntensity,
+  hour24, setHour24,
   onClose
 }) => {
   return (
@@ -214,7 +209,7 @@ const WeatherControlPanel = ({
         <div className="head-left">
           <div className="eyebrow">SMART CAMPUS · MFU</div>
           <div className="title">Weather Controls</div>
-          <div className="subtitle">Thailand time: {thClock.dateStr}</div>
+          <div className="subtitle">Thailand time: {clock.date}</div>
         </div>
 
         <div className="toolbar">
@@ -225,18 +220,34 @@ const WeatherControlPanel = ({
       </div>
 
       <div className="wc-sections">
+        {/* Realtime & Manual + Time Format */}
         <div className="wc-card">
           <div className="wc-card-title">Realtime (Thailand)</div>
 
           <div className="wc-time-row">
             <div className="wc-live-dot" aria-hidden="true" />
             <div className="wc-live-time">
-              {String(thClock.hour).padStart(2,'0')}:{String(thClock.minute).padStart(2,'0')}:{String(thClock.second).padStart(2,'0')}
+              {clock.hour}:{clock.minute}:{clock.second}
+              {clock.period && <span className="wc-live-label"> {clock.period}</span>}
               <span className="wc-live-label"> Asia/Bangkok</span>
             </div>
           </div>
 
-          <div className="wc-mode-toggle">
+          {/* Time format toggle INSIDE this card; updates app-wide */}
+          <div className="wc-mode-toggle" style={{ marginTop: 10 }}>
+            <span className={`mode-label ${!hour24 ? 'active' : ''}`}>12h</span>
+            <label className="switch" title="Toggle 12h / 24h clock">
+              <input
+                type="checkbox"
+                checked={hour24}
+                onChange={(e) => setHour24(e.target.checked)}
+              />
+              <span className="slider" />
+            </label>
+            <span className={`mode-label ${hour24 ? 'active' : ''}`}>24h</span>
+          </div>
+
+          <div className="wc-mode-toggle" style={{ marginTop: 10 }}>
             <span className={`mode-label ${envMode === 'realtime' ? 'active' : ''}`}>Realtime</span>
             <label className="switch" title="Switch between realtime and manual time">
               <input
@@ -249,9 +260,10 @@ const WeatherControlPanel = ({
             <span className={`mode-label ${envMode === 'manual' ? 'active' : ''}`}>Manual</span>
           </div>
 
-          <p className="wc-hint">Use Manual to scrub the sun from day to night.</p>
+          <p className="wc-hint">Use 12h/24h to change the app clock. Switch to Manual to scrub the sun.</p>
         </div>
 
+        {/* Manual slider */}
         <div className={`wc-card ${envMode === 'manual' ? '' : 'wc-disabled'}`}>
           <div className="wc-card-title">Manual Time</div>
           <div className="wc-manual-row">
@@ -271,6 +283,7 @@ const WeatherControlPanel = ({
           </div>
         </div>
 
+        {/* Rain */}
         <div className={`wc-card ${rainEnabled ? '' : 'wc-muted'}`}>
           <div className="wc-card-title">Rain</div>
           <div className="wc-rain-row">
@@ -337,7 +350,7 @@ const MapApp = () => {
     return dontShow === 'true' ? false : true;
   });
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const [hour24, setHour24] = useState(true);
+  const [hour24, setHour24] = useState(true); // single source of truth app-wide
 
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
   const [isOverallPopupVisible, setIsOverallPopupVisible] = useState(false);
@@ -354,15 +367,14 @@ const MapApp = () => {
   const [walkYTick, setWalkYTick] = useState(0);
   const [walkYDir, setWalkYDir] = useState(null);
 
-  const toggleWeather = () => {
-    setIsWeatherOpen((s) => {
-      const next = !s;
-      if (next) { setPopupData(null); setPinned(false); }
-      return next;
-    });
+  // Open weather panel via the clock (no Weather button)
+  const openWeatherPanel = () => {
+    setIsWeatherOpen(true);
+    setPopupData(null);
+    setPinned(false);
   };
 
-  /* ===== Thailand clock (for display) ===== */
+  /* ===== Thailand clock (for display, hour24-aware) ===== */
   const updateThailandTime = () => {
     const fmt = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Bangkok',
@@ -654,7 +666,7 @@ const MapApp = () => {
 
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
-      <Navbar isWeatherOpen={isWeatherOpen} toggleWeather={toggleWeather}>
+      <Navbar>
         <button
           className={`mode-seg ${navMode === 'walk' ? 'active' : ''}`}
           onClick={() => setNavMode('walk')}
@@ -684,17 +696,18 @@ const MapApp = () => {
         />
       </Navbar>
 
-      <div className="thailand-time" role="region" aria-label="Thailand time">
+      {/* Date/Time now opens the Weather Panel */}
+      <div
+        className="thailand-time"
+        role="button"
+        aria-label="Open Weather Controls"
+        tabIndex={0}
+        onClick={openWeatherPanel}
+        onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && openWeatherPanel()}
+      >
         <div className="date">{thailandTime.date}</div>
         <div className="time-row">
-          <div
-            className="time"
-            onClick={() => setHour24((prev) => !prev)}
-            title="Toggle 24h/12h"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e)=> (e.key==='Enter' || e.key===' ') && setHour24((prev)=>!prev)}
-          >
+          <div className="time" title="Open Weather Controls">
             {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
             {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
           </div>
@@ -703,7 +716,7 @@ const MapApp = () => {
             className="help-btn"
             title="Show instructions"
             aria-label="Show instructions"
-            onClick={() => setShowInstructions(true)}
+            onClick={(e) => { e.stopPropagation(); setShowInstructions(true); }}
           >
             ?
           </button>
@@ -850,7 +863,7 @@ const MapApp = () => {
 
       {isWeatherOpen && (
         <WeatherControlPanel
-          thClock={getThailandNow()}
+          clock={thailandTime}              // <- hour24-aware
           envMode={envMode}
           setEnvMode={setEnvMode}
           envHour={envHour}
@@ -859,6 +872,8 @@ const MapApp = () => {
           setRainEnabled={setRainEnabled}
           rainIntensity={rainIntensity}
           setRainIntensity={setRainIntensity}
+          hour24={hour24}
+          setHour24={setHour24}
           onClose={() => setIsWeatherOpen(false)}
         />
       )}
@@ -1061,7 +1076,7 @@ const MapApp = () => {
 
           <div className="card control-card">
             <h4 className="card-title">Select a Building</h4>
-            <div className="water-dropdown-container">
+            <div className="水er-dropdown-container">
               <select
                 value={selectedBuilding || ''}
                 onChange={(e) => setSelectedBuilding(e.target.value)}

@@ -15,6 +15,112 @@ import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
 import './Map3D.css';
 
+/* =====================================================================
+   ⚡ LightningFX
+   - Triggers lightning/thunder light pulses when active (>= 80% rain)
+   - Emits a 0..1 flash value each frame via onFlash
+   - Brief exposure kick for dramatic flashes
+===================================================================== */
+function LightningFX({
+  active = false,
+  intensity = 0.8,        // 0..1, maps to frequency/brightness
+  exposureKick = 0.25,    // renderer exposure bump while flashing
+  onFlash = () => {},     // callback(flash) each frame
+}) {
+  const { camera, gl } = useThree();
+  const dirRef = useRef();
+  const ambRef = useRef();
+  const targetRef = useRef();
+  const flashRef = useRef(0);
+  const nextTimeRef = useRef(0);
+  const pulsesRef = useRef([]);
+  const baseExposureRef = useRef(gl.toneMappingExposure);
+
+  const schedule = (now) => {
+    const t = THREE.MathUtils.clamp((intensity - 0.8) / 0.2, 0, 1);
+    const minGap = THREE.MathUtils.lerp(2.8, 0.9, t);
+    const maxGap = THREE.MathUtils.lerp(6.5, 2.2, t);
+    const gap = THREE.MathUtils.lerp(minGap, maxGap, Math.random());
+    const start = now + gap;
+
+    const multi = Math.random() < (0.6 + 0.3 * t);
+    const pulseDur = 0.10 + Math.random() * 0.12;
+    const between = 0.06 + Math.random() * 0.14;
+
+    const pulses = [{ start, end: start + pulseDur }];
+    if (multi) {
+      const s2 = start + pulseDur + between;
+      pulses.push({ start: s2, end: s2 + pulseDur * (0.8 + Math.random() * 0.4) });
+    }
+    pulsesRef.current = pulses;
+    nextTimeRef.current = start + 0.2 + (multi ? between + pulseDur : 0.0);
+  };
+
+  useFrame(({ clock }, dt) => {
+    const now = clock.getElapsedTime();
+    // exponential falloff of flash
+    flashRef.current *= Math.pow(0.04, dt);
+
+    if (!active) {
+      onFlash(0);
+      if (dirRef.current) dirRef.current.intensity = 0;
+      if (ambRef.current) ambRef.current.intensity = 0;
+      gl.toneMappingExposure = baseExposureRef.current;
+      return;
+    }
+
+    if (pulsesRef.current.length === 0 && now > nextTimeRef.current) {
+      schedule(now);
+    }
+
+    let inPulse = false;
+    for (const p of pulsesRef.current) {
+      if (now >= p.start && now <= p.end) { inPulse = true; break; }
+    }
+    pulsesRef.current = pulsesRef.current.filter((p) => now <= p.end + 0.02);
+
+    if (inPulse) {
+      const peak = THREE.MathUtils.lerp(0.7, 1.0, THREE.MathUtils.clamp((intensity - 0.8) / 0.2, 0, 1));
+      flashRef.current = Math.max(flashRef.current, peak);
+    }
+
+    // place lightning somewhere around the camera
+    const radius = 240 + Math.random() * 180;
+    const a = now * 0.15 + Math.random() * 0.2;
+    const lx = camera.position.x + Math.sin(a) * radius;
+    const ly = camera.position.y + 380 + Math.random() * 60;
+    const lz = camera.position.z + Math.cos(a) * radius;
+
+    if (dirRef.current) {
+      dirRef.current.position.set(lx, ly, lz);
+      if (targetRef.current) {
+        targetRef.current.position.copy(camera.position);
+        dirRef.current.target = targetRef.current;
+        dirRef.current.target.updateMatrixWorld();
+      }
+      dirRef.current.intensity = flashRef.current * THREE.MathUtils.lerp(14, 26, Math.random());
+      dirRef.current.color.set("#D7E8FF");
+    }
+    if (ambRef.current) {
+      ambRef.current.intensity = flashRef.current * 1.5;
+      ambRef.current.color.set("#D7E8FF");
+    }
+
+    gl.toneMappingExposure =
+      baseExposureRef.current + flashRef.current * exposureKick;
+
+    onFlash(THREE.MathUtils.clamp(flashRef.current, 0, 1));
+  });
+
+  return (
+    <>
+      <directionalLight ref={dirRef} intensity={0} />
+      <ambientLight ref={ambRef} intensity={0} />
+      <object3D ref={targetRef} />
+    </>
+  );
+}
+
 /** ---------- Sample data ---------- */
 const BUILDING_DATA = {
   E1: {
@@ -388,9 +494,6 @@ const Map3D = ({
   const [initialFocusBox, setInitialFocusBox] = useState(null);
   const didFitRef = useRef(false);
 
-  // Keep a local copy of original colors for wet-look restore (mesh -> THREE.Color)
-  const localOriginalColorsRef = useRef(null);
-
   // Isolation + background
   const isolatedActiveRef = useRef(false);
   const visibilityBackupRef = useRef(new Map());
@@ -434,7 +537,7 @@ const Map3D = ({
   const openingDroneYRef = useRef(null);
   const bootDoneRef = useRef(false);
 
-  // Tone mapping (store baseline so we can restore perfectly)
+  // Tone mapping baseline
   const baseExposureRef = useRef(1.15);
   useEffect(() => {
     gl.toneMappingExposure = baseExposureRef.current;
@@ -478,8 +581,8 @@ const Map3D = ({
       const dx = curr.x - prev.x;
       const dy = curr.y - prev.y;
       prev = curr;
-      yawTargetRef.current -= dx * SMOOTH.mouseSens;
-      pitchTargetRef.current -= dy * SMOOTH.mouseSens;
+      yawTargetRef.current -= dx * 0.0013;
+      pitchTargetRef.current -= dy * 0.0013;
       const HALF = Math.PI / 2;
       pitchTargetRef.current = Math.max(
         -HALF,
@@ -538,29 +641,27 @@ const Map3D = ({
         const dx = curr.x - prev.x;
         const dy = curr.y - prev.y;
         prevTouches = [curr];
-        yawTargetRef.current -= dx * SMOOTH.mouseSens * 1.2;
-        pitchTargetRef.current -= dy * SMOOTH.mouseSens * 1.2;
+        yawTargetRef.current -= dx * 0.0013 * 1.2;
+        pitchTargetRef.current -= dy * 0.0013 * 1.2;
         const HALF = Math.PI / 2;
         pitchTargetRef.current = Math.max(-HALF, Math.min(HALF, pitchTargetRef.current));
       } else if (touchMode === 'panzoom' && e.touches.length === 2) {
         e.preventDefault();
         const currTouches = toPts(e.touches);
         const [a, b] = currTouches;
-        const centerCurr = avg(currTouches);
         const centerPrev = avg(prevTouches);
-        const dx = centerCurr.x - centerPrev.x;
-        const dy = centerCurr.y - centerPrev.y;
+        const centerCurr = avg(currTouches);
 
         const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
         const right = new THREE.Vector3(1, 0, 0).applyEuler(yawOnly);
         const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
 
         const panScale = 0.02 * (mode === 'drone' ? 1 : 0.3);
-        camera.position.addScaledVector(right, -dx * panScale);
+        camera.position.addScaledVector(right, -(centerCurr.x - centerPrev.x) * panScale);
 
         if (mode === 'drone') {
           const altScale = 0.05;
-          camera.position.y += -dy * altScale * -1;
+          camera.position.y += -(centerCurr.y - centerPrev.y) * altScale * -1;
         }
 
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -817,7 +918,7 @@ const Map3D = ({
     [camera]
   );
 
-  /* ============ Frame (movement, locking, ground) ============ */
+  /* ============ Grounded movement, keys, etc. ============ */
   useFrame((_, delta) => {
     const now = performance.now();
     const locked = now < focusUntilRef.current;
@@ -948,7 +1049,7 @@ const Map3D = ({
     }
   }, [mode, camera]);
 
-  /** ---------- Generic Step-2 floor filter (no camera move) ---------- */
+  /** ---------- Generic Step-2 floor filter ---------- */
   const applyFloorFilter = useCallback(
     (buildingKey, clickedLabel) => {
       if (!isIsolated() || currentIsolationKeyRef.current !== buildingKey) return;
@@ -1371,159 +1472,54 @@ const Map3D = ({
         camera.rotation.y = snap.rot.y;
         camera.rotation.x = snap.rot.x;
         camera.rotation.z = 0;
-        yawTargetRef.current = snap.rot.y;
-        pitchTargetRef.current = snap.rot.x;
       },
     });
   }, [camera]);
 
-  /* ================== Hour-based lights ================== */
+  /* ================== Rain factor for sky/lighting ================== */
+  const rainFactor = useMemo(
+    () => (rainEnabled ? Math.max(0.05, Math.min(1, rainIntensity)) : 0),
+    [rainEnabled, rainIntensity]
+  );
+
+  /* ================== Hour-based lights (rain-aware color/intensity) ================== */
   const ambRef = useRef();
   const dir1Ref = useRef();
   const dir2Ref = useRef();
   const hemiRef = useRef();
   useEffect(() => {
-    const cols = skyColorsByHour(envHour);
+    const cols = skyColorsByHour(envHour, rainFactor, 0);
     if (hemiRef.current) {
       hemiRef.current.color = cols.top.clone();
       hemiRef.current.groundColor = cols.bottom.clone();
-      hemiRef.current.intensity = envHour >= 19 || envHour < 6 ? 0.45 : 0.85;
+      const night = envHour >= 19 || envHour < 6;
+      hemiRef.current.intensity = (night ? 0.45 : 0.85) * (1.0 - 0.25 * rainFactor);
     }
-    if (ambRef.current) ambRef.current.intensity = envHour >= 19 || envHour < 6 ? 0.7 : 1.0;
+    if (ambRef.current) {
+      const night = envHour >= 19 || envHour < 6;
+      ambRef.current.intensity = (night ? 0.7 : 1.0) * (1.0 - 0.2 * rainFactor);
+    }
     if (dir1Ref.current) {
-      dir1Ref.current.intensity = envHour >= 19 || envHour < 6 ? 0.5 : 1.4;
+      dir1Ref.current.intensity = (envHour >= 19 || envHour < 6 ? 0.5 : 1.4) * (1.0 - 0.35 * rainFactor);
       dir1Ref.current.color = cols.sunTint.clone();
     }
     if (dir2Ref.current) {
-      dir2Ref.current.intensity = envHour >= 19 || envHour < 6 ? 0.4 : 1.0;
+      dir2Ref.current.intensity = (envHour >= 19 || envHour < 6 ? 0.4 : 1.0) * (1.0 - 0.3 * rainFactor);
       dir2Ref.current.color = cols.haze.clone();
     }
-  }, [envHour]);
+  }, [envHour, rainFactor]);
 
-  /* ================== Wet Look: tint + roughness when raining ==================
-     STRONG RESTORE when intensity hits 0 (fallback to mesh->originalColor map). */
-  const lastWetFactorRef = useRef(0);
-
-  const restoreDryLook = useCallback(() => {
-    scene.traverse((obj) => {
-      if (!obj.isMesh || !obj.material) return;
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-
-      const meshBaseColor =
-        localOriginalColorsRef.current?.get(obj)?.clone() ?? null;
-
-      for (const mat of mats) {
-        if (!mat.userData) mat.userData = {};
-
-        if (mat.color && mat.color.isColor) {
-          if (mat.userData._baseColor && mat.userData._baseColor.isColor) {
-            mat.color.copy(mat.userData._baseColor);
-          } else if (meshBaseColor) {
-            mat.color.copy(meshBaseColor);
-          }
-        }
-
-        if (typeof mat.userData._baseRoughness === 'number') {
-          mat.roughness = mat.userData._baseRoughness;
-        }
-        if (typeof mat.userData._baseEnv === 'number') {
-          mat.envMapIntensity = mat.userData._baseEnv;
-        }
-
-        mat.needsUpdate = true;
-
-        delete mat.userData._baseColor;
-        delete mat.userData._baseRoughness;
-        delete mat.userData._baseEnv;
-      }
-    });
-
-    gl.toneMappingExposure = baseExposureRef.current;
-    lastWetFactorRef.current = 0;
-  }, [scene, gl]);
-
-  const applyWetLook = useCallback(
-    (factor) => {
-      const f = THREE.MathUtils.clamp(factor, 0, 1);
-
-      if (f === 0 && lastWetFactorRef.current !== 0) {
-        restoreDryLook();
-        return;
-      }
-
-      if (Math.abs(f - lastWetFactorRef.current) < 0.005) return;
-      lastWetFactorRef.current = f;
-
-      const wetTint = new THREE.Color(0x6f7c8a);
-
-      scene.traverse((obj) => {
-        if (!obj.isMesh || !obj.material) return;
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-
-        for (const mat of mats) {
-          if (!mat.userData) mat.userData = {};
-
-          if (mat.color && mat.color.isColor) {
-            if (!mat.userData._baseColor || !mat.userData._baseColor.isColor) {
-              mat.userData._baseColor = mat.color.clone();
-            }
-            const baseColor = mat.userData._baseColor;
-            const mixed = baseColor
-              .clone()
-              .lerp(wetTint, 0.35 * f)
-              .multiplyScalar(THREE.MathUtils.lerp(1.0, 0.88, f));
-            mat.color.copy(mixed);
-          }
-
-          if (typeof mat.roughness === 'number') {
-            if (mat.userData._baseRoughness == null) {
-              mat.userData._baseRoughness = mat.roughness;
-            }
-            mat.roughness = THREE.MathUtils.lerp(mat.userData._baseRoughness, 0.28, f);
-          }
-
-          if (typeof mat.envMapIntensity === 'number') {
-            if (mat.userData._baseEnv == null) {
-              mat.userData._baseEnv = mat.envMapIntensity;
-            }
-            const baseEnv = mat.userData._baseEnv ?? 1;
-            mat.envMapIntensity = THREE.MathUtils.lerp(baseEnv, baseEnv * 1.25, f);
-          }
-
-          mat.needsUpdate = true;
-        }
-      });
-
-      gl.toneMappingExposure = THREE.MathUtils.lerp(baseExposureRef.current, 1.03, f);
-    },
-    [scene, gl, restoreDryLook]
-  );
-
-  const captureOriginalsOnce = useCallback((map) => {
-    if (!localOriginalColorsRef.current) {
-      const copy = new Map();
-      map?.forEach((color, mesh) => copy.set(mesh, color.clone()));
-      localOriginalColorsRef.current = copy;
-    }
-  }, []);
-
-  useEffect(() => {
-    const f = rainEnabled ? THREE.MathUtils.clamp(rainIntensity, 0, 1) : 0;
-    if (f === 0) {
-      restoreDryLook();
-    } else {
-      applyWetLook(f);
-    }
-  }, [rainEnabled, rainIntensity, applyWetLook, restoreDryLook]);
+  // ⚡ lightning flash value for sky & clouds
+  const [lightningFlash, setLightningFlash] = useState(0);
 
   // Softer wind used by the rain system
   const rainWind = useMemo(() => new THREE.Vector2(2.2, -0.9), []);
 
   return (
     <>
-      {/* Realistic sky & cloud field (no scene fog) */}
-      <SkyDome hour={envHour} />
-      <RealCloudField hour={envHour} />
+      {/* Rain-aware sky & clouds (more grey when raining) + lightning flashes */}
+      <SkyDome hour={envHour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
+      <RealCloudField hour={envHour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
 
       {/* Lights */}
       <ambientLight ref={ambRef} intensity={1.0} />
@@ -1533,10 +1529,7 @@ const Map3D = ({
 
       {/* Campus model */}
       <Model
-        setOriginalColors={(map) => {
-          setOriginalColors && setOriginalColors(map);
-          captureOriginalsOnce(map);
-        }}
+        setOriginalColors={setOriginalColors}
         setInitialFocusBox={setInitialFocusBox}
         setGroundMeshes={(arr) => {
           groundMeshesRef.current = Array.isArray(arr) ? arr : [];
@@ -1555,13 +1548,20 @@ const Map3D = ({
         }}
       />
 
-      {/* ✅ Single rain wrapper; no named imports */}
+      {/* Rain effects (buildings keep their original materials/colors) */}
       <RainMode
         enabled={rainEnabled}
         intensity={rainIntensity}
         hour={envHour}
         wind={rainWind}
         colliders={collidableMeshesRef.current}
+      />
+
+      {/* ⚡ Lightning/thunder effects (active when rain ≥ 80%) */}
+      <LightningFX
+        active={rainEnabled && rainIntensity >= 0.8}
+        intensity={rainIntensity}
+        onFlash={(f) => setLightningFlash(f)}
       />
     </>
   );
