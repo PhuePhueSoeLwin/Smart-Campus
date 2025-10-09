@@ -1,4 +1,3 @@
-/* Minimal canvas helpers */
 .map3d-canvas {
   outline: none;
   user-select: none;
@@ -10,5 +9,4 @@
 }
 .map3d-canvas:active { cursor: grabbing; }
 
-/* Cursor hint while in walking mode */
 .walk-mode { cursor: crosshair; }

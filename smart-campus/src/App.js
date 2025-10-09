@@ -1,4 +1,3 @@
-// App.js
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
@@ -8,16 +7,13 @@ import gsap from 'gsap';
 import Map3D from './components/Map3D';
 import CCTV from './components/CCTV';
 import './App.css';
-
 import LeftDashboard from './components/leftDashboard';
 import RightDashboard from './components/rightDashboard';
 import Controller from './components/controller';
-
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import GaugeChart from 'react-gauge-chart';
 import { Bar } from 'react-chartjs-2';
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -49,9 +45,7 @@ ChartJS.defaults.borderColor = 'rgba(255,255,255,0.15)';
 ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
-/** Popup gauge should be steady: memoize like in LeftDashboard */
 const StaticGauge = React.memo(GaugeChart, () => true);
-
 const Modal = ({ open, onClose, children, size = 'md' }) => {
   if (!open) return null;
   return createPortal(
@@ -71,8 +65,6 @@ const Modal = ({ open, onClose, children, size = 'md' }) => {
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
-
-/* ===== Icons (added moon, rain) ===== */
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -96,7 +88,6 @@ const Icon = ({ name, size = 14 }) => {
   }
 };
 
-/* Navbar without Weather button */
 const Navbar = ({ children }) => {
   const location = useLocation();
   const onCCTV = location.pathname === '/cctv';
@@ -112,15 +103,12 @@ const Navbar = ({ children }) => {
         <Icon name="camera" size={16} />
         <span className="cctv-text">{onCCTV ? 'Back to Map' : 'CCTV'}</span>
       </Link>
-
       <img
         src="/assets/mfu_logo.png"
         alt="MFU Logo"
         className="navbar-logo"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       />
-
-      {/* Only the mode switch in the center now */}
       <div className="navbar-center-cluster">
         <div className="mode-switch" role="tablist" aria-label="View mode">
           {children}
@@ -130,7 +118,6 @@ const Navbar = ({ children }) => {
   );
 };
 
-/* ===== In-Canvas helper ===== */
 const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }) => {
   const { camera } = useThree();
   const lastRestoreTick = useRef(0);
@@ -170,7 +157,6 @@ const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }
   return null;
 };
 
-/* ===== Helpers for Thailand time & sky ===== */
 function getThailandNow() {
   const fmt = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Bangkok',
@@ -193,9 +179,8 @@ function calcSkyByHour(hour) {
   return '#0B1526';
 }
 
-/* ===== Weather Controls Panel (time + rain) ===== */
 const WeatherControlPanel = ({
-  clock,                     // <- hour24-aware clock from parent
+  clock,
   envMode, setEnvMode,
   envHour, setEnvHour,
   rainEnabled, setRainEnabled,
@@ -211,19 +196,15 @@ const WeatherControlPanel = ({
           <div className="title">Weather Controls</div>
           <div className="subtitle">Thailand time: {clock.date}</div>
         </div>
-
         <div className="toolbar">
           <button className="tool-btn danger" title="Close weather panel" onClick={onClose}>
             <Icon name="x" />
           </button>
         </div>
       </div>
-
       <div className="wc-sections">
-        {/* Realtime & Manual + Time Format */}
         <div className="wc-card">
           <div className="wc-card-title">Realtime (Thailand)</div>
-
           <div className="wc-time-row">
             <div className="wc-live-dot" aria-hidden="true" />
             <div className="wc-live-time">
@@ -232,8 +213,6 @@ const WeatherControlPanel = ({
               <span className="wc-live-label"> Asia/Bangkok</span>
             </div>
           </div>
-
-          {/* Time format toggle INSIDE this card; updates app-wide */}
           <div className="wc-mode-toggle" style={{ marginTop: 10 }}>
             <span className={`mode-label ${!hour24 ? 'active' : ''}`}>12h</span>
             <label className="switch" title="Toggle 12h / 24h clock">
@@ -246,7 +225,6 @@ const WeatherControlPanel = ({
             </label>
             <span className={`mode-label ${hour24 ? 'active' : ''}`}>24h</span>
           </div>
-
           <div className="wc-mode-toggle" style={{ marginTop: 10 }}>
             <span className={`mode-label ${envMode === 'realtime' ? 'active' : ''}`}>Realtime</span>
             <label className="switch" title="Switch between realtime and manual time">
@@ -262,8 +240,6 @@ const WeatherControlPanel = ({
 
           <p className="wc-hint">Use 12h/24h to change the app clock. Switch to Manual to scrub the sun.</p>
         </div>
-
-        {/* Manual slider */}
         <div className={`wc-card ${envMode === 'manual' ? '' : 'wc-disabled'}`}>
           <div className="wc-card-title">Manual Time</div>
           <div className="wc-manual-row">
@@ -282,8 +258,6 @@ const WeatherControlPanel = ({
             <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
           </div>
         </div>
-
-        {/* Rain */}
         <div className={`wc-card ${rainEnabled ? '' : 'wc-muted'}`}>
           <div className="wc-card-title">Rain</div>
           <div className="wc-rain-row">
@@ -297,7 +271,6 @@ const WeatherControlPanel = ({
             </label>
             <div className={`wc-rain-badge ${rainEnabled ? 'on' : 'off'}`}>{rainEnabled ? 'On' : 'Off'}</div>
           </div>
-
           <div className="wc-rain-intensity">
             <label>Intensity</label>
             <input
@@ -318,16 +291,12 @@ const WeatherControlPanel = ({
 
 const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
-
-  /* ===== ENV / WEATHER CONTROL STATE ===== */
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
-  const [envMode, setEnvMode] = useState('realtime'); // 'realtime' | 'manual'
-  const [envHour, setEnvHour] = useState(12);         // 0..23 (manual)
+  const [envMode, setEnvMode] = useState('realtime');
+  const [envHour, setEnvHour] = useState(12);
   const [rainEnabled, setRainEnabled] = useState(false);
   const [rainIntensity, setRainIntensity] = useState(0.5);
-
   const [backgroundColor, setBackgroundColor] = useState('#87CEEB');
-
   const [thailandTime, setThailandTime] = useState({ date: '', hour: '', minute: '', second: '', period: '' });
   const [popupData, setPopupData] = useState(null);
   const [resetColors, setResetColors] = useState(false);
@@ -338,7 +307,6 @@ const MapApp = () => {
   const [stepNudgeTick, setStepNudgeTick] = useState(0);
   const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
   useEffect(() => { setControllerCommand(null); }, [navMode]);
-
   const [pinned, setPinned] = useState(false);
   const setPopupFromMap = useCallback((d) => {
     if (!pinned) setPopupData(d);
@@ -350,31 +318,24 @@ const MapApp = () => {
     return dontShow === 'true' ? false : true;
   });
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const [hour24, setHour24] = useState(true); // single source of truth app-wide
-
+  const [hour24, setHour24] = useState(true);
   const [isWeeklyPopupVisible, setIsWeeklyPopupVisible] = useState(false);
   const [isOverallPopupVisible, setIsOverallPopupVisible] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState([new Date(), new Date()]);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
-
   const [isVehiclePopupVisible, setIsVehiclePopupVisible] = useState(false);
   const [vehicleType, setVehicleType] = useState('Cars');
   const [schedule, setSchedule] = useState([]);
-
   const [walkStepMeters, setWalkStepMeters] = useState(6);
   const [walkVStepMeters, setWalkVStepMeters] = useState(2.6);
   const [walkStickToFloor, setWalkStickToFloor] = useState(true);
   const [walkYTick, setWalkYTick] = useState(0);
   const [walkYDir, setWalkYDir] = useState(null);
-
-  // Open weather panel via the clock (no Weather button)
   const openWeatherPanel = () => {
     setIsWeatherOpen(true);
     setPopupData(null);
     setPinned(false);
   };
-
-  /* ===== Thailand clock (for display, hour24-aware) ===== */
   const updateThailandTime = () => {
     const fmt = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Bangkok',
@@ -399,8 +360,6 @@ const MapApp = () => {
       period
     });
   };
-
-  /* ===== Compute the hour to drive sky/lighting ===== */
   const [visualHour, setVisualHour] = useState(12);
   useEffect(() => {
     const tick = () => {
@@ -413,7 +372,6 @@ const MapApp = () => {
     const bgId = setInterval(tick, 1000);
     const tId = setInterval(updateThailandTime, 1000);
     return () => { clearInterval(bgId); clearInterval(tId); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envMode, envHour, hour24]);
 
   useEffect(() => {
@@ -573,13 +531,9 @@ const MapApp = () => {
   useEffect(() => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
-
-  useEffect(() => { updateThailandTime(); }, []); // initialize
-
+  useEffect(() => { updateThailandTime(); }, []);
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
@@ -589,19 +543,15 @@ const MapApp = () => {
     };
     const elec = popupData.electricity || { value: 0, unit: 'kWh', percent: 0, status: 'N/A' };
     const water = popupData.water || { value: 0, unit: 'm³', percent: 0, status: 'N/A' };
-
     const THB_PER_KWH = 4.19;
     const THB_PER_M3 = 13.0;
     const GRID_CO2_KG_KWH = 0.45;
-
     const costTHB = elec.value * THB_PER_KWH;
     const waterTHB = water.value * THB_PER_M3;
     const co2kg = elec.value * GRID_CO2_KG_KWH;
-
     const baseOcc =
       popupData.type?.toLowerCase().includes('library') ? 220 :
       popupData.type?.toLowerCase().includes('auditor') ? 350 : 120;
-
     const occupancy = Math.max(0, Math.round(baseOcc * (0.8 + Math.random()*0.4)));
     const temperature = 24 + Math.round(Math.random()*4);
     const co2ppm = 420 + Math.round(Math.random()*200);
@@ -626,26 +576,22 @@ const MapApp = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
   const copyCoords = async () => {
     if (!popupData?.world) return;
     const { x, y, z } = popupData.world;
     const text = `X ${x.toFixed(2)}, Y ${y.toFixed(2)}, Z ${z.toFixed(2)}`;
     try { await navigator.clipboard.writeText(text); } catch {}
   };
-
   const openAnalytics = () => {
     if (!popupData) return;
     window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
   };
-
   const latestCamRef = useRef(null);
   const preFocusPoseRef = useRef(null);
   const [restoreTick, setRestoreTick] = useState(0);
   const [restoreSnapshot, setRestoreSnapshot] = useState(null);
   const wasOpenRef = useRef(false);
   const [restoreFreezeMs, setRestoreFreezeMs] = useState(0);
-
   useEffect(() => {
     const isOpen = !!popupData;
     if (isOpen && !wasOpenRef.current) {
@@ -659,11 +605,9 @@ const MapApp = () => {
       }
     }
   }, [popupData]);
-
   const inE1Step2 = popupData && /^E1/i.test(popupData.name);
   const inE2Step2 = popupData && /^E2/i.test(popupData.name);
   const inLibraryStep2 = popupData && (/^Library/i.test(popupData.name) || /^AV$/i.test(popupData.name));
-
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       <Navbar>
@@ -677,7 +621,6 @@ const MapApp = () => {
           <Icon name="walk" size={14} />
           <span>Walk</span>
         </button>
-
         <button
           className={`mode-seg ${navMode === 'drone' ? 'active' : ''}`}
           onClick={() => setNavMode('drone')}
@@ -688,15 +631,12 @@ const MapApp = () => {
           <Icon name="drone" size={14} />
           <span>Drone</span>
         </button>
-
         <div
           className="mode-thumb"
           style={{ transform: navMode === 'walk' ? 'translateX(0%)' : 'translateX(100%)' }}
           aria-hidden="true"
         />
       </Navbar>
-
-      {/* Date/Time now opens the Weather Panel */}
       <div
         className="thailand-time"
         role="button"
@@ -722,11 +662,9 @@ const MapApp = () => {
           </button>
         </div>
       </div>
-
       <button className="hide-button" onClick={toggleDashboards}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
-
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
           <Canvas
@@ -759,8 +697,6 @@ const MapApp = () => {
                 walkYDir={walkYDir}
                 restoreCameraTick={restoreTick}
                 popupOpen={!!popupData || isWeatherOpen}
-
-                /* Weather/Env props for Map3D */
                 envMode={envMode}
                 envHour={visualHour}
                 rainEnabled={rainEnabled}
@@ -819,7 +755,6 @@ const MapApp = () => {
                 {walkVStepMeters.toFixed(1)} m
               </div>
             </div>
-
             <div className="elevator">
               <button
                 className="elev-btn"
@@ -838,7 +773,6 @@ const MapApp = () => {
           </div>
         )}
       </div>
-
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -850,20 +784,17 @@ const MapApp = () => {
               onOpenOverallPopup={() => setIsOverallPopupVisible(true)}
             />
           </div>
-
           <div className="dashboard-wrapper right-dashboard-wrapper show">
             <RightDashboard onOpenVehiclePopup={openVehiclePopup} />
           </div>
         </>
       )}
-
       {!showDashboards && navMode === 'drone' && (
         <Controller setControllerCommand={setControllerCommand} />
       )}
-
       {isWeatherOpen && (
         <WeatherControlPanel
-          clock={thailandTime}              // <- hour24-aware
+          clock={thailandTime}
           envMode={envMode}
           setEnvMode={setEnvMode}
           envHour={envHour}
@@ -877,7 +808,6 @@ const MapApp = () => {
           onClose={() => setIsWeatherOpen(false)}
         />
       )}
-
       {!isWeatherOpen && popupData && popupDerived && (
         <div
           className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
@@ -890,7 +820,6 @@ const MapApp = () => {
               <div className="title">{popupData.name}</div>
               <div className="subtitle">{popupData.type}</div>
             </div>
-
             <div className="toolbar">
               {inE1Step2 && (
                 <button
@@ -946,7 +875,6 @@ const MapApp = () => {
               </button>
             </div>
           </div>
-
           <div className="telemetry-row">
             <div className="chip">
               <Icon name="user" /><span>{popupDerived.occupancy}</span><small>people</small>
@@ -958,7 +886,6 @@ const MapApp = () => {
               <Icon name="leaf" /><span>{popupDerived.co2ppm}</span><small>CO₂ ppm</small>
             </div>
           </div>
-
           {popupData.world && (
             <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
               <span className="loc-label">World</span>
@@ -967,7 +894,6 @@ const MapApp = () => {
               <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
             </div>
           )}
-
           <div className="metrics-grid">
             <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
@@ -987,7 +913,6 @@ const MapApp = () => {
                 {popupDerived.trendElec.dir === 'up' ? '▲' : popupDerived.trendElec.dir === 'down' ? '▼' : '■'} {Math.abs(popupDerived.trendElec.value)}%
               </div>
             </div>
-
             <div className={`metric-card ${popupData.water.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
                 <div className="metric-name"><span className="dot alt" />Water</div>
@@ -1007,7 +932,6 @@ const MapApp = () => {
               </div>
             </div>
           </div>
-
           <div className="footer-stats">
             <div className="pill"><span className="k">Cost</span><span className="v">฿{popupDerived.costTHB.toFixed(0)}</span></div>
             <div className="pill"><span className="k">CO₂</span><span className="v">{popupDerived.co2kg.toFixed(0)} kg</span></div>
@@ -1015,7 +939,6 @@ const MapApp = () => {
           </div>
         </div>
       )}
-
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -1025,13 +948,11 @@ const MapApp = () => {
             <button className={`chip ${presetRange === 30 ? 'active' : ''}`} onClick={() => setRangeDays(30)}>30d</button>
           </div>
         </div>
-
         <div className="modal-kpis">
           <div className="kpi"><span className="kpi-label">Total</span><span className="kpi-value">{Math.round(usageTotal).toLocaleString()} kWh</span></div>
           <div className="kpi"><span className="kpi-label">Avg / day</span><span className="kpi-value">{Math.round(usageAvg).toLocaleString()} kWh</span></div>
           <div className="kpi"><span className="kpi-label">Days</span><span className="kpi-value">{usageCount}</span></div>
         </div>
-
         <div className="modal-content">
           <div className="chart-wrapper">
             <Bar data={popupElectricityUsageData} options={popupElectricityUsageOptions} />
@@ -1041,18 +962,15 @@ const MapApp = () => {
           </div>
         </div>
       </Modal>
-
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
         </div>
-
         <div className="modal-kpis">
           <div className="kpi"><span className="kpi-label">Total Water Usage (Daily)</span><span className="kpi-value">{(buildings.reduce((acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0), 0)).toFixed(2)} liters/day</span></div>
           <div className="kpi"><span className="kpi-label">Total Water Usage (Monthly)</span><span className="kpi-value">{(buildings.reduce((acc, b) => acc + (waterUsageData.find((d) => d.building === b)?.usage || 0), 0) * 30).toFixed(2)} liters/month</span></div>
           <div className="kpi"><span className="kpi-label">Selected Building</span><span className="kpi-value">{selectedBuilding || '—'}</span></div>
         </div>
-
         <div className="modal-content">
           <div className="card gauge-card">
             <h4 className="card-title">{selectedBuilding ? selectedBuilding : 'Campus Water Usage'}</h4>
@@ -1073,7 +991,6 @@ const MapApp = () => {
               {selectedBuilding && (<p className="big-stat">{(waterUsageData.find((d)=>d.building===selectedBuilding)?.usage || 0).toFixed(2)} liters/day</p>)}
             </div>
           </div>
-
           <div className="card control-card">
             <h4 className="card-title">Select a Building</h4>
             <div className="水er-dropdown-container">
@@ -1086,7 +1003,6 @@ const MapApp = () => {
                 {buildings.map((b) => (<option key={b} value={b}>{b}</option>))}
               </select>
             </div>
-
             {selectedBuilding && (
               <div className="stat-box">
                 <div className="stat-label">Current Usage</div>
@@ -1097,7 +1013,6 @@ const MapApp = () => {
           </div>
         </div>
       </Modal>
-
       {isVehiclePopupVisible && (
         <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
           <div className="modal-header">
@@ -1115,9 +1030,7 @@ const MapApp = () => {
               >🏍️</button>
             </div>
           </div>
-
           <p className="modal-note">Here is the schedule for the whole day.</p>
-
           <div className="schedule-scroll">
             <table className="schedule-table">
               <thead>
@@ -1133,7 +1046,6 @@ const MapApp = () => {
               </tbody>
             </table>
           </div>
-
           {peakTime && (
             <div className="peak-row">
               <div className="kpi mini">
@@ -1148,7 +1060,6 @@ const MapApp = () => {
           )}
         </Modal>
       )}
-
       {showInstructions && (
         <div className="instructions-popup">
           <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
@@ -1170,7 +1081,6 @@ const MapApp = () => {
           }}>Do not show me again</button>
         </div>
       )}
-
       {showConfirmPopup && (
         <div className="confirm-popup">
           <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
@@ -1182,7 +1092,6 @@ const MapApp = () => {
     </div>
   );
 };
-
 const App = () => {
   return (
     <Router>
@@ -1193,5 +1102,4 @@ const App = () => {
     </Router>
   );
 };
-
 export default App;

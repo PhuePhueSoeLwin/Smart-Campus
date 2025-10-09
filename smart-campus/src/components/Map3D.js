@@ -1,4 +1,3 @@
-// components/Map3D.js
 import React, {
   useState,
   useEffect,
@@ -15,17 +14,11 @@ import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
 import './Map3D.css';
 
-/* =====================================================================
-   ⚡ LightningFX
-   - Triggers lightning/thunder light pulses when active (>= 80% rain)
-   - Emits a 0..1 flash value each frame via onFlash
-   - Brief exposure kick for dramatic flashes
-===================================================================== */
 function LightningFX({
   active = false,
-  intensity = 0.8,        // 0..1, maps to frequency/brightness
-  exposureKick = 0.25,    // renderer exposure bump while flashing
-  onFlash = () => {},     // callback(flash) each frame
+  intensity = 0.8,
+  exposureKick = 0.25,
+  onFlash = () => {},
 }) {
   const { camera, gl } = useThree();
   const dirRef = useRef();
@@ -58,7 +51,6 @@ function LightningFX({
 
   useFrame(({ clock }, dt) => {
     const now = clock.getElapsedTime();
-    // exponential falloff of flash
     flashRef.current *= Math.pow(0.04, dt);
 
     if (!active) {
@@ -174,7 +166,7 @@ const E2_FLOOR_ORDER = ['E2-G', 'E2-1', 'E2-2', 'E2-3', 'E2-4'];
 
 /** Library building has NO parent "Library" node; only these floors */
 const LIB_CANON = ['AV', 'Library2', 'Library3', 'Library4', 'Library5'];
-const LIB_FLOOR_ORDER = ['AV', 'Library2', 'Library3', 'Library4', 'Library5']; // bottom → top
+const LIB_FLOOR_ORDER = ['AV', 'Library2', 'Library3', 'Library4', 'Library5'];
 
 const canonE1 = (name = '') => {
   const s = String(name);
@@ -420,7 +412,7 @@ function Model({
 
     setGroundMeshes && setGroundMeshes(grounds);
 
-    // ✅ Colliders = ALL meshes (buildings + props + ground)
+    // Colliders = ALL meshes (buildings + props + ground)
     const colliders = everyMesh.slice();
     setCollidableMeshes && setCollidableMeshes(colliders);
   }, [
@@ -482,73 +474,51 @@ const Map3D = ({
   popupOpen = false,
   restoreCameraTick = 0,
 
-  // Env from the CloudSky integration
   envMode = 'realtime',
-  envHour = 12, // 0..23
+  envHour = 12,
 
-  // Rain props (from App.js Weather panel)
   rainEnabled = false,
   rainIntensity = 0.5,
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
   const didFitRef = useRef(false);
-
-  // Isolation + background
   const isolatedActiveRef = useRef(false);
   const visibilityBackupRef = useRef(new Map());
   const bgBackupRef = useRef(null);
   const BLACK = new THREE.Color(0x000000);
   const isolatedKeepSetRef = useRef(null);
   const currentIsolationKeyRef = useRef(null);
-
-  // E1/E2/Library indices (label -> Set roots)
   const e1IndexRef = useRef(new Map());
   const e2IndexRef = useRef(new Map());
   const libIndexRef = useRef(new Map());
-
-  // Camera snapshot (for restore)
   const prevCamRef = useRef(null);
-
-  // Ground helpers
   const groundMeshesRef = useRef([]);
   const collidableMeshesRef = useRef([]);
   const groundRay = useRef(new THREE.Raycaster());
   const tmp = useRef(new THREE.Vector3());
   const DOWN = useRef(new THREE.Vector3(0, -1, 0));
   const sceneMinYRef = useRef(null);
-
-  // Smooth control
   const velRef = useRef(new THREE.Vector3());
   const yawTargetRef = useRef(0);
   const pitchTargetRef = useRef(0);
-
-  // Control locks
   const suppressMoveUntilRef = useRef(0);
   const focusUntilRef = useRef(0);
-
-  // Tweens
   const nudgeTweenRef = useRef(null);
   const orbitTweenRef = useRef(null);
   const moveTweenRef = useRef(null);
   const fovTweenRef = useRef(null);
-
-  // Boot height
   const openingDroneYRef = useRef(null);
   const bootDoneRef = useRef(false);
-
-  // Tone mapping baseline
   const baseExposureRef = useRef(1.15);
   useEffect(() => {
     gl.toneMappingExposure = baseExposureRef.current;
   }, [gl]);
 
-  // SAFETY: kill any fog each frame to avoid refreshFogUniforms crash
   useFrame(() => {
     if (scene.fog) scene.fog = null;
   });
 
-  // Scene floor fallback
   useEffect(() => {
     const id = setTimeout(() => {
       try {
@@ -559,7 +529,6 @@ const Map3D = ({
     return () => clearTimeout(id);
   }, [scene]);
 
-  // Cursor hint
   useEffect(() => {
     const el = gl.domElement;
     if (mode === 'walk') el.classList.add('walk-mode');
@@ -567,7 +536,6 @@ const Map3D = ({
     return () => el.classList.remove('walk-mode');
   }, [gl, mode]);
 
-  /* ============ Mouse look ============ */
   useEffect(() => {
     let isDragging = false;
     let prev = { x: 0, y: 0 };
@@ -716,7 +684,6 @@ const Map3D = ({
     };
   }, [setPopupData]);
 
-  /* ===== Helpers ===== */
   const boxFromObjects = (objs) => {
     const box = new THREE.Box3();
     let init = false;
@@ -775,7 +742,6 @@ const Map3D = ({
     for (const root of setNodes) forceVisibleUpAndDown(root);
   };
 
-  /** ---------- Isolation helpers ---------- */
   const isolateWithObjects = useCallback(
     (objs, keyForThis = null) => {
       if (!objs?.length) return;
@@ -820,7 +786,6 @@ const Map3D = ({
     currentIsolationKeyRef.current = null;
   }, [scene]);
 
-  /** ---------- Camera focus + fast 360° orbit (Step 1 only) ---------- */
   const focusAndOrbitCamera = useCallback(
     (objs) => {
       if (!objs?.length) return;
@@ -918,12 +883,10 @@ const Map3D = ({
     [camera]
   );
 
-  /* ============ Grounded movement, keys, etc. ============ */
   useFrame((_, delta) => {
     const now = performance.now();
     const locked = now < focusUntilRef.current;
 
-    // Rotate camera with keys (disabled while locked)
     if (!locked) {
       const yawLeft = keys.current['ArrowLeft'] ? 1 : 0;
       const yawRight = keys.current['ArrowRight'] ? 1 : 0;
@@ -944,7 +907,6 @@ const Map3D = ({
       camera.rotation.z = 0;
     }
 
-    // Movement wish
     const wish = new THREE.Vector3(0, 0, 0);
     if (keys.current['KeyW']) wish.z -= 1;
     if (keys.current['KeyS']) wish.z += 1;
@@ -981,12 +943,10 @@ const Map3D = ({
     const tAcc = dampFactor(SMOOTH.accel, delta);
     velRef.current.lerp(desiredVel, tAcc);
 
-    // Apply velocity if not locked
     if (now > suppressMoveUntilRef.current && !locked) {
       camera.position.addScaledVector(velRef.current, delta);
     }
 
-    // Minimal ground clearance for drone
     const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
     groundRay.current.set(origin, new THREE.Vector3(0, -1, 0));
     let groundY = sceneMinYRef.current ?? 0;
@@ -1001,7 +961,6 @@ const Map3D = ({
     }
   });
 
-  // Initial fit
   useLayoutEffect(() => {
     if (initialFocusBox && !didFitRef.current) {
       const aspect = size.width / size.height;
@@ -1023,7 +982,6 @@ const Map3D = ({
     }
   }, [initialFocusBox, camera, size]);
 
-  // Mode height adjust
   useEffect(() => {
     if (!bootDoneRef.current) return;
     const origin = tmp.current.set(camera.position.x, 1e6, camera.position.z);
@@ -1049,7 +1007,6 @@ const Map3D = ({
     }
   }, [mode, camera]);
 
-  /** ---------- Generic Step-2 floor filter ---------- */
   const applyFloorFilter = useCallback(
     (buildingKey, clickedLabel) => {
       if (!isIsolated() || currentIsolationKeyRef.current !== buildingKey) return;
@@ -1068,7 +1025,6 @@ const Map3D = ({
       }
       focusUntilRef.current = 0;
 
-      // pick index + lists
       let idxRef = null,
         CANON = [],
         FLOORS = [];
@@ -1087,11 +1043,9 @@ const Map3D = ({
       } else return;
 
       const get = (k) => idxRef.current.get(k);
-      // Hide everything first (all floors)
       for (const k of CANON) setVisibleDeepSet(get(k), false);
 
       if (buildingKey === 'Library') {
-        // Special cascade rules (no parent Library node)
         if (clickedLabel === 'Library5') {
           setVisibleDeepSet(get('Library5'), true);
           setVisibleDeepSet(get('Library4'), true);
@@ -1110,7 +1064,6 @@ const Map3D = ({
           setVisibleDeepSet(get('AV'), true);
         }
       } else {
-        // E1/E2 standard
         if (clickedLabel === buildingKey) {
           for (const nm of FLOORS) setVisibleDeepSet(get(nm), true);
         } else if (clickedLabel.endsWith('-G')) {
@@ -1123,7 +1076,6 @@ const Map3D = ({
         }
       }
 
-      // pick popup info
       let infoKey = clickedLabel;
       if (buildingKey === 'E1' || buildingKey === 'E2') infoKey = buildingKey;
       else if (buildingKey === 'Library') {
@@ -1148,7 +1100,6 @@ const Map3D = ({
     [setPopupData, camera]
   );
 
-  /** Resolve E1/E2/Library label from any node */
   const resolveLabelFromNode = (node) => {
     let p = node;
     while (p) {
@@ -1167,7 +1118,6 @@ const Map3D = ({
     return null;
   };
 
-  /** Ground hit test (ignore clicks on GIS/terrain/ground) */
   const groundNameRe = /(terrain|ground|gis|base|map|sat|earth)/i;
   const isGroundNode = (node) => {
     let p = node;
@@ -1181,7 +1131,6 @@ const Map3D = ({
     return false;
   };
 
-  /* ============ Picking ============ */
   useEffect(() => {
     const onClick = (event) => {
       const rect = gl.domElement.getBoundingClientRect();
@@ -1192,13 +1141,10 @@ const Map3D = ({
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
-      // Intersect then DROP all hits that belong to ground (GIS etc.)
       const allHits = raycaster.intersectObjects(scene.children, true);
       const intersects = allHits.filter((h) => !isGroundNode(h.object));
 
-      // If isolated (black background shown):
       if (isIsolated()) {
-        // Background/ground unclickable
         if (!intersects.length) {
           event.preventDefault();
           if (typeof event.stopPropagation === 'function') event.stopPropagation();
@@ -1208,7 +1154,6 @@ const Map3D = ({
         const key = currentIsolationKeyRef.current;
         if (key === 'E1' || key === 'E2' || key === 'Library') {
           const lab = resolveLabelFromNode(intersects[0].object);
-          // Only respond to clicks inside the same building
           if (
             !lab ||
             (key === 'Library'
@@ -1222,18 +1167,13 @@ const Map3D = ({
           applyFloorFilter(key, lab);
           return;
         }
-
-        // Isolated on other buildings, ignore clicks
         return;
       }
-
-      // Not isolated -> normal selection (Step 1)
       if (!intersects.length) return;
 
       const hit = intersects[0];
       const label = resolveLabelFromNode(hit.object);
 
-      // E1 subtree
       if (label && label.startsWith('E1')) {
         const allRoots = [];
         for (const k of E1_CANON) {
@@ -1260,7 +1200,6 @@ const Map3D = ({
         return;
       }
 
-      // E2 subtree
       if (label && label.startsWith('E2')) {
         const allRoots = [];
         for (const k of E2_CANON) {
@@ -1287,7 +1226,6 @@ const Map3D = ({
         return;
       }
 
-      // Library subtree (AV or Library2..5)
       if (label && (label === 'AV' || /^Library[2345]$/.test(label))) {
         const allRoots = [];
         for (const k of LIB_CANON) {
@@ -1316,7 +1254,6 @@ const Map3D = ({
         return;
       }
 
-      // Generic building path
       let clickedObject = hit.object;
       if (!clickedObject.userData.name) return;
 
@@ -1359,7 +1296,6 @@ const Map3D = ({
     applyFloorFilter,
   ]);
 
-  /* ============ Return-to-Origin events for E1/E2/Library ============ */
   useEffect(() => {
     const restoreAllFor = (key) => {
       let idxRef = null,
@@ -1417,7 +1353,6 @@ const Map3D = ({
     };
   }, [camera, setPopupData]);
 
-  /* ============ Restore triggers from App.js ============ */
   const wasPopupOpenRef = useRef(false);
   useEffect(() => {
     const was = wasPopupOpenRef.current;
@@ -1437,7 +1372,6 @@ const Map3D = ({
     }
   }, [restoreCameraTick]);
 
-  /* ===== Smooth camera restore ===== */
   const restoreCameraSmooth = useCallback(() => {
     const snap = prevCamRef.current;
     if (!snap) return;
@@ -1476,13 +1410,11 @@ const Map3D = ({
     });
   }, [camera]);
 
-  /* ================== Rain factor for sky/lighting ================== */
   const rainFactor = useMemo(
     () => (rainEnabled ? Math.max(0.05, Math.min(1, rainIntensity)) : 0),
     [rainEnabled, rainIntensity]
   );
 
-  /* ================== Hour-based lights (rain-aware color/intensity) ================== */
   const ambRef = useRef();
   const dir1Ref = useRef();
   const dir2Ref = useRef();
@@ -1509,25 +1441,105 @@ const Map3D = ({
     }
   }, [envHour, rainFactor]);
 
-  // ⚡ lightning flash value for sky & clouds
   const [lightningFlash, setLightningFlash] = useState(0);
 
-  // Softer wind used by the rain system
   const rainWind = useMemo(() => new THREE.Vector2(2.2, -0.9), []);
+
+  const sampleGroundY = useCallback((x, z) => {
+    let groundY = sceneMinYRef.current ?? 0;
+    const origin = tmp.current.set(x, 1e6, z);
+    groundRay.current.set(origin, DOWN.current);
+    const grounds = groundMeshesRef.current;
+    if (grounds?.length) {
+      const hits = groundRay.current.intersectObjects(grounds, true);
+      if (hits.length) groundY = hits[0].point.y;
+    }
+    return groundY;
+  }, []);
+
+  const doWalkNudge = useCallback((dir, meters) => {
+    if (mode !== 'walk') return;
+    if (!['forward', 'left', 'right'].includes(dir)) return;
+
+    if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
+
+    const yawOnly = new THREE.Euler(0, camera.rotation.y, 0, 'YXZ');
+    const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
+    const right = new THREE.Vector3(1, 0, 0).applyEuler(yawOnly);
+    const left = right.clone().multiplyScalar(-1);
+
+    let moveVec = new THREE.Vector3();
+    if (dir === 'forward') moveVec.copy(forward);
+    else if (dir === 'left') moveVec.copy(left);
+    else if (dir === 'right') moveVec.copy(right);
+    moveVec.multiplyScalar(meters);
+
+    const start = camera.position.clone();
+    const targetXZ = start.clone().add(moveVec);
+
+    let targetY = start.y;
+    if (walkStickToFloor) {
+      const gy = sampleGroundY(targetXZ.x, targetXZ.z);
+      targetY = gy + WALK.eyeHeight;
+    }
+
+    const duration = SMOOTH.nudgeMs / 1000;
+    const now = performance.now();
+    suppressMoveUntilRef.current = now + SMOOTH.nudgeMs + 40;
+
+    yawTargetRef.current = camera.rotation.y;
+    pitchTargetRef.current = camera.rotation.x;
+
+    nudgeTweenRef.current = gsap.to(camera.position, {
+      duration,
+      x: targetXZ.x,
+      y: targetY,
+      z: targetXZ.z,
+      ease: 'power2.out',
+      onComplete: () => { nudgeTweenRef.current = null; }
+    });
+  }, [camera, mode, walkStickToFloor, sampleGroundY]);
+
+  const lastNudgeTickRef = useRef(0);
+  useEffect(() => {
+    if (stepNudgeTick === lastNudgeTickRef.current) return;
+    lastNudgeTickRef.current = stepNudgeTick;
+    if (!stepNudge || !stepNudge.dir) return;
+    doWalkNudge(stepNudge.dir, walkStepMeters);
+  }, [stepNudgeTick, stepNudge, walkStepMeters, doWalkNudge]);
+
+  const lastWalkYTickRef = useRef(0);
+  useEffect(() => {
+    if (walkYTick === lastWalkYTickRef.current) return;
+    lastWalkYTickRef.current = walkYTick;
+    if (mode !== 'walk') return;
+    if (walkStickToFloor) return;
+    if (!walkYDir) return;
+
+    if (nudgeTweenRef.current) nudgeTweenRef.current.kill();
+
+    const deltaY = (walkYDir === 'up' ? 1 : -1) * walkVStepMeters;
+    const duration = SMOOTH.nudgeMs / 1000;
+
+    const now = performance.now();
+    suppressMoveUntilRef.current = now + SMOOTH.nudgeMs + 40;
+
+    nudgeTweenRef.current = gsap.to(camera.position, {
+      duration,
+      y: camera.position.y + deltaY,
+      ease: 'power2.out',
+      onComplete: () => { nudgeTweenRef.current = null; }
+    });
+  }, [walkYTick, walkYDir, walkVStepMeters, walkStickToFloor, mode, camera]);
 
   return (
     <>
-      {/* Rain-aware sky & clouds (more grey when raining) + lightning flashes */}
       <SkyDome hour={envHour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
       <RealCloudField hour={envHour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
-
-      {/* Lights */}
       <ambientLight ref={ambRef} intensity={1.0} />
       <directionalLight ref={dir1Ref} position={[10, 300, 150]} intensity={1.4} />
       <directionalLight ref={dir2Ref} position={[-120, 240, -180]} intensity={1.0} />
       <hemisphereLight ref={hemiRef} intensity={0.8} />
-
-      {/* Campus model */}
       <Model
         setOriginalColors={setOriginalColors}
         setInitialFocusBox={setInitialFocusBox}
@@ -1547,8 +1559,6 @@ const Map3D = ({
           libIndexRef.current = idx instanceof Map ? idx : new Map();
         }}
       />
-
-      {/* Rain effects (buildings keep their original materials/colors) */}
       <RainMode
         enabled={rainEnabled}
         intensity={rainIntensity}
@@ -1556,8 +1566,6 @@ const Map3D = ({
         wind={rainWind}
         colliders={collidableMeshesRef.current}
       />
-
-      {/* ⚡ Lightning/thunder effects (active when rain ≥ 80%) */}
       <LightningFX
         active={rainEnabled && rainIntensity >= 0.8}
         intensity={rainIntensity}

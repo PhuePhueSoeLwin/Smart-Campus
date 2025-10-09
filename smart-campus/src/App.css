@@ -1,13 +1,10 @@
-/* ===== Base ===== */
 html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
-
 .app-container {
   position: fixed; height: 100vh; width: 100%;
   overflow: hidden; font-family: 'Poppins', sans-serif;
   color: #f1f1f1; transition: background 0.5s ease-in-out;
 }
 
-/* ===== Navbar ===== */
 .navbar {
   position: fixed; display: flex; align-items: center; justify-content: space-between;
   background: linear-gradient(to right, rgba(0,0,51,1) 0%, rgba(0,0,51,0) 50%, rgba(0,0,51,1) 100%);
@@ -16,7 +13,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .navbar-logo { position: absolute; left: 50%; transform: translateX(-50%); height: 50px; z-index: 1001; cursor: pointer; }
 
-/* ===== Smart CCTV nav button (left) ===== */
 .cctv-nav-btn{
   position:absolute;
   left:14px; top:50%; transform:translateY(-50%);
@@ -45,7 +41,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .cctv-nav-btn:hover{ filter: brightness(1.06); }
 .cctv-nav-btn:active{ transform: translateY(calc(-50% + 1px)); }
 
-/* ===== Mode (Walk/Drone) ===== */
 .mode-switch{
   position:absolute;
   left:130px; top:50%; transform:translateY(-50%);
@@ -68,13 +63,12 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   transition: transform .22s ease; z-index:1; pointer-events:none;
 }
 
-/* ===== Right-side date/time + help ===== */
 .thailand-time {
   position: absolute; right: 4%; top: 8px;
   display: flex; flex-direction: column; align-items: flex-end;
   text-align: right; color: #0ff; font-family: 'Courier New', Courier, monospace;
   font-weight: bold; line-height: 1.3; padding: 6px 12px; border-radius: 8px; user-select: none;
-  z-index: 1003; cursor: pointer; /* opens weather panel */
+  z-index: 1003; cursor: pointer;
 }
 .thailand-time .date { margin-bottom: 2px; cursor: pointer; }
 .time-row { display: flex; align-items: center; gap: 0; }
@@ -88,7 +82,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .period { margin-left: 6px; font-weight: 600; font-size: 16px; color: #aaddff; }
 
-/* help button */
 .help-btn { position: relative; background: transparent; border: 0; padding: 0; color: #e97070; font-weight: 800; font-size: 18px; line-height: 1; cursor: pointer; outline: none; }
 .help-btn::before {
   content: ""; position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border-radius: 50%;
@@ -97,7 +90,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .help-btn:hover::before, .help-btn:focus-visible::before { opacity: 1; transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 3px rgba(77,174,244,0.2); cursor: pointer; }
 
-/* ===== Toggle dashboards button ===== */
 .hide-button {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
   padding: 10px 25px; background: linear-gradient(90deg, #007bff, #4daef4); color: #fff;
@@ -106,7 +98,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .hide-button:hover { background: linear-gradient(90deg, #0056b3, #007bff); box-shadow: 0 6px 12px rgba(0,0,0,.4); }
 
-/* ===== Street-view arrows ===== */
 .streetview-ui{
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 88px;
   display: grid; grid-template-rows: auto auto; place-items: center; gap: 10px; z-index: 1100;
@@ -121,12 +112,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .sv-arrow:hover{ filter:brightness(1.05); }
 .sv-arrow:active{ transform: translateY(1px); }
 
-/* ===== Map container ===== */
 .map-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 .map3d-canvas { outline: none; user-select: none; touch-action: none; cursor: grab; }
 .map3d-canvas:active { cursor: grabbing; }
 
-/* ===== Dashboards ===== */
 .dashboard-wrapper { position: absolute; top: 70px; bottom: 10px; width: 300px; transition: transform .5s, opacity .3s; z-index: 1001; }
 .dashboard-wrapper.show { transform: translateX(0); opacity: 1; }
 .left-dashboard-wrapper { position: fixed; left: 0; transform: translateX(-100%); opacity: 0; }
@@ -137,7 +126,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .right-dashboard { border-radius: 10px 0 0 10px; }
 
-/* ===== Popup Base ===== */
 .building-popup {
   position: fixed; top: 80px; width: clamp(260px, 22vw, 360px); color: #e6eeff; z-index: 2000;
   background: linear-gradient(180deg, rgba(46,144,255,0.10), rgba(18,209,184,0.08)), rgba(11,18,32,0.96);
@@ -155,7 +143,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   background: radial-gradient(600px 80px at 50% -10%, rgba(46,144,255,0.15), transparent 60%), radial-gradient(600px 80px at 50% 110%, rgba(18,209,184,0.12), transparent 60%);
 }
 
-/* Header with utility toolbar */
 .popup-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px 12px 8px; }
 .head-left { display:grid; gap:2px; }
 .eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.28em; color:#9aa8c8; opacity:.9; }
@@ -168,19 +155,16 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .tool-btn:active { transform: translateY(1px); }
 .tool-btn.danger { border-color: rgba(255,77,77,0.45); }
 
-/* ========= Weather Controls ========= */
 .navbar-center-cluster{
   position:absolute; left:130px; top:50%; transform:translateY(-50%);
   display:flex; align-items:center; gap:10px; z-index:1002;
 }
 .navbar-center-cluster .mode-switch{ position:relative; left:auto; top:auto; transform:none; }
 
-/* Weather button styles remain unused (safe to keep or remove) */
 .weather-btn{
   display:none;
 }
 
-/* Weather cards */
 .wc-sections{ display:grid; gap:10px; padding: 0 12px 12px; }
 .wc-card{
   background: rgba(255,255,255,0.06); border:1px solid rgba(90,125,255,0.22); border-radius:12px; padding:10px 12px;
@@ -189,27 +173,19 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .wc-card-title{ font-weight:800; font-size:12px; letter-spacing:.2px; color:#e6eeff; margin-bottom:8px; text-transform:uppercase; opacity:.9; }
 .wc-disabled{ opacity:.55; pointer-events:none; filter: grayscale(0.15); }
 .wc-muted{ opacity:.95; }
-
-/* Time row */
 .wc-time-row{ display:flex; align-items:center; gap:8px; }
 .wc-live-dot{ width:8px; height:8px; border-radius:50%; background:#39ff88; box-shadow:0 0 10px #39ff88; animation: thPulse 1.6s ease-in-out infinite; }
 @keyframes thPulse { 0%,100%{ transform: scale(.9); opacity:.75; } 50%{ transform: scale(1); opacity:1; } }
 .wc-live-time{ font-size:16px; font-weight:800; letter-spacing:.3px; }
 .wc-live-label{ color:#9ec8ff; font-size:12px; margin-left:6px; }
 .wc-hint{ margin:.35rem 0 0; font-size:11px; color:#9aa8c8; }
-
-/* Inline Realtime/Manual toggle */
 .wc-mode-toggle{ display:flex; align-items:center; gap:12px; margin-top:10px; }
 .mode-label{ font-size:12px; opacity:.6; font-weight:700; letter-spacing:.2px; min-width:56px; text-align:center; }
 .mode-label.active{ opacity:1; color:#e6eeff; }
-
-/* Manual time slider */
 .wc-manual-row{ display:grid; grid-template-columns: 20px 1fr auto; align-items:center; gap:10px; }
 .wc-hour-slider{ width:100%; accent-color:#4daef4; }
 .wc-hour-label{ font-weight:800; letter-spacing:.2px; }
 .wc-hour-markers{ display:flex; justify-content:space-between; font-size:11px; color:#9aa8c8; margin-top:4px; }
-
-/* Rain row */
 .wc-rain-row{ display:flex; align-items:center; gap:12px; }
 .wc-rain-badge{ padding:4px 12px; border-radius:999px; font-size:11px; font-weight:800; border:1px solid rgba(255,255,255,0.18); }
 .wc-rain-badge.on{ background: rgba(18,209,184,0.18); border-color: rgba(18,209,184,0.35); }
@@ -217,8 +193,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .wc-rain-intensity{ display:grid; grid-template-columns: auto 1fr auto; align-items:center; gap:10px; margin-top:8px; }
 .wc-rain-intensity input[type="range"]{ width:100%; accent-color:#4daef4; }
 .wc-rain-value{ font-weight:800; }
-
-/* ===== Unified Switch (iOS-like) ===== */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
 .switch.switch-lg { width: 52px; height: 28px; }
 .switch input{ opacity:0; width:0; height:0; position:absolute; }
@@ -227,8 +201,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   border:1px solid rgba(255,255,255,.25); transition: background .2s ease, border-color .2s ease;
   display:block;
 }
-
-/* ===== Metrics/Popup parts ===== */
 .telemetry-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; padding: 0 12px 8px; }
 .telemetry-row .chip {
   display:grid; grid-template-columns: 16px auto auto; align-items:center; gap:6px; padding:6px 8px; border-radius:10px;
@@ -266,8 +238,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .meter.alt { border-color:rgba(18,209,184,0.35); }
 .meter .bar { height:100%; width:0; border-radius:999px; background:linear-gradient(90deg, #2e90ff, #12d1b8); box-shadow:0 4px 16px rgba(46,144,255,0.35); transition:width 260ms ease-out; }
 .meter.alt .bar { background:linear-gradient(90deg, #12d1b8, #2e90ff); box-shadow:0 4px 16px rgba(18,209,184,0.35); }
-
-/* Footer pills */
 .footer-stats { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; padding: 0 12px 12px; }
 .footer-stats .pill {
   display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 10px; border-radius:10px; font-size:11px;
@@ -276,14 +246,12 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .footer-stats .pill .k { color:#9aa8c8; }
 .footer-stats .pill .v { font-weight:800; }
 
-/* Anim & responsive */
 @keyframes popup-in { from{opacity:0;transform:translateY(-4px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);} }
 @media (max-width:768px) {
   .building-popup { width: auto; left: 8px; right: 8px; }
   .metrics-grid { grid-template-columns:1fr 1fr; }
 }
 
-/* ===== Instructions & Modals ===== */
 .instructions-popup {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
   background: rgba(255,255,255,.15); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -312,7 +280,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .confirm-text { font-size: 14px; color: rgba(255,255,255,.8); text-align: center; line-height: 1.5; margin-bottom: 20px; }
 
-/* Modals */
 .modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 3000; background: rgba(6, 18, 40, 0.22); }
 .modal-box {
   position: relative; background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.16) 100%);
@@ -325,7 +292,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .modal-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .2px; }
 .modal-box > .close-button { top: 14px; right: 14px; font-size: 24px; line-height: 1; padding: 6px 8px; background: transparent; border: none; box-shadow: none; border-radius: 0; }
 
-/* Chips */
 .chip-group { display: flex; gap: 8px; }
 .chip {
   background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.28); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 12px; cursor: pointer;
@@ -334,7 +300,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .chip:hover { transform: translateY(-1px); background: rgba(255,255,255,0.28); }
 .chip.active { background: #4daef4; border-color: #4daef4; box-shadow: 0 0 0 3px rgba(77,174,244,0.18); }
 
-/* Cards + charts reused */
 .modal-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 12px; }
 .kpi {
   background: linear-gradient(180deg, rgba(77,174,244,0.10), rgba(77,174,244,0.06));
@@ -353,13 +318,9 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .chart-wrapper canvas { width: 100% !important; height: 100% !important; }
 .card-title { margin: 0 0 10px 0; font-size: 16px; font-weight: 700; color: #fff; }
-
-/* Gauge/controls */
 .gauge-card { display: flex; flex-direction: column; justify-content: center; }
 .gauge-holder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 260px; }
 .big-stat { margin-top: 10px; font-size: 18px; font-weight: 700; }
-
-/* Dropdown, stats */
 .control-card { display: flex; flex-direction: column; gap: 12px; }
 .water-dropdown-container { display: flex; flex-direction: column; align-items: stretch; }
 .building-dropdown { width: 100%; padding: 10px; border: 1px solid #7aaee2; border-radius: 8px; font-size: 14px; background: #fff; color: #000; cursor: pointer; }
@@ -367,8 +328,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .stat-label { font-size: 12px; opacity: .85; }
 .stat-value { font-size: 16px; font-weight: 700; }
 .muted-note { font-size: 12px; opacity: .8; }
-
-/* Vehicle modal table */
 .button-group { display: flex; gap: 8px; align-items: center; }
 .vehicle-button { padding: 10px 20px; background-color: rgba(240,240,240,.9); border: 1px solid #ccc; border-radius: 12px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: background-color .2s ease, transform .1s ease; }
 .vehicle-button:hover { background-color: #ddd; transform: translateY(-1px); }
@@ -380,8 +339,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .schedule-table thead th { position: sticky; top: 0; background: #4285F4; color: #fff; z-index: 1; font-weight: 700; }
 .schedule-table tbody tr:nth-child(even) { background-color: rgba(255,255,255,.05); }
 .schedule-table tbody tr:hover { background-color: rgba(255,255,255,.10); }
-
-/* Elevator UI */
 .elev-btn{ width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; font-size: 18px; color: #fff; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(255,255,255,.15)), linear-gradient(180deg,#79b9ff,#4daef4); box-shadow: 0 8px 18px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.3); display: grid; place-items: center; transition: transform .08s ease, filter .15s ease; }
 .elev-btn:hover{ filter:brightness(1.05); }
 .elev-btn:active{ transform: translateY(1px); }
