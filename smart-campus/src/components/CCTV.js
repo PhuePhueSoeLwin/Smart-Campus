@@ -120,7 +120,7 @@ const CCTV = () => {
     // Special building: Campus Area with 3 YouTube cameras
     map['Campus Area'] = [
       { id: 'CAMP-01', name: 'Main Gate — Campus Area',    zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/J_loYa0UiSU' },
-      { id: 'CAMP-02', name: 'Central Walkway — Campus Area', zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/07VJFUB2zso' },
+      { id: 'CAMP-02', name: 'Central Walkway — Campus Area', zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/hlyH0ZocSvo' },
       { id: 'CAMP-03', name: 'Library Front — Campus Area', zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/Kryb_9itDbY' },
     ];
 
