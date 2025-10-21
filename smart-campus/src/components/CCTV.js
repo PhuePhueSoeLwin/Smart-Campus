@@ -33,14 +33,29 @@ const PeopleIcon = ({ size = 14 }) => (
 const PlayIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>);
 const PauseIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>);
 const VolumeIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" strokeWidth="2"/></svg>);
-const MuteIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><path fill="currentColor" d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M19 9l-6 6m0-6l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
-const FullIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm0-4h3V7h2V5H5v5h2zm10 7h-3v2h5v-5h-2v3zm0-12h-5v2h3v3h2V5z"/></svg>);
+const MuteIcon   = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><path fill="currentColor" d="M5 10v4h4l5 4V6l-5 4H5z"/><path d="M19 9l-6 6m0-6l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>);
+const FullIcon   = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm0-4h3V7h2V5H5v5h2zm10 7h-3v2h5v-5h-2v3zm0-12h-5v2h3v3h2V5z"/></svg>);
 const FullExitIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M7 10H5V5h5v2H7v3zm7-3V5h5v5h-2V7h-3zm-2 9v2H7v-5h2v3h3zm5-3h2v5h-5v-2h3v-3z"/></svg>);
-const PipIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="currentColor" opacity=".7"/><rect x="12" y="10" width="7" height="5" rx="1.2" fill="#fff"/></svg>);
-const GearIcon = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.95 7.95 0 0 0 .06-1 7.95 7.95 0 0 0-.06-1l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a8.12 8.12 0 0 0-1.73-1l-.38-2.65a.5.5 0 0 0-.5-.42h-4a.5.5 0 0 0-.5.42L9.05 4a8.12 8.12 0 0 0-1.73 1l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.56 11a7.95 7.95 0 0 0 0 2L2.35 14.7a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49 1a8.12 8.12 0 0 0 1.73 1l.38 2.65a.5.5 0 0 0 .5.42h4a.5.5 0 0 0 .5-.42l.38-2.65a8.12 8.12 0 0 0 1.73-1l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>);
+const PipIcon    = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="currentColor" opacity=".7"/><rect x="12" y="10" width="7" height="5" rx="1.2" fill="#fff"/></svg>);
+const GearIcon   = ({ size = 20 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.95 7.95 0 0 0 .06-1 7.95 7.95 0 0 0-.06-1l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a8.12 8.12 0 0 0-1.73-1l-.38-2.65a.5.5 0 0 0-.5-.42h-4a.5.5 0 0 0-.5.42L9.05 4a8.12 8.12 0 0 0-1.73 1l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.56 11a7.95 7.95 0 0 0 0 2L2.35 14.7a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49 1a8.12 8.12 0 0 0 1.73 1l.38 2.65a.5.5 0 0 0 .5.42h4a.5.5 0 0 0 .5-.42l.38-2.65a8.12 8.12 0 0 0 1.73-1l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64L19.4 13zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/></svg>);
+
+/* ===== Helpers for YouTube ===== */
+const isYouTube = (url) => /youtu\.?be|youtube\.com/i.test(url || '');
+const youtubeIdFromUrl = (url) => {
+  if (!url) return null;
+  const m1 = url.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/);
+  const m2 = url.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  const m3 = url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{6,})/);
+  return (m1 && m1[1]) || (m2 && m2[1]) || (m3 && m3[1]) || null;
+};
+const ytEmbedSrc = (url, { autoplay = 1, mute = 1, loop = 1 } = {}) => {
+  const id = youtubeIdFromUrl(url);
+  if (!id) return null;
+  return `https://www.youtube.com/embed/${id}?autoplay=${autoplay}&mute=${mute}&loop=${loop}&playlist=${id}&controls=1&rel=0&modestbranding=1&playsinline=1`;
+};
 
 /* ===== Data ===== */
-const BUILDINGS = ['E1','E2','E3','E4','C1','C2','C3','C5','AD1','AD2','AS','AV','F1','F2','F3','F4','F5','F6','F7'];
+const BUILDINGS = ['E1','E2','E3','E4','C1','C2','C3','C5','AD1','AD2','AS','AV','F1','F2','F3','F4','F5','F6','F7','Campus Area'];
 
 const CCTV = () => {
   const navigate = useNavigate();
@@ -86,7 +101,7 @@ const CCTV = () => {
     return h ? `${h}:${m.padStart(2,'0')}:${s}` : `${m}:${s}`;
   };
 
-  /* Mock catalog */
+  /* Mock catalog + Campus Area override */
   const catalog = useMemo(() => {
     const rand = (a) => a[Math.floor(Math.random() * a.length)];
     const places = ['Entrance','Lobby','Corridor','Parking','Stairwell','Elevator','Perimeter','Backyard','Gate','Loading'];
@@ -101,6 +116,14 @@ const CCTV = () => {
     };
     const map = {};
     BUILDINGS.forEach(b => { map[b] = makeCams(b); });
+
+    // Special building: Campus Area with 3 YouTube cameras
+    map['Campus Area'] = [
+      { id: 'CAMP-01', name: 'Main Gate — Campus Area',    zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/J_loYa0UiSU' },
+      { id: 'CAMP-02', name: 'Central Walkway — Campus Area', zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/07VJFUB2zso' },
+      { id: 'CAMP-03', name: 'Library Front — Campus Area', zone: 'Outdoor', status: 'Online', streamUrl: 'https://youtu.be/Kryb_9itDbY' },
+    ];
+
     return map;
   }, []);
 
@@ -110,6 +133,7 @@ const CCTV = () => {
       let min = 220, max = 900;
       if (/^(E|F|AD)/.test(b)) { min = 600; max = 2000; }
       if (/^(C|AS|AV)/.test(b)) { min = 350; max = 1300; }
+      if (b === 'Campus Area') { min = 800; max = 3000; }
       init[b] = randInt(min, max);
     });
     return init;
@@ -167,10 +191,13 @@ const CCTV = () => {
     return buildingCards.find(x => x.code === selectedBuilding) || null;
   }, [buildingCards, selectedBuilding]);
 
-  const getStreamUrl = (cam) =>
-    cam?.status === 'Online'
+  const getStreamUrl = (cam) => {
+    if (!cam) return null;
+    if (cam.streamUrl) return cam.streamUrl;
+    return cam?.status === 'Online'
       ? 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
       : null;
+  };
 
   const openPlayer = (cam) => {
     const streamUrl = getStreamUrl(cam);
@@ -193,10 +220,10 @@ const CCTV = () => {
     setSelectedCam(null);
   };
 
-  /* Player wiring */
+  /* Player wiring for HTML5 video (not for YouTube iframes) */
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || !playerOpen || !selectedCam?.streamUrl) return;
+    if (!v || !playerOpen || !selectedCam?.streamUrl || isYouTube(selectedCam.streamUrl)) return;
 
     v.muted = muted; v.volume = volume; v.loop = isLoop; v.playbackRate = speed;
 
@@ -267,10 +294,11 @@ const CCTV = () => {
     };
   }, []);
 
-  /* Keyboard */
+  /* Keyboard (HTML5 video only) */
   useEffect(() => {
     if (!playerOpen) return;
     const onKey = (e) => {
+      if (selectedCam?.streamUrl && isYouTube(selectedCam.streamUrl)) return;
       const v = videoRef.current; if (!v) return;
       switch (e.key.toLowerCase()) {
         case ' ':
@@ -289,14 +317,14 @@ const CCTV = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [playerOpen]);
+  }, [playerOpen, selectedCam?.streamUrl]);
 
-  /* Controls */
+  /* Controls for HTML5 video */
   const togglePlay = () => { const v = videoRef.current; if (v) v.paused ? v.play() : v.pause(); };
-  const setVol = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
+  const setVol     = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
   const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted; };
-  const seekTo = (sec) => { const v = videoRef.current; if (v && isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, sec)); };
-  const changeSpeed = (val) => { const v = videoRef.current; if (v) v.playbackRate = val; };
+  const seekTo     = (sec) => { const v = videoRef.current; if (v && isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, sec)); };
+  const changeSpeed= (val) => { const v = videoRef.current; if (v) v.playbackRate = val; };
   const toggleLoop = () => { const v = videoRef.current; if (v) { v.loop = !v.loop; setIsLoop(v.loop); } };
 
   const toggleFullscreen = async () => {
@@ -369,7 +397,6 @@ const CCTV = () => {
           {selectedBuilding && <span className="bld-badge">{selectedBuilding}</span>}
         </div>
 
-        {/* Theme switch */}
         <div className="topbar-right">
           <span className="switch-text">{theme === 'light' ? 'Light' : 'Dark'} Mode</span>
           <label className="switch theme-toggle">
@@ -425,7 +452,7 @@ const CCTV = () => {
           <div className="cctv-search">
             <input
               type="text"
-              placeholder="Search building… (e.g., E1, F4)"
+              placeholder="Search building… (e.g., E1, F4, Campus)"
               value={buildingQuery}
               onChange={(e) => setBuildingQuery(e.target.value)}
             />
@@ -494,10 +521,11 @@ const CCTV = () => {
             {filteredCams.map((cam) => {
               const safeName = (cam?.name && cam.name.trim()) ? cam.name : `${selectedBuilding} #${cam?.id}`;
               const live = cam.status === 'Online';
-              const streamUrl = live ? getStreamUrl(cam) : null;
+              const streamUrl = getStreamUrl(cam);
+              const isYT = isYouTube(streamUrl);
 
               if (!keepEyes) {
-                /* NORMAL MODE CARD (footer removed) */
+                /* NORMAL MODE */
                 return (
                   <article
                     className={`cam-card ${live ? 'ok' : 'off'}`}
@@ -506,13 +534,14 @@ const CCTV = () => {
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e)=> (e.key === 'Enter' || e.key === ' ') && openPlayer(cam)}
+                    title={safeName}
                   >
                     <div className="thumb">
                       <div className="stream-placeholder">
                         <div className="scanline" />
                         <div className={`overlay ${live ? 'live' : 'offline'}`}>
                           <CameraIcon size={18} />
-                          <span>{live ? 'Live' : 'Offline'}</span>
+                          <span>{live ? (isYT ? 'Live • YT' : 'Live') : 'Offline'}</span>
                         </div>
                         <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
                           <span className="thumb-name">{safeName}</span>
@@ -524,7 +553,7 @@ const CCTV = () => {
                 );
               }
 
-              /* KEEP EYES MODE CARD — unchanged */
+              /* KEEP EYES MODE — title overlay removed */
               return (
                 <article
                   key={cam.id}
@@ -537,14 +566,25 @@ const CCTV = () => {
                 >
                   <div className="eyes-thumb">
                     {live && streamUrl ? (
-                      <video
-                        className="eyes-video"
-                        src={streamUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                      />
+                      isYT ? (
+                        <iframe
+                          className="eyes-yt"
+                          src={ytEmbedSrc(streamUrl, { autoplay: 1, mute: 1, loop: 1 })}
+                          title={`${safeName} (YouTube)`}
+                          frameBorder="0"
+                          allow="autoplay; picture-in-picture; clipboard-write; encrypted-media"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video
+                          className="eyes-video"
+                          src={streamUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                        />
+                      )
                     ) : (
                       <div className="no-signal">
                         <div className="no-signal-wrap">
@@ -556,12 +596,9 @@ const CCTV = () => {
 
                     <div className={`overlay ${live ? 'live' : 'offline'}`}>
                       <CameraIcon size={18} />
-                      <span>{live ? 'Live' : 'Offline'}</span>
+                      <span>{live ? (isYT ? 'Live • YT' : 'Live') : 'Offline'}</span>
                     </div>
-                    <div className="thumb-title" title={`${safeName} • #${cam.id}`}>
-                      <span className="thumb-name">{safeName}</span>
-                      <span className="thumb-id">#{cam.id}</span>
-                    </div>
+                    {/* Title overlay intentionally removed in Keep Eyes mode */}
                   </div>
 
                   <div className="eyes-footer">
@@ -597,6 +634,7 @@ const CCTV = () => {
                     <span className={`tag ${selectedCam.status === 'Online' ? 'ok' : 'off'}`}>{selectedCam.status}</span>
                     <span className="dot">•</span>
                     <span className="tag">{selectedCam.zone}</span>
+                    {isYouTube(selectedCam.streamUrl) && (<><span className="dot">•</span><span className="tag">YouTube</span></>)}
                   </div>
                 </div>
               </div>
@@ -605,111 +643,122 @@ const CCTV = () => {
 
             <div className={`player-stage ${selectedCam.status !== 'Online' ? 'offline' : ''}`} ref={stageRef}>
               {selectedCam.status === 'Online' && selectedCam.streamUrl ? (
-                <>
-                  <video
-                    key={`video-${useCrossOrigin ? 'cors' : 'nocors'}`}
-                    ref={videoRef}
-                    className="player-video"
-                    src={selectedCam.streamUrl}
-                    controls={false}
-                    autoPlay
-                    playsInline
-                    muted
-                    preload="auto"
-                    {...(useCrossOrigin ? { crossOrigin: 'anonymous' } : {})}
-                    onError={handleVideoError}
+                isYouTube(selectedCam.streamUrl) ? (
+                  <iframe
+                    className="player-yt-iframe"
+                    src={ytEmbedSrc(selectedCam.streamUrl, { autoplay: 1, mute: 0, loop: 1 })}
+                    title={`${selectedCam.name} (YouTube)`}
+                    frameBorder="0"
+                    allow="autoplay; picture-in-picture; clipboard-write; encrypted-media"
+                    allowFullScreen
                   />
+                ) : (
+                  <>
+                    <video
+                      key={`video-${useCrossOrigin ? 'cors' : 'nocors'}`}
+                      ref={videoRef}
+                      className="player-video"
+                      src={selectedCam.streamUrl}
+                      controls={false}
+                      autoPlay
+                      playsInline
+                      muted
+                      preload="auto"
+                      {...(useCrossOrigin ? { crossOrigin: 'anonymous' } : {})}
+                      onError={handleVideoError}
+                    />
 
-                  <div className="yt-controls">
-                    <div className="yt-progress">
-                      <div className="track">
-                        <div className="track-buffer" style={{ width: `${bufferedPct}%` }} />
-                        <div className="track-played" style={{ width: `${duration ? (current / duration) * 100 : 0}%` }} />
-                        <input
-                          type="range"
-                          min={0}
-                          max={duration || 0}
-                          step="0.1"
-                          value={current}
-                          onChange={(e)=> seekTo(parseFloat(e.target.value))}
-                          aria-label="Seek"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="yt-row">
-                      <div className="yt-left">
-                        <button className="icon-btn" onClick={togglePlay} title={isPlaying ? 'Pause (k)' : 'Play (k)'} aria-label="Play/Pause">
-                          {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                        </button>
-
-                        <button className="icon-btn" onClick={toggleMute} title={muted ? 'Unmute (m)' : 'Mute (m)'} aria-label="Mute">
-                          {muted || volume === 0 ? <MuteIcon/> : <VolumeIcon/>}
-                        </button>
-                        <input
-                          className="yt-volume"
-                          type="range"
-                          min="0" max="1" step="0.01"
-                          value={muted ? 0 : volume}
-                          onChange={(e)=> setVol(parseFloat(e.target.value))}
-                          aria-label="Volume"
-                        />
-
-                        <span className="yt-time">{fmt(current)} <span className="sep">/</span> {fmt(duration)}</span>
+                    <div className="yt-controls">
+                      <div className="yt-progress">
+                        <div className="track">
+                          <div className="track-buffer" style={{ width: `${bufferedPct}%` }} />
+                          <div className="track-played" style={{ width: `${duration ? (current / duration) * 100 : 0}%` }} />
+                          <input
+                            type="range"
+                            min={0}
+                            max={duration || 0}
+                            step="0.1"
+                            value={current}
+                            onChange={(e)=> seekTo(parseFloat(e.target.value))}
+                            aria-label="Seek"
+                          />
+                        </div>
                       </div>
 
-                      <div className="yt-right">
-                        <div className="yt-settings-wrap">
-                          <button className="icon-btn" onClick={()=> setShowSettings(v => !v)} title="Settings"><GearIcon/></button>
-                          {showSettings && (
-                            <div className="yt-settings" onMouseLeave={()=> setShowSettings(false)}>
-                              <div className="yt-section-title">Playback</div>
-                              <div className="yt-menu">
-                                <div className="yt-item">
-                                  <span>Speed</span>
-                                  <select className="yt-dd" value={speed} onChange={(e)=> changeSpeed(parseFloat(e.target.value))}>
-                                    <option value={0.25}>0.25×</option>
-                                    <option value={0.5}>0.5×</option>
-                                    <option value={0.75}>0.75×</option>
-                                    <option value={1}>Normal</option>
-                                    <option value={1.25}>1.25×</option>
-                                    <option value={1.5}>1.5×</option>
-                                    <option value={2}>2×</option>
-                                  </select>
-                                </div>
-                                <div className="yt-item">
-                                  <span>Loop</span>
-                                  <label className="right"><input type="checkbox" checked={isLoop} onChange={toggleLoop}/> On</label>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                      <div className="yt-row">
+                        <div className="yt-left">
+                          <button className="icon-btn" onClick={togglePlay} title={isPlaying ? 'Pause (k)' : 'Play (k)'} aria-label="Play/Pause">
+                            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+                          </button>
+
+                          <button className="icon-btn" onClick={toggleMute} title={muted ? 'Unmute (m)' : 'Mute (m)'} aria-label="Mute">
+                            {muted || volume === 0 ? <MuteIcon/> : <VolumeIcon/>}
+                          </button>
+                          <input
+                            className="yt-volume"
+                            type="range"
+                            min="0" max="1" step="0.01"
+                            value={muted ? 0 : volume}
+                            onChange={(e)=> setVol(parseFloat(e.target.value))}
+                            aria-label="Volume"
+                          />
+
+                          <span className="yt-time">{fmt(current)} <span className="sep">/</span> {fmt(duration)}</span>
                         </div>
 
-                        {pipSupported && (
-                          <button className="icon-btn" onClick={togglePiP} title="Picture-in-Picture (i)" aria-label="Picture in Picture">
-                            <PipIcon />
-                          </button>
-                        )}
-                        <button className="icon-btn" onClick={snapshot} title="Snapshot" aria-label="Snapshot">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="4" fill="#fff"/>
-                          </svg>
-                        </button>
-                        {selectedCam.streamUrl && (
-                          <button className="icon-btn" onClick={copyUrl} title="Copy stream URL" aria-label="Copy URL">
+                        <div className="yt-right">
+                          <div className="yt-settings-wrap">
+                            <button className="icon-btn" onClick={()=> setShowSettings(v => !v)} title="Settings"><GearIcon/></button>
+                            {showSettings && (
+                              <div className="yt-settings" onMouseLeave={()=> setShowSettings(false)}>
+                                <div className="yt-section-title">Playback</div>
+                                <div className="yt-menu">
+                                  <div className="yt-item">
+                                    <span>Speed</span>
+                                    <select className="yt-dd" value={speed} onChange={(e)=> changeSpeed(parseFloat(e.target.value))}>
+                                      <option value={0.25}>0.25×</option>
+                                      <option value={0.5}>0.5×</option>
+                                      <option value={0.75}>0.75×</option>
+                                      <option value={1}>Normal</option>
+                                      <option value={1.25}>1.25×</option>
+                                      <option value={1.5}>1.5×</option>
+                                      <option value={2}>2×</option>
+                                    </select>
+                                  </div>
+                                  <div className="yt-item">
+                                    <span>Loop</span>
+                                    <label className="right"><input type="checkbox" checked={isLoop} onChange={toggleLoop}/> On</label>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {pipSupported && (
+                            <button className="icon-btn" onClick={togglePiP} title="Picture-in-Picture (i)" aria-label="Picture in Picture">
+                              <PipIcon />
+                            </button>
+                          )}
+                          <button className="icon-btn" onClick={snapshot} title="Snapshot" aria-label="Snapshot">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                              <path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14h13a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/>
+                              <path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="4" fill="#fff"/>
                             </svg>
                           </button>
-                        )}
-                        <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'} aria-label="Fullscreen">
-                          {isFullscreen ? <FullExitIcon/> : <FullIcon/>}
-                        </button>
+                          {selectedCam.streamUrl && (
+                            <button className="icon-btn" onClick={copyUrl} title="Copy stream URL" aria-label="Copy URL">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14h13a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/>
+                              </svg>
+                            </button>
+                          )}
+                          <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'} aria-label="Fullscreen">
+                            {isFullscreen ? <FullExitIcon/> : <FullIcon/>}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </>
+                  </>
+                )
               ) : (
                 <div className="offline-wrap">
                   <div className="offline-badge">Offline</div>

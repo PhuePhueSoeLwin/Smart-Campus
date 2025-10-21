@@ -290,7 +290,7 @@ function Model({
   setE2Index,
   setLibIndex,
 }) {
-  const { scene } = useGLTF('/assets/final4.glb', true);
+  const { scene } = useGLTF('/assets/final4.opt.glb', true);
   const originalColors = useRef(new Map());
 
   scene.scale.set(0.1, 0.1, 0.1);
@@ -1577,4 +1577,4 @@ const Map3D = ({
 
 export default Map3D;
 
-useGLTF.preload('/assets/final4.glb');
+useGLTF.preload('/assets/final4.opt.glb');

@@ -1,4 +1,4 @@
-/* CCTV.css — updated so Normal mode has no footer in tiles */
+/* CCTV.css — YouTube iframes now fill the container */
 
 /* ========== THEME TOKENS ========== */
 :root{
@@ -159,8 +159,7 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   padding:9px 12px; border-radius:10px;
   background:var(--overlay-dark); border:1px solid rgba(255,255,255,0.16);
-  color:#f2f6ff; font-weight:800; font-size:13px; letter-spacing:.2px;
-  text-shadow:0 1px 2px rgba(0,0,0,.15); backdrop-filter:blur(2px); line-height:1.15;
+  color:#f2f6ff; font-weight:800; font-size:13px; letter-spacing:.2px; text-shadow:0 1px 2px rgba(0,0,0,.15); backdrop-filter:blur(2px); line-height:1.15;
 }
 .theme-light .thumb-title{color:#0b1a2e;}
 .thumb-title .thumb-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -168,13 +167,24 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .theme-light .thumb-title .thumb-id{color:#2a4f86;}
 @media (max-width:420px){.thumb-title .thumb-id{display:none;}}
 
-/* ===== Keep Eyes mode (unchanged) ===== */
+/* ===== Keep Eyes mode ===== */
 .cctv-grid.eyes-on .cam-card{ grid-template-rows: 200px 66px; }
 
 .cam-card.keep-eyes .eyes-thumb{position:relative; height:100%; background:#000; display:grid; place-items:center; overflow:hidden; isolation:isolate;}
 .theme-light .cam-card.keep-eyes .eyes-thumb{background:#e5eefc;}
 .cam-card.keep-eyes .eyes-video{width:100%; height:100%; object-fit:cover; filter: contrast(1.05) brightness(0.95) saturate(1.05);}
 
+/* >>> NEW: Make YouTube iframes fill tiles and the main player <<< */
+.eyes-yt,
+.player-yt-iframe{
+  width:100%;
+  height:100%;
+  display:block;
+  background:#000;
+  border:0;
+}
+
+/* Footer under Keep Eyes tiles */
 .eyes-footer{display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:8px 12px 10px; border-top:1px solid var(--divider); background:radial-gradient(600px 240px at 50% -100%, rgba(77,174,244,0.08), transparent 60%), linear-gradient(180deg, var(--card-bg-1), var(--card-bg-2));}
 .eyes-meta{font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .eyes-id{font-weight:800; color:#cfe0ff;} .theme-light .eyes-id{color:#2a4f86;}
@@ -235,14 +245,17 @@ input:checked + .slider:before{transform:translate(24px,-50%);}
 .player-stage{position:relative; background:var(--player-stage); display:grid; place-items:center; overflow:hidden;}
 .player-stage.offline{background:radial-gradient(600px 240px at 50% -20%, rgba(255,138,138,0.15), transparent 60%), #140f16;}
 .theme-light .player-stage.offline{background:radial-gradient(600px 240px at 50% -20%, rgba(255,138,138,0.15), transparent 60%), #fff3f3;}
+
+/* HTML5 video element */
 .player-video{width:100%; height:100%; object-fit:contain; background:#000;}
 .theme-light .player-video{background:#fff;}
+
+/* Controls */
 .offline-wrap{text-align:center; color:#ffd1d1;}
 .theme-light .offline-wrap{color:#a32727;}
 .offline-badge{display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,138,138,.26); background:rgba(255,138,138,.12); font-weight:800; margin-bottom:8px;}
 .theme-light .offline-badge{border-color:rgba(220,68,68,.26); background:rgba(220,68,68,.12);}
 
-/* Controls */
 .yt-controls{position:absolute; left:0; right:0; bottom:0; z-index:2; display:grid; grid-template-rows:auto auto; gap:4px; padding:0; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 45%, rgba(0,0,0,.65) 100%);}
 .theme-light .yt-controls{background:linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.35) 45%, rgba(255,255,255,.75) 100%);}
 .yt-progress{padding:8px 12px 4px;}
