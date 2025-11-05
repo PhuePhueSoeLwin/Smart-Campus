@@ -12,7 +12,9 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
+import Parking3D from './Parking3D';
 import './Map3D.css';
+import './Parking3D.css';
 
 function LightningFX({
   active = false,
@@ -479,6 +481,9 @@ const Map3D = ({
 
   rainEnabled = false,
   rainIntensity = 0.5,
+
+  // NEW: parent-provided callback to open the Parking modal
+  onZoneClick,
 }) => {
   const { camera, gl, scene, size } = useThree();
   const [initialFocusBox, setInitialFocusBox] = useState(null);
@@ -1080,7 +1085,7 @@ const Map3D = ({
       if (buildingKey === 'E1' || buildingKey === 'E2') infoKey = buildingKey;
       else if (buildingKey === 'Library') {
         if (!BUILDING_DATA[infoKey]) infoKey = 'Library5';
-      }
+        }
 
       const info =
         BUILDING_DATA[infoKey] || {
@@ -1133,6 +1138,14 @@ const Map3D = ({
 
   useEffect(() => {
     const onClick = (event) => {
+      // NEW: ignore the very next click if it originated from a Parking zone (so buildings don't also react)
+      if (window.__mfuParkingClick) {
+        window.__mfuParkingClick = false;
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        return;
+      }
+
       const rect = gl.domElement.getBoundingClientRect();
       const mouse = new THREE.Vector2(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -1532,6 +1545,45 @@ const Map3D = ({
     });
   }, [walkYTick, walkYDir, walkVStepMeters, walkStickToFloor, mode, camera]);
 
+  /** ------- Smart Parking anchor near C2 building ------- */
+  const [parkingAnchor, setParkingAnchor] = useState(null);
+
+  useEffect(() => {
+    // Try to find a node named like “C2” in the loaded scene.
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^c2($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        // Snap Y to ground so pads sit on asphalt:
+        const gy = sampleGroundY(c.x, c.z);
+        setParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback manual anchor (tweak if needed):
+    const fx = 165, fz = -95;
+    const gy = sampleGroundY(fx, fz);
+    setParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // UPDATED: delegate parking clicks up to App via onZoneClick, and mark the click so buildings won't react
+  const onParkingZoneClick = useCallback((zone) => {
+    if (!zone) return;
+    // mark for the global click guard (consumed in the canvas click handler above)
+    window.__mfuParkingClick = true;
+
+    const zoneId =
+      zone?.zoneId || zone?.id || (typeof zone === 'string' ? zone : 'Parking');
+
+    // Let parent open the Parking modal
+    onZoneClick?.(zoneId);
+  }, [onZoneClick]);
+
   return (
     <>
       <SkyDome hour={envHour} rainFactor={rainFactor} lightningFlash={lightningFlash} />
@@ -1540,6 +1592,16 @@ const Map3D = ({
       <directionalLight ref={dir1Ref} position={[10, 300, 150]} intensity={1.4} />
       <directionalLight ref={dir2Ref} position={[-120, 240, -180]} intensity={1.0} />
       <hemisphereLight ref={hemiRef} intensity={0.8} />
+
+      {/* Live C2 Smart Parking overlay (renders pads even if GLB has only C2 building) */}
+      {parkingAnchor && (
+        <Parking3D
+          anchor={parkingAnchor}
+          sampleGroundY={sampleGroundY}
+          onZoneClick={onParkingZoneClick}
+        />
+      )}
+
       <Model
         setOriginalColors={setOriginalColors}
         setInitialFocusBox={setInitialFocusBox}

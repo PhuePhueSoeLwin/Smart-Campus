@@ -28,6 +28,9 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
+// NEW: parking rich fetch (handles your array payload and per-zone)
+import { fetchZoneInfoRich } from './components/parkingApi';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -46,12 +49,14 @@ ChartJS.defaults.plugins = ChartJS.defaults.plugins || {};
 ChartJS.defaults.plugins.datalabels = { display: false };
 
 const StaticGauge = React.memo(GaugeChart, () => true);
-const Modal = ({ open, onClose, children, size = 'md' }) => {
+
+/* === Modal (minor tweak: add `variant` class) === */
+const Modal = ({ open, onClose, children, size = 'md', variant = '' }) => {
   if (!open) return null;
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-box ${size === 'sm' ? 'modal-compact' : ''}`}
+        className={`modal-box ${size === 'sm' ? 'modal-compact' : ''} ${variant}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="close-button" onClick={onClose}>✖</button>
@@ -62,9 +67,26 @@ const Modal = ({ open, onClose, children, size = 'md' }) => {
   );
 };
 
+/* === small helpers for parking popup === */
+function driveToDirectImage(url) {
+  // Accepts: https://drive.google.com/file/d/<ID>/view  OR already-direct links
+  if (!url) return '';
+  const m = url.match(/\/d\/([^/]+)\//);
+  const id = m?.[1];
+  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url.trim();
+}
+function computeStatus(info) {
+  if (!info) return '—';
+  const util = (info.occupied || 0) / Math.max(1, info.total || 0);
+  if (util > 0.85) return 'RED';
+  if (util > 0.6) return 'ORANGE';
+  return 'GREEN';
+}
+
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
 const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -171,7 +193,6 @@ function getThailandNow() {
   const dateStr = `${obj.day}/${obj.month}/${obj.year} ${obj.weekday}`;
   return { hour, minute, second, dateStr };
 }
-
 function calcSkyByHour(hour) {
   if (hour >= 6 && hour < 9) return 'linear-gradient(180deg, #FFB347, #FFD700)';
   if (hour >= 9 && hour < 17) return '#87CEEB';
@@ -237,7 +258,6 @@ const WeatherControlPanel = ({
             </label>
             <span className={`mode-label ${envMode === 'manual' ? 'active' : ''}`}>Manual</span>
           </div>
-
           <p className="wc-hint">Use 12h/24h to change the app clock. Switch to Manual to scrub the sun.</p>
         </div>
         <div className={`wc-card ${envMode === 'manual' ? '' : 'wc-disabled'}`}>
@@ -281,7 +301,6 @@ const WeatherControlPanel = ({
             />
             <div className="wc-rain-value">{Math.round(rainIntensity*100)}%</div>
           </div>
-
           <p className="wc-hint">Map3D listens to <code>rainEnabled</code> & <code>rainIntensity</code> to emit particles and wet surfaces.</p>
         </div>
       </div>
@@ -308,10 +327,46 @@ const MapApp = () => {
   const doNudge = (dir) => { setStepNudge({ dir }); setStepNudgeTick((t) => t + 1); };
   useEffect(() => { setControllerCommand(null); }, [navMode]);
   const [pinned, setPinned] = useState(false);
+
+  // NEW: parking-popup state
+  const [parkingZoneId, setParkingZoneId] = useState(null);
+  const [parkingInfo, setParkingInfo] = useState(null);
+  const [parkingLoading, setParkingLoading] = useState(false);
+  const [parkingError, setParkingError] = useState('');
+  const parkingOpenRef = useRef(false);
+
   const setPopupFromMap = useCallback((d) => {
+    if (parkingOpenRef.current) return;
     if (!pinned) setPopupData(d);
     setIsWeatherOpen(false);
   }, [pinned]);
+
+  const openParkingPopup = useCallback(async (zoneId) => {
+    parkingOpenRef.current = true;
+    setPopupData(null);
+    setIsWeatherOpen(false);
+    setPinned(false);
+
+    setParkingZoneId(zoneId);
+    setParkingLoading(true);
+    setParkingError('');
+    try {
+      const info = await fetchZoneInfoRich(zoneId);
+      setParkingInfo(info);
+    } catch (e) {
+      setParkingError(e?.message || 'Failed to load parking data');
+      setParkingInfo(null);
+    } finally {
+      setParkingLoading(false);
+      setTimeout(() => { parkingOpenRef.current = false; }, 0);
+    }
+  }, []);
+
+  const closeParkingPopup = useCallback(() => {
+    setParkingZoneId(null);
+    setParkingInfo(null);
+    setParkingError('');
+  }, []);
 
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
@@ -331,11 +386,13 @@ const MapApp = () => {
   const [walkStickToFloor, setWalkStickToFloor] = useState(true);
   const [walkYTick, setWalkYTick] = useState(0);
   const [walkYDir, setWalkYDir] = useState(null);
+
   const openWeatherPanel = () => {
     setIsWeatherOpen(true);
     setPopupData(null);
     setPinned(false);
   };
+
   const updateThailandTime = () => {
     const fmt = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Bangkok',
@@ -360,6 +417,7 @@ const MapApp = () => {
       period
     });
   };
+
   const [visualHour, setVisualHour] = useState(12);
   useEffect(() => {
     const tick = () => {
@@ -377,6 +435,7 @@ const MapApp = () => {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('mfu:env', { detail: { mode: envMode, hour: visualHour } }));
   }, [envMode, visualHour]);
+
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('mfu:rain', { detail: { enabled: rainEnabled, intensity: rainIntensity } }));
   }, [rainEnabled, rainIntensity]);
@@ -532,9 +591,12 @@ const MapApp = () => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
   }, []);
+
   const toggleDashboards = () => setShowDashboards((prev) => !prev);
   useEffect(() => { updateThailandTime(); }, []);
+
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
+
   const popupDerived = useMemo(() => {
     if (!popupData) return null;
     const randTrend = () => {
@@ -586,12 +648,14 @@ const MapApp = () => {
     if (!popupData) return;
     window.open(`#analytics/${encodeURIComponent(popupData.name)}`, '_blank');
   };
+
   const latestCamRef = useRef(null);
   const preFocusPoseRef = useRef(null);
   const [restoreTick, setRestoreTick] = useState(0);
   const [restoreSnapshot, setRestoreSnapshot] = useState(null);
   const wasOpenRef = useRef(false);
   const [restoreFreezeMs, setRestoreFreezeMs] = useState(0);
+
   useEffect(() => {
     const isOpen = !!popupData;
     if (isOpen && !wasOpenRef.current) {
@@ -605,9 +669,11 @@ const MapApp = () => {
       }
     }
   }, [popupData]);
+
   const inE1Step2 = popupData && /^E1/i.test(popupData.name);
   const inE2Step2 = popupData && /^E2/i.test(popupData.name);
   const inLibraryStep2 = popupData && (/^Library/i.test(popupData.name) || /^AV$/i.test(popupData.name));
+
   return (
     <div className="app-container" style={{ background: backgroundColor }}>
       <Navbar>
@@ -637,6 +703,7 @@ const MapApp = () => {
           aria-hidden="true"
         />
       </Navbar>
+
       <div
         className="thailand-time"
         role="button"
@@ -651,7 +718,6 @@ const MapApp = () => {
             {thailandTime.hour}:{thailandTime.minute}:{thailandTime.second}
             {thailandTime.period && <span className="period"> {thailandTime.period}</span>}
           </div>
-
           <button
             className="help-btn"
             title="Show instructions"
@@ -662,9 +728,11 @@ const MapApp = () => {
           </button>
         </div>
       </div>
-      <button className="hide-button" onClick={toggleDashboards}>
+
+      <button className="hide-button" onClick={() => setShowDashboards((prev) => !prev)}>
         {showDashboards ? 'Hide Dashboards' : 'Show Dashboards'}
       </button>
+
       <div className="map-container">
         <Suspense fallback={<div>Loading...</div>}>
           <Canvas
@@ -696,11 +764,12 @@ const MapApp = () => {
                 walkYTick={walkYTick}
                 walkYDir={walkYDir}
                 restoreCameraTick={restoreTick}
-                popupOpen={!!popupData || isWeatherOpen}
+                popupOpen={!!popupData || isWeatherOpen || !!parkingZoneId}
                 envMode={envMode}
                 envHour={visualHour}
                 rainEnabled={rainEnabled}
                 rainIntensity={rainIntensity}
+                onZoneClick={openParkingPopup}
               />
             </PerformanceMonitor>
           </Canvas>
@@ -773,6 +842,7 @@ const MapApp = () => {
           </div>
         )}
       </div>
+
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -792,6 +862,7 @@ const MapApp = () => {
       {!showDashboards && navMode === 'drone' && (
         <Controller setControllerCommand={setControllerCommand} />
       )}
+
       {isWeatherOpen && (
         <WeatherControlPanel
           clock={thailandTime}
@@ -808,9 +879,124 @@ const MapApp = () => {
           onClose={() => setIsWeatherOpen(false)}
         />
       )}
+
+      {/* === SMART PARKING POPUP (compact) === */}
+      <Modal open={!!parkingZoneId} onClose={closeParkingPopup} size="sm" variant="parking">
+        <div className="modal-header">
+          <h3 className="modal-title">Smart Parking · {parkingZoneId || '—'}</h3>
+        </div>
+
+        {/* Snapshot first (top) */}
+        <div className={`parking-snapshot ${parkingLoading ? 'loading' : ''}`}>
+          {!parkingLoading && !parkingError && parkingInfo?.snapLink && (
+            <img
+              src={driveToDirectImage(parkingInfo.snapLink)}
+              alt={`Parking snapshot · ${parkingZoneId}`}
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {!parkingLoading && !parkingError && !parkingInfo?.snapLink && (
+            <div className="parking-snapshot-fallback">No snapshot</div>
+          )}
+          {parkingLoading && <div className="parking-snapshot-fallback">Loading…</div>}
+        </div>
+
+        {!parkingLoading && parkingError && (
+          <p style={{ color: '#ffb4b4', marginTop: 8 }}>Error: {parkingError}</p>
+        )}
+
+        {!parkingLoading && !parkingError && parkingInfo && (
+          <div className="parking-body">
+            <div className="parking-summary">
+              <div className="stat-mini">
+                <span className="k">Used</span>
+                <span className="v">{parkingInfo.occupied ?? 0}</span>
+              </div>
+              <div className="stat-mini">
+                <span className="k">Free</span>
+                <span className="v">{parkingInfo.free ?? 0}</span>
+              </div>
+              <div className="stat-mini">
+                <span className="k">Total</span>
+                <span className="v">{parkingInfo.total ?? 0}</span>
+              </div>
+              <div className="stat-mini">
+                <span className="k">Utilization</span>
+                <span className="v">
+                  {Math.round(((parkingInfo.occupied || 0) / Math.max(1, parkingInfo.total || 0)) * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="utilization-card">
+              <div className="card-head">
+                <span>SLOTS UTILIZATION</span>
+                <span className={`pill ${computeStatus(parkingInfo).toLowerCase()}`}>
+                  {computeStatus(parkingInfo)}
+                </span>
+              </div>
+              <div className="utilization-track">
+                <div
+                  className="utilization-fill"
+                  style={{
+                    width: `${((parkingInfo.occupied || 0) / Math.max(1, parkingInfo.total || 0)) * 100}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="parking-section">
+              <div className="section-head">
+                Cars
+                <span className="muted">
+                  {(parkingInfo.car?.occ ?? 0)} Used · {(parkingInfo.car?.free ?? 0)} Free
+                </span>
+              </div>
+              <div className="tiny-track">
+                <div
+                  className="tiny-fill"
+                  style={{
+                    width: `${
+                      ((parkingInfo.car?.occ ?? 0) /
+                        Math.max(1, (parkingInfo.car?.occ ?? 0) + (parkingInfo.car?.free ?? 0))) * 100
+                    }%`
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="parking-section">
+              <div className="section-head">
+                Motorcycles
+                <span className="muted">
+                  {(parkingInfo.motorcycle?.occ ?? 0)} Used · {(parkingInfo.motorcycle?.free ?? 0)} Free
+                </span>
+              </div>
+              <div className="tiny-track">
+                <div
+                  className="tiny-fill"
+                  style={{
+                    width: `${
+                      ((parkingInfo.motorcycle?.occ ?? 0) /
+                        Math.max(
+                          1,
+                          (parkingInfo.motorcycle?.occ ?? 0) + (parkingInfo.motorcycle?.free ?? 0)
+                        )) * 100
+                    }%`
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="parking-ts">
+              {parkingInfo.timestamp || ''}
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {!isWeatherOpen && popupData && popupDerived && (
-        <div
-          className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
+        <div className={`building-popup scientific ${showDashboards ? 'first' : 'second'}`}
           role="dialog"
           aria-label={`${popupData.name} details`}
         >
@@ -821,7 +1007,7 @@ const MapApp = () => {
               <div className="subtitle">{popupData.type}</div>
             </div>
             <div className="toolbar">
-              {inE1Step2 && (
+              {(/^E1/i.test(popupData.name)) && (
                 <button
                   className="tool-btn"
                   title="Return to Origin (E1 + all floors)"
@@ -830,7 +1016,7 @@ const MapApp = () => {
                   <Icon name="undo" />
                 </button>
               )}
-              {inE2Step2 && (
+              {(/^E2/i.test(popupData.name)) && (
                 <button
                   className="tool-btn"
                   title="Return to Origin (E2 + all floors)"
@@ -839,7 +1025,7 @@ const MapApp = () => {
                   <Icon name="undo" />
                 </button>
               )}
-              {inLibraryStep2 && (
+              {((/^Library/i.test(popupData.name)) || (/^AV$/i.test(popupData.name))) && (
                 <button
                   className="tool-btn"
                   title="Return to Origin (Library + all floors)"
@@ -875,6 +1061,7 @@ const MapApp = () => {
               </button>
             </div>
           </div>
+
           <div className="telemetry-row">
             <div className="chip">
               <Icon name="user" /><span>{popupDerived.occupancy}</span><small>people</small>
@@ -886,6 +1073,7 @@ const MapApp = () => {
               <Icon name="leaf" /><span>{popupDerived.co2ppm}</span><small>CO₂ ppm</small>
             </div>
           </div>
+
           {popupData.world && (
             <div className="location-compact" onClick={copyCoords} title="Copy world coordinates">
               <span className="loc-label">World</span>
@@ -894,6 +1082,7 @@ const MapApp = () => {
               <span className="coord">Z {popupData.world.z.toFixed(2)}</span>
             </div>
           )}
+
           <div className="metrics-grid">
             <div className={`metric-card ${popupData.electricity.status === 'High' ? 'risk' : ''}`}>
               <div className="metric-head">
@@ -932,6 +1121,7 @@ const MapApp = () => {
               </div>
             </div>
           </div>
+
           <div className="footer-stats">
             <div className="pill"><span className="k">Cost</span><span className="v">฿{popupDerived.costTHB.toFixed(0)}</span></div>
             <div className="pill"><span className="k">CO₂</span><span className="v">{popupDerived.co2kg.toFixed(0)} kg</span></div>
@@ -939,6 +1129,7 @@ const MapApp = () => {
           </div>
         </div>
       )}
+
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -962,6 +1153,7 @@ const MapApp = () => {
           </div>
         </div>
       </Modal>
+
       <Modal open={isOverallPopupVisible} onClose={() => setIsOverallPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Water Usage: Overall Campus</h3>
@@ -1013,6 +1205,7 @@ const MapApp = () => {
           </div>
         </div>
       </Modal>
+
       {isVehiclePopupVisible && (
         <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
           <div className="modal-header">
@@ -1060,6 +1253,7 @@ const MapApp = () => {
           )}
         </Modal>
       )}
+
       {showInstructions && (
         <div className="instructions-popup">
           <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
@@ -1092,6 +1286,7 @@ const MapApp = () => {
     </div>
   );
 };
+
 const App = () => {
   return (
     <Router>
@@ -1102,4 +1297,5 @@ const App = () => {
     </Router>
   );
 };
+
 export default App;

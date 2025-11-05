@@ -1,0 +1,25 @@
+/* src/components/Parking3D.css */
+.parking-chip{
+  pointer-events: auto;
+  background: rgba(0,0,0,.6);
+  border: 1px solid rgba(255,255,255,.18);
+  color:#fff; padding:6px 10px; border-radius:999px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+.parking-name{ font-weight: 800; font-size: 12px; letter-spacing:.2px; text-align:center; }
+.parking-row{
+  display:flex; align-items:center; gap:8px; justify-content:center;
+  font-size:12px; margin-top:4px;
+}
+.parking-row .dot{ width:8px; height:8px; border-radius:50%; box-shadow: 0 0 10px rgba(255,255,255,.35); }
+.parking-row .txt{ opacity:.9; }
+.parking-row .sep{ opacity:.6; }
+
+.parking-stale {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:2px 8px; font-size:10px; border-radius:999px;
+  border:1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08);
+  margin-left:6px;
+}
