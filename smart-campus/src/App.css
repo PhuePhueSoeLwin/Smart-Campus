@@ -21,7 +21,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   left:14px; top:50%; transform:translateY(-50%);
   display:inline-flex; align-items:center; gap:10px;
   padding:8px 14px; border-radius:999px;
-  text-decoration:none; color:#dfeaff; font-weight:800; letter-spacing:.2px;
+  text-decoration:none; color:#dfeaff; font-weight:800; letter-spacing: .2px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)),
     radial-gradient(80% 140% at 0% 0%, rgba(120,90,255,0.22), transparent 60%),
@@ -55,7 +55,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .mode-seg{
   position:relative; z-index:2; appearance:none; border:0; background:transparent; color:#e6f1ff;
-  font-size:12px; font-weight:700; letter-spacing:.2px; display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:12px; font-weight:700; letter-spacing: .2px; display:flex; align-items:center; justify-content:center; gap:6px;
   cursor:pointer; height:100%;
 }
 .mode-seg.active{ color:#0b254a; }
@@ -130,7 +130,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .right-dashboard { border-radius: 10px 0 0 10px; }
 
 /* =========================
-   BUILDING POPUP (ORIGINAL)
+   UNIFIED POPUPS (building / weather / parking)
    ========================= */
 .building-popup {
   position: fixed; top: 80px; width: clamp(260px, 22vw, 360px); color: #e6eeff; z-index: 2000;
@@ -138,8 +138,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   border: 1px solid rgba(90, 125, 255, 0.28); border-radius: 16px; box-shadow: 0 12px 36px rgba(8, 12, 20, 0.45);
   -webkit-backdrop-filter: blur(10px) saturate(1.25); backdrop-filter: blur(10px) saturate(1.25); overflow: hidden; animation: popup-in 160ms ease-out both;
 }
-.building-popup.first { right: 350px; }
-.building-popup.second  { right: 50px; }
+.building-popup.first { right: 350px; }   /* when dashboards visible */
+.building-popup.second  { right: 50px; }  /* when dashboards hidden */
 
 .building-popup.scientific::before {
   content:""; position:absolute; inset:0 0 auto 0; height:2px; background:linear-gradient(90deg, transparent, #2e90ff, #12d1b8, transparent); opacity:.9;
@@ -152,7 +152,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .popup-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:12px 12px 8px; }
 .head-left { display:grid; gap:2px; }
 .eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.28em; color:#9aa8c8; opacity:.9; }
-.title { font-size:16px; font-weight:800; letter-spacing:.2px; color:#e6eeff; text-shadow:0 1px 0 rgba(0,0,0,.25); }
+.title { font-size:16px; font-weight:800; letter-spacing: .2px; color:#e6eeff; text-shadow:0 1px 0 rgba(0,0,0,.25); }
 .subtitle { font-size:12px; color:#9aa8c8; }
 
 .toolbar { display:flex; gap:6px; align-items:center; }
@@ -166,8 +166,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   display:flex; align-items:center; gap:10px; z-index:1002;
 }
 .navbar-center-cluster .mode-switch{ position:relative; left:auto; top:auto; transform:none; }
-
-.weather-btn{ display:none; }
 
 .telemetry-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; padding: 0 12px 8px; }
 .telemetry-row .chip {
@@ -187,19 +185,19 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .metric-card.risk { border-color:rgba(255,77,77,0.45); box-shadow:0 0 0 1px rgba(255,77,77,0.15), 0 12px 36px rgba(8,12,20,0.45); }
 .metric-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-.metric-name { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#e6eeff; letter-spacing:.2px; }
+.metric-name { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#e6eeff; letter-spacing: .2px; }
 .metric-name .dot, .metric-name .dot.alt { width:7px; height:7px; border-radius:50%; box-shadow:0 0 10px rgba(46,144,255,0.6); background:radial-gradient(circle at 40% 40%, #fff 0 22%, #2e90ff 22% 100%); }
 .metric-name .dot.alt { box-shadow:0 0 10px rgba(18,209,184,0.6); background:radial-gradient(circle at 40% 40%, #fff 0 22%, #12d1b8 22% 100%); }
 
 .metric-card .badge {
   position:absolute; top:6px; right:8px; pointer-events:none; font-size:9px; font-weight:800; padding:3px 6px; border-radius:999px;
-  border:1px solid rgba(90,125,255,0.28); background:rgba(255,255,255,0.04); color:#e6eeff; letter-spacing:.06em; text-transform:uppercase;
+  border:1px solid rgba(90,125,255,0.28); background:rgba(255,255,255,0.04); color:#e6eeff; letter-spacing: .06em; text-transform:uppercase;
 }
 .badge.high { border-color:rgba(255,77,77,0.45); color:#ffd9d9; background:linear-gradient(180deg, rgba(255,77,77,0.22), rgba(255,77,77,0.12)); }
 .badge.normal { border-color:rgba(32,210,136,0.4); color:#d7ffef; background:linear-gradient(180deg, rgba(32,210,136,0.22), rgba(32,210,136,0.12)); }
 
 .metric-value { display:flex; align-items:baseline; gap:6px; margin:0 0 4px; }
-.metric-value .num { font-size:18px; font-weight:900; letter-spacing:.2px; }
+.metric-value .num { font-size:18px; font-weight:900; letter-spacing: .2px; }
 .metric-value .unit { font-size:11px; color:#9aa8c8; }
 
 .meter { height:8px; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03)); border:1px solid rgba(90,125,255,0.25); overflow:hidden; }
@@ -221,7 +219,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 
 /* =========================
-   INSTRUCTIONS / CONFIRM (ORIGINAL)
+   INSTRUCTIONS / CONFIRM
    ========================= */
 .instructions-popup {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
@@ -252,7 +250,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .confirm-text { font-size: 14px; color: rgba(255,255,255,.8); text-align: center; line-height: 1.5; margin-bottom: 20px; }
 
 /* =========================
-   MODAL (ORIGINAL)
+   MODAL (Week/Overall/Vehicles)
    ========================= */
 .modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 3000; background: rgba(6, 18, 40, 0.22); }
 .modal-box {
@@ -263,9 +261,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 }
 .modal-box.modal-compact { width: clamp(360px, 60vw, 680px); }
 .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; padding-right: 56px; }
-.modal-title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .2px; }
-.modal-box > .close-button { top: 14px; right: 14px; font-size: 24px; line-height: 1; padding: 6px 8px; background: transparent; border: none; box-shadow: none; border-radius: 0; }
+.modal-title { margin: 0; font-size: 20px; font-weight: 700; }
+.modal-box > .close-button { top: 14px; right: 14px; font-size: 24px; line-height: 1; padding: 6px 8px; background: transparent; border: none; }
 
+/* chips, cards, etc. (unchanged) */
 .chip-group { display: flex; gap: 8px; }
 .chip {
   background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.28); color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 12px; cursor: pointer;
@@ -318,55 +317,49 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .elev-btn:active{ transform: translateY(1px); }
 
 /* =========================================================
-   SMART PARKING POPUP — COMPACT, SNAPSHOT-ON-TOP, FIT HEIGHT
+   WEATHER & PARKING SUBCOMPONENTS (inside building-popup)
    ========================================================= */
+.popup-body { padding: 10px 12px 12px; }
 
-/* The modal we use for parking gets a compact width and tighter padding */
-.modal-box.modal-compact.parking {
-  width: clamp(360px, 28vw, 420px);
-  padding: 16px 14px 14px;
-  max-height: calc(100vh - 80px);
-  overflow: hidden;              /* We’ll control inner scroll */
-  display: grid;
-  grid-template-rows: auto auto 1fr; /* title, snapshot, scrollable body */
-  row-gap: 10px;
-}
+.wc-sections { display:grid; gap:10px; }
+.wc-card { background: rgba(255,255,255,0.07); border:1px solid rgba(90,125,255,0.22); border-radius:10px; padding:10px; }
+.wc-card-title { font-size:12px; font-weight:800; color:#cfe1ff; margin-bottom:6px; }
+.wc-time-row { display:flex; align-items:center; gap:8px; }
+.wc-live-dot { width:8px; height:8px; border-radius:50%; background:#2ee59d; box-shadow:0 0 10px rgba(46,229,157,.8); }
+.wc-live-time { font-weight:700; }
+.wc-live-label { margin-left:6px; color:#9aa8c8; font-size:11px; }
+.wc-mode-toggle { display:flex; align-items:center; gap:8px; }
+.mode-label { font-size:11px; opacity:.9; }
+.mode-label.active { color:#e6eeff; font-weight:800; }
 
-/* Header row (reuse .modal-header) with smaller title */
-.modal-box.parking .modal-header { margin: 0; padding: 0 40px 0 0; }
-.modal-box.parking .modal-title { font-size: 16px; }
+.wc-manual-row { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+.wc-hour-slider { width:100%; }
+.wc-hour-label { font-weight:800; letter-spacing:.2px; }
 
-/* Scrollable body */
-.parking-body {
-  overflow: auto;
-  padding-right: 4px;
-  display: grid;
-  gap: 10px;
-}
+.wc-hour-markers { display:flex; justify-content:space-between; font-size:10px; color:#9aa8c8; margin-top:4px; }
+.wc-muted { opacity:.85; }
+.wc-disabled { opacity:.55; pointer-events:none; }
+.wc-rain-row { display:flex; align-items:center; gap:10px; }
+.wc-rain-badge { padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.24); font-size:10px; }
+.wc-rain-badge.on { background:rgba(46, 209, 128, .16); color:#9ff3ce; }
+.wc-rain-badge.off { background:rgba(255, 255, 255, .06); color:#cfe1ff; }
+.wc-rain-intensity { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; margin-top:6px; }
+.wc-rain-intensity input[type="range"]{ width:100%; }
+.wc-rain-value { font-weight:800; }
 
-/* Snapshot at the very top */
+.parking-body { display:grid; gap:10px; }
 .parking-snapshot {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(77,174,244,0.25);
   background: rgba(255,255,255,0.06);
-  height: 180px;                 /* compact fixed window */
+  height: 180px;
   box-shadow: 0 6px 16px rgba(0,0,0,.25);
 }
-.parking-snapshot img,
-.parking-snapshot iframe {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block; border: 0;
-}
-.parking-snapshot .snap-label {
-  position: absolute; left: 10px; bottom: 8px;
-  font-size: 11px; padding: 4px 8px; border-radius: 999px;
-  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(6px);
-}
+.parking-snapshot img { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; }
+.parking-snapshot-fallback { width:100%; height:100%; display:grid; place-items:center; color:#cfe1ff; font-size:13px; }
 
-/* Top summary row (Used / Free / Total / Utilization) — mini tiles */
 .parking-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -380,10 +373,9 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   text-align: center;
   box-shadow: 0 6px 16px rgba(0,0,0,.18);
 }
-.stat-mini .k { display:block; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#9bb1d8; }
+.stat-mini .k { display:block; font-size:10px; letter-spacing: .08em; text-transform:uppercase; color:#9bb1d8; }
 .stat-mini .v { display:block; font-size:16px; font-weight:800; margin-top:2px; }
 
-/* Utilization bar (very compact) */
 .utilization-card {
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(90,125,255,0.22);
@@ -410,7 +402,6 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   transition: width 240ms ease-out;
 }
 
-/* Breakdown section (Cars / Motorcycles) */
 .parking-section {
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(90,125,255,0.22);
@@ -422,48 +413,11 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   font-size:12px; font-weight:800; color:#e6eeff;
   margin-bottom:6px;
 }
-.parking-section .line {
-  display:grid; grid-template-columns: 1fr auto; align-items:center; gap:10px;
-  font-size:12px; margin:4px 0;
-}
-.parking-section .line .label { color:#b7c7e8; }
-.parking-section .line .value { font-weight:800; }
-
-/* Tiny progress line for each category */
 .tiny-track { height:6px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); overflow:hidden; }
 .tiny-fill  { height:100%; width:0%; background: linear-gradient(90deg, #21d1b1, #3ba5ff); transition: width 240ms ease-out; }
+.parking-ts { text-align:right; font-size:10px; color:#9ab6de; opacity:.9; }
 
-/* Timestamp footer (compact) */
-.parking-ts {
-  text-align:right; font-size:10px; color:#9ab6de; opacity:.9;
-}
-
-/* Make everything denser inside the parking modal */
-.modal-box.parking .card,
-.modal-box.parking .utilization-card,
-.modal-box.parking .parking-section {
-  min-height: unset;
-  padding: 8px 10px;
-}
-
-/* Small close button hitbox stays the same */
-.modal-box.parking > .close-button { top: 10px; right: 10px; font-size: 20px; }
-
-/* On short screens, let the body scroll but keep snapshot visible */
-@media (max-height: 760px) {
-  .parking-snapshot { height: 150px; }
-  .modal-box.modal-compact.parking { grid-template-rows: auto auto 1fr; }
-}
-
-/* Narrow screens: widen slightly but still compact */
-@media (max-width: 840px) {
-  .modal-box.modal-compact.parking { width: min(92vw, 520px); }
-}
-
-/* Helper: hide default Modal divider look inside parking body */
-.modal-box.parking .divider { border-top-color: rgba(255,255,255,.12); margin: 8px 0; }
-
-/* Optional shimmer placeholder for when snapshot is loading */
+/* Loading shimmer */
 .parking-snapshot.loading::after{
   content:""; position:absolute; inset:0;
   background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
