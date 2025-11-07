@@ -158,6 +158,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .tool-btn:hover { filter:brightness(1.08); }
 .tool-btn:active { transform: translateY(1px); }
 .tool-btn.danger { border-color: rgba(255,77,77,0.45); }
+/* Text-fitting variant for label buttons (e.g., Refresh) */
+.tool-btn.label { width:auto; padding:0 10px; height:26px; font-size:13px; line-height:26px; }
 
 .navbar-center-cluster{
   position:absolute; left:130px; top:50%; transform:translateY(-50%);

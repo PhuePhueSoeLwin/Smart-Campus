@@ -384,6 +384,7 @@ const MapApp = () => {
   const [parkingLoading, setParkingLoading] = useState(false);
   const [parkingError, setParkingError] = useState('');
   const parkingAbortRef = useRef(null);
+  const [parkingCache, setParkingCache] = useState(() => ({}));
 
   const setPopupFromMap = useCallback((d) => {
     if (parkingZoneId) return;      // parking popup has priority
@@ -402,36 +403,35 @@ const MapApp = () => {
     setPinned(false);
 
     setParkingZoneId(zoneId);
-    setParkingLoading(true);
+    // Show cached data if available; otherwise fetch once
     setParkingError('');
+    const cached = parkingCache[zoneId];
+    if (cached) {
+      setParkingInfo(cached);
+      setParkingLoading(false);
+      return;
+    }
+    setParkingLoading(true);
     setParkingInfo(null);
 
     parkingAbortRef.current?.abort();
     const ctl = new AbortController();
     parkingAbortRef.current = ctl;
 
-    const load = async () => {
-      try {
-        const info = await pollClickedZone(zoneId, ctl.signal);
-        setParkingInfo(info);
-        setParkingError('');
-      } catch (e) {
-        if (e?.name !== 'AbortError') {
-          setParkingError(e?.message || 'Failed to load parking data');
-          setParkingInfo(null);
-        }
-      } finally {
-        setParkingLoading(false);
+    try {
+      const info = await pollClickedZone(zoneId, ctl.signal);
+      setParkingInfo(info);
+      setParkingCache((prev) => ({ ...prev, [zoneId]: info }));
+      setParkingError('');
+    } catch (e) {
+      if (e?.name !== 'AbortError') {
+        setParkingError(e?.message || 'Failed to load parking data');
+        setParkingInfo(null);
       }
-    };
-    load();
-
-    const id = setInterval(() => {
-      pollClickedZone(zoneId, ctl.signal).then(setParkingInfo).catch(()=>{});
-    }, 8000);
-    openParkingPopup._intId && clearInterval(openParkingPopup._intId);
-    openParkingPopup._intId = id;
-  }, [pollClickedZone]);
+    } finally {
+      setParkingLoading(false);
+    }
+  }, [pollClickedZone, parkingCache]);
 
   const closeParkingPopup = useCallback(() => {
     setParkingZoneId(null);
@@ -439,8 +439,30 @@ const MapApp = () => {
     setParkingError('');
     setParkingLoading(false);
     parkingAbortRef.current?.abort();
-    if (openParkingPopup._intId) clearInterval(openParkingPopup._intId);
   }, []);
+
+  // Manual refresh for parking info (no auto polling)
+  const refreshParkingInfo = useCallback(async () => {
+    if (!parkingZoneId) return;
+    setParkingLoading(true);
+    setParkingError('');
+    parkingAbortRef.current?.abort();
+    const ctl = new AbortController();
+    parkingAbortRef.current = ctl;
+    try {
+      const info = await pollClickedZone(parkingZoneId, ctl.signal);
+      setParkingInfo(info);
+      setParkingCache((prev) => ({ ...prev, [parkingZoneId]: info }));
+      setParkingError('');
+    } catch (e) {
+      if (e?.name !== 'AbortError') {
+        setParkingError(e?.message || 'Failed to load parking data');
+        setParkingInfo(null);
+      }
+    } finally {
+      setParkingLoading(false);
+    }
+  }, [parkingZoneId, pollClickedZone]);
 
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
@@ -1087,6 +1109,15 @@ const MapApp = () => {
               <div className="subtitle">Realtime utilization</div>
             </div>
             <div className="toolbar">
+              <button
+                className="tool-btn label refresh"
+                title="Refresh"
+                onClick={refreshParkingInfo}
+                disabled={parkingLoading}
+                style={{ marginRight: 4 }}
+              >
+                Refresh
+              </button>
               <button className="tool-btn danger" title="Close" onClick={closeParkingPopup}>
                 <Icon name="x" />
               </button>
