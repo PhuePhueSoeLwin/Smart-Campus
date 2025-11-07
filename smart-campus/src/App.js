@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
@@ -28,7 +29,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-// parking rich fetch
+// realtime parking (API wrapper)
 import { fetchZoneInfoRich } from './components/parkingApi';
 
 ChartJS.register(
@@ -50,7 +51,7 @@ ChartJS.defaults.plugins.datalabels = { display: false };
 
 const StaticGauge = React.memo(GaugeChart, () => true);
 
-/* === Modal (kept for analytics/weeklies/vehicles) === */
+/* ===================== Modal ===================== */
 const Modal = ({ open, onClose, children, size = 'md', variant = '' }) => {
   if (!open) return null;
   return createPortal(
@@ -67,14 +68,50 @@ const Modal = ({ open, onClose, children, size = 'md', variant = '' }) => {
   );
 };
 
-/* === helpers === */
-function driveToDirectImage(url) {
-  if (!url) return '';
-  const m = url.match(/\/d\/([^/]+)\//);
-  const id = m?.[1];
-  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url.trim();
+/* ========== Parking snapshot helpers (Google Drive safe) ========== */
+function driveImageCandidates(url) {
+  const u = (url || '').trim();
+  if (!u) return [];
+
+  // Extract Drive file ID from /file/d/<id>/… or ?id=<id>
+  let id = null;
+  const m1 = u.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  const m2 = u.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (m1 && m1[1]) id = m1[1];
+  if (!id && m2 && m2[1]) id = m2[1];
+
+  if (!id) return [u]; // non-Drive URL → return as-is
+
+  // Try embeddable Drive variants in order
+  return [
+    `https://drive.google.com/thumbnail?id=${id}&sz=w1600`,
+    `https://drive.google.com/uc?export=view&id=${id}`,
+    `https://drive.google.com/uc?export=download&id=${id}`,
+  ];
 }
-function computeStatus(info) {
+
+const DriveImage = ({ link, alt = '' }) => {
+  const [cands] = useState(() => driveImageCandidates(link));
+  const [idx, setIdx] = useState(0);
+
+  if (!cands.length) return <div className="parking-snapshot-fallback">No snapshot</div>;
+
+  const onError = () => { if (idx < cands.length - 1) setIdx(idx + 1); };
+
+  return (
+    <img
+      src={cands[idx]}
+      alt={alt}
+      decoding="async"
+      loading="eager"
+      referrerPolicy="no-referrer"
+      onError={onError}
+      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+    />
+  );
+};
+
+function computeStatusBadge(info) {
   if (!info) return '—';
   const util = (info.occupied || 0) / Math.max(1, info.total || 0);
   if (util > 0.85) return 'RED';
@@ -82,10 +119,7 @@ function computeStatus(info) {
   return 'GREEN';
 }
 
-const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
-const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
-const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
-
+/* ===================== Icons ===================== */
 const Icon = ({ name, size = 14 }) => {
   const common = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
   switch (name) {
@@ -105,10 +139,13 @@ const Icon = ({ name, size = 14 }) => {
     case 'sun': return (<svg {...common}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l-1.5-1.5M20.5 20.5 19 19M19 5l1.5-1.5M4.5 20.5 6 19"/></svg>);
     case 'moon': return (<svg {...common}><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>);
     case 'cloud-rain': return (<svg {...common}><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11-1 4 4 0 0 0 1 9h10z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg>);
+    case 'car': return (<svg {...common}><path d="M3 13l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5"/><path d="M5 16h14"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/></svg>);
+    case 'bike': return (<svg {...common}><circle cx="5.5" cy="16.5" r="2.5"/><circle cx="18.5" cy="16.5" r="2.5"/><path d="M5.5 16.5l5-8h3l3 8M10.5 8.5l8 8"/></svg>);
     default: return null;
   }
 };
 
+/* ===================== Navbar ===================== */
 const Navbar = ({ children }) => {
   const location = useLocation();
   const onCCTV = location.pathname === '/cctv';
@@ -139,6 +176,7 @@ const Navbar = ({ children }) => {
   );
 };
 
+/* ===================== Camera Sync ===================== */
 const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }) => {
   const { camera } = useThree();
   const lastRestoreTick = useRef(0);
@@ -178,6 +216,7 @@ const CameraSync = ({ onSnapshot, restoreTick, restoreSnapshot, onRestoreStart }
   return null;
 };
 
+/* ===================== Time helpers ===================== */
 function getThailandNow() {
   const fmt = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Bangkok',
@@ -199,7 +238,7 @@ function calcSkyByHour(hour) {
   return '#0B1526';
 }
 
-/* === Weather panel docked like building popup === */
+/* ===================== Weather Panel ===================== */
 const WeatherPanelDocked = ({
   clock,
   envMode, setEnvMode,
@@ -208,10 +247,13 @@ const WeatherPanelDocked = ({
   rainIntensity, setRainIntensity,
   hour24, setHour24,
   onClose,
-  dockClass = 'second',
+  dockRight
 }) => {
   return (
-    <div className={`building-popup scientific ${dockClass}`} role="dialog" aria-label="Weather Controls">
+    <div className="building-popup scientific"
+         role="dialog"
+         aria-label="Weather Controls"
+         style={{ right: dockRight, top: 80 }}>
       <div className="popup-header">
         <div className="head-left">
           <div className="eyebrow">SMART CAMPUS · MFU</div>
@@ -312,9 +354,13 @@ const WeatherPanelDocked = ({
   );
 };
 
+/* ===================== Main App ===================== */
 const MapApp = () => {
   const [showDashboards, setShowDashboards] = useState(true);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
+
+  const buildingDockRight = showDashboards ? 350 : 50; // same docking rule used everywhere
+
   const [envMode, setEnvMode] = useState('realtime');
   const [envHour, setEnvHour] = useState(12);
   const [rainEnabled, setRainEnabled] = useState(false);
@@ -332,47 +378,68 @@ const MapApp = () => {
   useEffect(() => { setControllerCommand(null); }, [navMode]);
   const [pinned, setPinned] = useState(false);
 
-  // parking popup
+  // SMART PARKING: clicked zone only (+ snapshot)
   const [parkingZoneId, setParkingZoneId] = useState(null);
   const [parkingInfo, setParkingInfo] = useState(null);
   const [parkingLoading, setParkingLoading] = useState(false);
   const [parkingError, setParkingError] = useState('');
-  const parkingOpenRef = useRef(false);
-
-  // unified dock lane: if dashboards are shown → 'first' (350px); else → 'second' (50px)
-  const dockClass = showDashboards ? 'first' : 'second';
+  const parkingAbortRef = useRef(null);
 
   const setPopupFromMap = useCallback((d) => {
-    if (parkingOpenRef.current) return;
+    if (parkingZoneId) return;      // parking popup has priority
     if (!pinned) setPopupData(d);
     setIsWeatherOpen(false);
-  }, [pinned]);
+  }, [pinned, parkingZoneId]);
+
+  const pollClickedZone = useCallback(async (zoneId, signal) => {
+    const info = await fetchZoneInfoRich(zoneId, { signal });
+    return info;
+  }, []);
 
   const openParkingPopup = useCallback(async (zoneId) => {
-    parkingOpenRef.current = true;
-    setPopupData(null);
     setIsWeatherOpen(false);
+    setPopupData(null);
     setPinned(false);
 
     setParkingZoneId(zoneId);
     setParkingLoading(true);
     setParkingError('');
-    try {
-      const info = await fetchZoneInfoRich(zoneId);
-      setParkingInfo(info);
-    } catch (e) {
-      setParkingError(e?.message || 'Failed to load parking data');
-      setParkingInfo(null);
-    } finally {
-      setParkingLoading(false);
-      setTimeout(() => { parkingOpenRef.current = false; }, 0);
-    }
-  }, []);
+    setParkingInfo(null);
+
+    parkingAbortRef.current?.abort();
+    const ctl = new AbortController();
+    parkingAbortRef.current = ctl;
+
+    const load = async () => {
+      try {
+        const info = await pollClickedZone(zoneId, ctl.signal);
+        setParkingInfo(info);
+        setParkingError('');
+      } catch (e) {
+        if (e?.name !== 'AbortError') {
+          setParkingError(e?.message || 'Failed to load parking data');
+          setParkingInfo(null);
+        }
+      } finally {
+        setParkingLoading(false);
+      }
+    };
+    load();
+
+    const id = setInterval(() => {
+      pollClickedZone(zoneId, ctl.signal).then(setParkingInfo).catch(()=>{});
+    }, 8000);
+    openParkingPopup._intId && clearInterval(openParkingPopup._intId);
+    openParkingPopup._intId = id;
+  }, [pollClickedZone]);
 
   const closeParkingPopup = useCallback(() => {
     setParkingZoneId(null);
     setParkingInfo(null);
     setParkingError('');
+    setParkingLoading(false);
+    parkingAbortRef.current?.abort();
+    if (openParkingPopup._intId) clearInterval(openParkingPopup._intId);
   }, []);
 
   const [showInstructions, setShowInstructions] = useState(() => {
@@ -459,7 +526,7 @@ const MapApp = () => {
       '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM',
       '6:00 PM','7:00 PM','8:00 PM','9:00 PM'
     ];
-    setSchedule(times.map(time => ({
+    setSchedule(times.map((time) => ({
       time,
       cars: Math.floor(Math.random()*500),
       motorcycles: Math.floor(Math.random()*1000)
@@ -472,14 +539,10 @@ const MapApp = () => {
       schedule[0])
     : null;
 
-  const [presetRange, setPresetRange] = useState(null);
-  const setRangeDays = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - (days - 1));
-    setSelectedDateRange([startOfDay(start), endOfDay(end)]);
-    setPresetRange(days);
-  };
+  /* ===== Electricity series (for left panel modal) ===== */
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+  const endOfDay   = (d) => { const x = new Date(d); x.setHours(23,59,59,999); return x; };
+  const labelFor   = (date) => date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
   const totalElectricityUsage = 121008.75;
   const buildDailySeries = (days = 35) => {
@@ -501,11 +564,19 @@ const MapApp = () => {
     }
     return series;
   };
-
   const [series] = useState(() => buildDailySeries(35));
   const last7 = series.slice(-7);
   const weeklyLabels = [last7.map((p) => p.label)];
   const weeklyData = [last7.map((p) => p.value)];
+
+  const [presetRange, setPresetRange] = useState(null);
+  const setRangeDays = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    setSelectedDateRange([startOfDay(start), endOfDay(end)]);
+    setPresetRange(days);
+  };
 
   const normalizeRange = (value) => {
     if (Array.isArray(value)) {
@@ -553,6 +624,7 @@ const MapApp = () => {
     },
   };
 
+  // dashboards
   const buildings = [
     'Msquare','E1','E2','E3','E4','C1','C2','C3','C4','C5','D1','AD1','AD2',
     'F1','F2','F3','F4','F5','F6','L1','L2','L3','L4','L5','L6','L7',
@@ -599,9 +671,6 @@ const MapApp = () => {
     generateWaterUsage();
     const id = setInterval(() => { if (waterUsageData.length > 0) generateWaterUsage(); }, 5000);
   }, []);
-
-  const toggleDashboards = () => setShowDashboards((prev) => !prev);
-  useEffect(() => { updateThailandTime(); }, []);
 
   const clampPct = (n) => Math.max(0, Math.min(100, n || 0));
 
@@ -753,7 +822,6 @@ const MapApp = () => {
                 restoreSnapshot={restoreSnapshot}
                 onRestoreStart={(ms) => setRestoreFreezeMs(ms)}
               />
-
               <Map3D
                 setPopupData={setPopupFromMap}
                 originalColors={originalColors}
@@ -849,12 +917,12 @@ const MapApp = () => {
         )}
       </div>
 
-      {/* === BUILDING POPUP — unified dock === */}
+      {/* ===== BUILDING POPUP (docked) ===== */}
       {showBuildingPopup && (
-        <div className={`building-popup scientific ${dockClass}`}
-          role="dialog"
-          aria-label={`${popupData.name} details`}
-        >
+        <div className="building-popup scientific"
+             role="dialog"
+             aria-label={`${popupData.name} details`}
+             style={{ right: buildingDockRight, top: 80 }}>
           <div className="popup-header">
             <div className="head-left">
               <div className="eyebrow">SMART CAMPUS · MFU</div>
@@ -985,7 +1053,7 @@ const MapApp = () => {
         </div>
       )}
 
-      {/* === WEATHER — unified dock === */}
+      {/* ===== WEATHER (docked) ===== */}
       {isWeatherOpen && (
         <WeatherPanelDocked
           clock={thailandTime}
@@ -1000,18 +1068,23 @@ const MapApp = () => {
           hour24={hour24}
           setHour24={setHour24}
           onClose={() => setIsWeatherOpen(false)}
-          dockClass={dockClass}
+          dockRight={buildingDockRight}
         />
       )}
 
-      {/* === SMART PARKING — unified dock === */}
+      {/* ===== SMART PARKING (single zone) ===== */}
       {parkingZoneId && (
-        <div className={`building-popup scientific ${dockClass}`} role="dialog" aria-label="Smart Parking">
+        <div
+          className="building-popup scientific parking-one"
+          role="dialog"
+          aria-label={`Smart Parking — ${parkingZoneId}`}
+          style={{ right: buildingDockRight, top: 80 }}
+        >
           <div className="popup-header">
             <div className="head-left">
               <div className="eyebrow">SMART CAMPUS · MFU</div>
-              <div className="title">Smart Parking · {parkingZoneId}</div>
-              <div className="subtitle">Live utilization & snapshot</div>
+              <div className="title">Zone {parkingZoneId}</div>
+              <div className="subtitle">Realtime utilization</div>
             </div>
             <div className="toolbar">
               <button className="tool-btn danger" title="Close" onClick={closeParkingPopup}>
@@ -1020,14 +1093,11 @@ const MapApp = () => {
             </div>
           </div>
 
-          <div className="popup-body parking-body">
+          <div className="popup-body">
+            {/* snapshot */}
             <div className={`parking-snapshot ${parkingLoading ? 'loading' : ''}`}>
               {!parkingLoading && !parkingError && parkingInfo?.snapLink && (
-                <img
-                  src={driveToDirectImage(parkingInfo.snapLink)}
-                  alt={`Parking snapshot · ${parkingZoneId}`}
-                  referrerPolicy="no-referrer"
-                />
+                <DriveImage link={parkingInfo.snapLink} alt={`Parking snapshot · ${parkingZoneId}`} />
               )}
               {!parkingLoading && !parkingError && !parkingInfo?.snapLink && (
                 <div className="parking-snapshot-fallback">No snapshot</div>
@@ -1035,38 +1105,68 @@ const MapApp = () => {
               {parkingLoading && <div className="parking-snapshot-fallback">Loading…</div>}
             </div>
 
+            {/* error */}
             {!parkingLoading && parkingError && (
               <p style={{ color: '#ffb4b4', marginTop: 8 }}>Error: {parkingError}</p>
             )}
 
+            {/* metrics */}
             {!parkingLoading && !parkingError && parkingInfo && (
               <>
-                <div className="parking-summary">
-                  <div className="stat-mini">
-                    <span className="k">Used</span>
-                    <span className="v">{parkingInfo.occupied ?? 0}</span>
+                <div className="pp-topline">
+                  <div className={`pp-dot ${computeStatusBadge(parkingInfo).toLowerCase()}`} />
+                  <span className="pp-status">{computeStatusBadge(parkingInfo)}</span>
+                  <span className="spacer" />
+                  <span className="pp-ts">{parkingInfo.timestamp || ''}</span>
+                </div>
+
+                <div className="pp-card">
+                  <div className="pp-row header">
+                    <span className="cell label">Total</span>
+                    <span className="cell">All</span>
+                    <span className="cell">Use</span>
+                    <span className="cell">Free</span>
                   </div>
-                  <div className="stat-mini">
-                    <span className="k">Free</span>
-                    <span className="v">{parkingInfo.free ?? 0}</span>
+                  <div className="pp-row">
+                    <span className="cell label">—</span>
+                    <span className="cell strong">{parkingInfo.total ?? 0}</span>
+                    <span className="cell strong red">{parkingInfo.occupied ?? 0}</span>
+                    <span className="cell strong green">{parkingInfo.free ?? 0}</span>
                   </div>
-                  <div className="stat-mini">
-                    <span className="k">Total</span>
-                    <span className="v">{parkingInfo.total ?? 0}</span>
+                </div>
+
+                <div className="pp-card">
+                  <div className="pp-row header">
+                    <span className="cell label">Type</span>
+                    <span className="cell">All</span>
+                    <span className="cell">Use</span>
+                    <span className="cell">Free</span>
                   </div>
-                  <div className="stat-mini">
-                    <span className="k">Utilization</span>
-                    <span className="v">
-                      {Math.round(((parkingInfo.occupied || 0) / Math.max(1, parkingInfo.total || 0)) * 100)}%
+
+                  <div className="pp-row">
+                    <span className="cell label icon">
+                      <Icon name="bike" size={16} /><span>motorcycle</span>
                     </span>
+                    <span className="cell strong">{(parkingInfo.motorcycle?.occ ?? 0) + (parkingInfo.motorcycle?.free ?? 0)}</span>
+                    <span className="cell strong red">{parkingInfo.motorcycle?.occ ?? 0}</span>
+                    <span className="cell strong green">{parkingInfo.motorcycle?.free ?? 0}</span>
+                  </div>
+
+                  <div className="pp-row">
+                    <span className="cell label icon">
+                      <Icon name="car" size={16} /><span>car</span>
+                    </span>
+                    <span className="cell strong">{(parkingInfo.car?.occ ?? 0) + (parkingInfo.car?.free ?? 0)}</span>
+                    <span className="cell strong red">{parkingInfo.car?.occ ?? 0}</span>
+                    <span className="cell strong green">{parkingInfo.car?.free ?? 0}</span>
                   </div>
                 </div>
 
                 <div className="utilization-card">
                   <div className="card-head">
                     <span>SLOTS UTILIZATION</span>
-                    <span className={`pill ${computeStatus(parkingInfo).toLowerCase()}`}>
-                      {computeStatus(parkingInfo)}
+                    <span className={`pill ${computeStatusBadge(parkingInfo).toLowerCase()}`}>
+                      {computeStatusBadge(parkingInfo)}
                     </span>
                   </div>
                   <div className="utilization-track">
@@ -1078,60 +1178,12 @@ const MapApp = () => {
                     />
                   </div>
                 </div>
-
-                <div className="parking-section">
-                  <div className="section-head">
-                    Cars
-                    <span className="muted">
-                      {(parkingInfo.car?.occ ?? 0)} Used · {(parkingInfo.car?.free ?? 0)} Free
-                    </span>
-                  </div>
-                  <div className="tiny-track">
-                    <div
-                      className="tiny-fill"
-                      style={{
-                        width: `${
-                          ((parkingInfo.car?.occ ?? 0) /
-                            Math.max(1, (parkingInfo.car?.occ ?? 0) + (parkingInfo.car?.free ?? 0))) * 100
-                        }%`
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="parking-section">
-                  <div className="section-head">
-                    Motorcycles
-                    <span className="muted">
-                      {(parkingInfo.motorcycle?.occ ?? 0)} Used · {(parkingInfo.motorcycle?.free ?? 0)} Free
-                    </span>
-                  </div>
-                  <div className="tiny-track">
-                    <div
-                      className="tiny-fill"
-                      style={{
-                        width: `${
-                          ((parkingInfo.motorcycle?.occ ?? 0) /
-                            Math.max(
-                              1,
-                              (parkingInfo.motorcycle?.occ ?? 0) + (parkingInfo.motorcycle?.free ?? 0)
-                            )) * 100
-                        }%`
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="parking-ts">
-                  {parkingInfo.timestamp || ''}
-                </div>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* Dashboards */}
       {showDashboards && (
         <>
           <div className="dashboard-wrapper left-dashboard-wrapper show">
@@ -1152,7 +1204,7 @@ const MapApp = () => {
         <Controller setControllerCommand={setControllerCommand} />
       )}
 
-      {/* Week/Overall & Vehicles */}
+      {/* ===== Modals ===== */}
       <Modal open={isWeeklyPopupVisible} onClose={() => setIsWeeklyPopupVisible(false)}>
         <div className="modal-header">
           <h3 className="modal-title">Electricity Usage for Selected Dates</h3>
@@ -1228,54 +1280,6 @@ const MapApp = () => {
           </div>
         </div>
       </Modal>
-
-      {isVehiclePopupVisible && (
-        <Modal open={isVehiclePopupVisible} onClose={closeVehiclePopup} size="sm">
-          <div className="modal-header">
-            <h3 className="modal-title">{vehicleType} Schedule</h3>
-            <div className="button-group">
-              <button
-                className={`vehicle-button ${vehicleType === 'Cars' ? 'active' : ''}`}
-                onClick={() => setVehicleType('Cars')}
-                title="Show Cars"
-              >🚗</button>
-              <button
-                className={`vehicle-button ${vehicleType === 'Motorcycles' ? 'active' : ''}`}
-                onClick={() => setVehicleType('Motorcycles')}
-                title="Show Motorcycles"
-              >🏍️</button>
-            </div>
-          </div>
-          <p className="modal-note">Here is the schedule for the whole day.</p>
-          <div className="schedule-scroll">
-            <table className="schedule-table">
-              <thead>
-                <tr><th>Time</th><th>{vehicleType}</th></tr>
-              </thead>
-              <tbody>
-                {schedule.map((entry) => (
-                  <tr key={entry.time}>
-                    <td>{entry.time}</td>
-                    <td>{entry[vehicleType.toLowerCase()].toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {peakTime && (
-            <div className="peak-row">
-              <div className="kpi mini">
-                <span className="kpi-label">Peak Time</span>
-                <span className="kpi-value">{peakTime.time}</span>
-              </div>
-              <div className="kpi mini">
-                <span className="kpi-label">Vehicles</span>
-                <span className="kpi-value">{peakTime[vehicleType.toLowerCase()].toLocaleString()}</span>
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
 
       {showInstructions && (
         <div className="instructions-popup">

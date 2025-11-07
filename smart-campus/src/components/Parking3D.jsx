@@ -5,31 +5,22 @@ import * as THREE from 'three';
 import { fetchAllZones, ZONES_C2 } from './parkingApi';
 import './Parking3D.css';
 
-const POLL_MS = 8000;
-
-/* ================= TUNING =================
- * C2-Parking-01: uses base offset + local nudges you asked for.
- * C2-Parking-02: own absolute offset (no sideOf).
- */
-const CAR1_OFFSET_FROM_C2 = new THREE.Vector3(6, 0, 9);      // base for -01
-const CAR2_OFFSET_FROM_C2 = new THREE.Vector3(12.8, 0, 8.5); // explicit spot for -02
-const CAR2_TOUCH_SIDE = 'right'; // kept for reference
+const CAR1_OFFSET_FROM_C2 = new THREE.Vector3(6, 0, 9);
+const CAR2_OFFSET_FROM_C2 = new THREE.Vector3(12.8, 0, 8.5);
+const CAR2_TOUCH_SIDE = 'right';
 const CAR_Y_LIFT = 0.3;
 
-/* Motorcycle pads: finalized placement (stacked along +Z) */
 const MOTO1_LOCAL_OFFSET  = new THREE.Vector3(7.1, 0, 0.35);
 const MOTO_PAIR_GAP_LOCAL = 0.12;
 const MOTO_Y_LIFT         = 0.35;
 
-/* --------- BIG chip (container above lots) controls --------- */
-const CHIP_SCALE   = 4.5;      // doubled from 2.25 -> 4.5
-const CHIP_POS_Y   = 1.25;     // height above pad
+const CHIP_SCALE   = 4.5;
+const CHIP_POS_Y   = 1.25;
 const CHIP_PADDING = '14px 18px';
-const CHIP_NAME_FS = '22px';   // title font size (also scaled by transform)
-const CHIP_ROW_FS  = '18px';   // metrics font size (also scaled)
-const CHIP_DOT_SZ  = 14;       // px (also scaled)
+const CHIP_NAME_FS = '22px';
+const CHIP_ROW_FS  = '18px';
+const CHIP_DOT_SZ  = 14;
 
-/* =============== SLOT / VISUAL =============== */
 const SLOT_SPEC = {
   car:  { w: 2.6, d: 5.2, gapX: 0.40, gapZ: 0.60, marginX: 0.8,  marginZ: 0.8 },
   moto: { w: 1.0, d: 2.2, gapX: 0.25, gapZ: 0.30, marginX: 0.6,  marginZ: 0.6 },
@@ -61,9 +52,8 @@ function touchAlongLocalAxis({
   }
 }
 
-/* ---------- Textured white lining for bays ---------- */
 function useSlotLineTexture(kind) {
-  return useMemo(() => {
+  return React.useMemo(() => {
     const texW = 256, texH = kind === 'car' ? 512 : 384;
     const cnv = document.createElement('canvas');
     cnv.width = texW; cnv.height = texH;
@@ -89,7 +79,6 @@ function useSlotLineTexture(kind) {
   }, [kind]);
 }
 
-/* ---------- GRID: capacity-capped; also return grid size ---------- */
 function computeGrid(kind, padW, padD, requestedCount) {
   const spec   = SLOT_SPEC[kind];
   const pitchX = spec.w + spec.gapX;
@@ -115,13 +104,7 @@ function computeGrid(kind, padW, padD, requestedCount) {
   for (let r = 0; r < rows; r++) {
     const cellsThisRow = Math.min(cols, left);
     for (let c = 0; c < cellsThisRow; c++) {
-      slots.push({
-        x: originX + c * pitchX,
-        z: originZ + r * pitchZ,
-        w: SLOT_SPEC[kind].w,
-        d: SLOT_SPEC[kind].d,
-        r, c
-      });
+      slots.push({ x: originX + c * pitchX, z: originZ + r * pitchZ, w: SLOT_SPEC[kind].w, d: SLOT_SPEC[kind].d, r, c });
     }
     left -= cellsThisRow;
   }
@@ -129,7 +112,6 @@ function computeGrid(kind, padW, padD, requestedCount) {
   return { slots, cols, rows, gridW, gridD, capacity, pitchX, pitchZ };
 }
 
-/* ---------- Single bay (clickable) ---------- */
 function Bay({ x, z, w, d, occupied, lineTex, onClick }) {
   const y = 0.035;
   const color = occupied ? RED : GREEN;
@@ -138,13 +120,7 @@ function Bay({ x, z, w, d, occupied, lineTex, onClick }) {
     <group position={[x + w/2, 0, z + d/2]} onClick={handle}>
       <mesh position={[0, y, 0]} rotation={[-Math.PI/2,0,0]}>
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial
-          color={color}
-          roughness={0.7}
-          metalness={0}
-          opacity={occupied ? 0.85 : 0.55}
-          transparent
-        />
+        <meshStandardMaterial color={color} roughness={0.7} metalness={0} opacity={occupied ? 0.85 : 0.55} transparent />
       </mesh>
       <mesh position={[0, y + 0.001, 0]} rotation={[-Math.PI/2,0,0]}>
         <planeGeometry args={[w, d]} />
@@ -154,9 +130,6 @@ function Bay({ x, z, w, d, occupied, lineTex, onClick }) {
   );
 }
 
-/**
- * ZonePad
- */
 function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
   const {
     id, w: padW, d: padD, rotDeg, kind, scale = 1, yLift = 0,
@@ -176,12 +149,12 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
   const totalBaysRequested  = Math.max(0, Math.ceil((info.total ?? 0)    / Math.max(1, vehiclesPerBay)));
   const baysOccupied        = Math.max(0, Math.ceil((info.occupied ?? 0) / Math.max(1, vehiclesPerBay)));
 
-  const grid = useMemo(
+  const grid = React.useMemo(
     () => computeGrid(kind, padW, padD, totalBaysRequested),
     [kind, padW, padD, totalBaysRequested]
   );
 
-  const manual = useMemo(() => {
+  const manual = React.useMemo(() => {
     if (!forceExactTwoRows) return null;
 
     const pitchX = spec.w + spec.gapX;
@@ -237,7 +210,7 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
     });
   })();
 
-  const occSet = useMemo(() => {
+  const occSet = React.useMemo(() => {
     const s = new Set();
     const occ = Math.min(baysOccupied, renderSlots.length);
     for (let i = 0; i < occ; i++) s.add(i);
@@ -254,7 +227,6 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
     return ground + 0.02 + yLift;
   })();
 
-  // Slightly smaller distanceFactor keeps chip big in view
   const chipDistanceFactor = Math.max(2.2, 10 * scale);
 
   const handleClick = (e) => {
@@ -291,50 +263,23 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
           d={s.d}
           occupied={occSet.has(i)}
           lineTex={lineTex}
-          onClick={handleClick}   // clicking a bay opens the same popup
+          onClick={handleClick}
         />
       ))}
 
-      {/* BIGGER floating container */}
-      <Html
-        center
-        position={[0, CHIP_POS_Y, 0]}
-        transform
-        distanceFactor={chipDistanceFactor}
-      >
+      <Html center position={[0, CHIP_POS_Y, 0]} transform distanceFactor={chipDistanceFactor}>
         <div
           className="parking-chip"
           title={info.timestamp || ''}
           onClick={(e)=>{ e.stopPropagation(); handleClick(e); }}
-          style={{
-            transform: `scale(${CHIP_SCALE})`,
-            transformOrigin: 'center',
-            padding: CHIP_PADDING,
-            borderRadius: 16
-          }}
+          style={{ transform: `scale(${CHIP_SCALE})`, transformOrigin: 'center', padding: CHIP_PADDING, borderRadius: 16 }}
         >
-          <div
-            className="parking-name"
-            style={{ fontSize: CHIP_NAME_FS, fontWeight: 800, lineHeight: 1.1 }}
-          >
+          <div className="parking-name" style={{ fontSize: CHIP_NAME_FS, fontWeight: 800, lineHeight: 1.1 }}>
             {info.zoneId ?? id}
           </div>
 
-          <div
-            className="parking-row"
-            style={{ fontSize: CHIP_ROW_FS, display: 'flex', alignItems: 'center', gap: 10 }}
-          >
-            <span
-              className="dot"
-              style={{
-                background: chipDot,
-                width: CHIP_DOT_SZ,
-                height: CHIP_DOT_SZ,
-                borderRadius: CHIP_DOT_SZ / 2,
-                display: 'inline-block',
-                marginRight: 8
-              }}
-            />
+          <div className="parking-row" style={{ fontSize: CHIP_ROW_FS, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="dot" style={{ background: chipDot, width: CHIP_DOT_SZ, height: CHIP_DOT_SZ, borderRadius: CHIP_DOT_SZ / 2, display: 'inline-block', marginRight: 8 }} />
             <span className="txt">Free</span><strong>{info.free ?? '—'}</strong>
             <span className="sep">•</span>
             <span className="txt">Used</span><strong>{info.occupied ?? '—'}</strong>
@@ -352,7 +297,7 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
   );
   const abortRef = useRef();
 
-  const poll = useCallback(async () => {
+  const refreshOnce = useCallback(async () => {
     abortRef.current?.abort();
     const ctl = new AbortController();
     abortRef.current = ctl;
@@ -360,35 +305,32 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
       const data = await fetchAllZones(ZONES_C2, { signal: ctl.signal });
       setZones(data);
     } catch (e) {
-      if (e?.name !== 'AbortError') console.error('[Parking3D] poll failed', e);
+      if (e?.name !== 'AbortError') console.error('[Parking3D] refresh failed', e);
     }
   }, []);
 
+  // Fetch once on mount
   useEffect(() => {
-    poll();
-    const id = setInterval(poll, POLL_MS);
-    return () => { clearInterval(id); abortRef.current?.abort(); };
-  }, [poll]);
+    refreshOnce();
+    const handler = () => refreshOnce();
+    window.addEventListener('mfu:refreshParkingZones', handler);
+    return () => {
+      abortRef.current?.abort();
+      window.removeEventListener('mfu:refreshParkingZones', handler);
+    };
+  }, [refreshOnce]);
 
   const byId = useMemo(() => new Map(zones.map((z) => [z.zoneId, z])), [zones]);
 
-  /* ---------- Build layout ---------- */
   const PAD_LAYOUT = useMemo(() => ([
     { id: 'C2-Parking-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
-      offset: CAR1_OFFSET_FROM_C2,
-      rightNudge: 4.3,
-      forwardNudge: -6.5,
+      offset: CAR1_OFFSET_FROM_C2, rightNudge: 4.3, forwardNudge: -6.5,
       yLift: CAR_Y_LIFT, vehiclesPerBay: 1, tightFit: true, showPad: false },
 
-    // C2-Parking-02 — explicit position + move forward by 3 (negative forward)
     { id: 'C2-Parking-02', kind: 'moto', w: 32, d: 14, rotDeg: 90, scale: 0.16,
-      offset: CAR2_OFFSET_FROM_C2,
-      forwardNudge: -7.5,
-      yLift: CAR_Y_LIFT + 0.34,
-      vehiclesPerBay: 1, tightFit: true, showPad: false,
-      forceExactTwoRows: true, firstRowCount: 30, rowGap: 6.5 },
+      offset: CAR2_OFFSET_FROM_C2, forwardNudge: -7.5, yLift: CAR_Y_LIFT + 0.34,
+      vehiclesPerBay: 1, tightFit: true, showPad: false, forceExactTwoRows: true, firstRowCount: 30, rowGap: 6.5 },
 
-    // Motorcycles (tightFit, no base)
     { id: 'C2-Motorcycle-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
       fromC2Local: MOTO1_LOCAL_OFFSET, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
 
@@ -401,28 +343,18 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
     const c2 = (anchor ?? new THREE.Vector3(165, 0, -95));
     const map = new Map();
 
-    // Base placements + support local right/forward nudges
     for (const pad of PAD_LAYOUT) {
       let basePos = null;
-
-      if (pad.offset) {
-        basePos = c2.clone().add(pad.offset);
-      } else if (pad.fromC2Local) {
-        basePos = c2.clone().add(rotY(pad.fromC2Local, pad.rotDeg));
-      }
+      if (pad.offset) basePos = c2.clone().add(pad.offset);
+      else if (pad.fromC2Local) basePos = c2.clone().add(rotY(pad.fromC2Local, pad.rotDeg));
 
       if (basePos) {
-        if (pad.rightNudge) {
-          basePos = basePos.add(rotY(new THREE.Vector3(1, 0, 0), pad.rotDeg).multiplyScalar(pad.rightNudge));
-        }
-        if (pad.forwardNudge) {
-          basePos = basePos.add(rotY(new THREE.Vector3(0, 0, 1), pad.rotDeg).multiplyScalar(pad.forwardNudge));
-        }
+        if (pad.rightNudge) basePos = basePos.add(rotY(new THREE.Vector3(1, 0, 0), pad.rotDeg).multiplyScalar(pad.rightNudge));
+        if (pad.forwardNudge) basePos = basePos.add(rotY(new THREE.Vector3(0, 0, 1), pad.rotDeg).multiplyScalar(pad.forwardNudge));
         map.set(pad.id, basePos);
       }
     }
 
-    // Touching dependents (motorcycle pair)
     for (const pad of PAD_LAYOUT) {
       if (!pad.sideOf) continue;
       const ref = PAD_LAYOUT.find(p => p.id === pad.sideOf);
@@ -439,12 +371,8 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
       });
 
       let pos = refPos.clone().add(vec);
-      if (pad.forwardNudge) {
-        pos = pos.add(rotY(new THREE.Vector3(0, 0, 1), pad.rotDeg).multiplyScalar(pad.forwardNudge));
-      }
-      if (pad.rightNudge) {
-        pos = pos.add(rotY(new THREE.Vector3(1, 0, 0), pad.rotDeg).multiplyScalar(pad.rightNudge));
-      }
+      if (pad.forwardNudge) pos = pos.add(rotY(new THREE.Vector3(0, 0, 1), pad.rotDeg).multiplyScalar(pad.forwardNudge));
+      if (pad.rightNudge) pos = pos.add(rotY(new THREE.Vector3(1, 0, 0), pad.rotDeg).multiplyScalar(pad.rightNudge));
       map.set(pad.id, pos);
     }
 

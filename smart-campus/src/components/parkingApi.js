@@ -43,6 +43,10 @@ function num(v, def = 0) {
   return Number.isFinite(n) ? n : def;
 }
 
+function cleanStr(v) {
+  return typeof v === 'string' ? v.trim() : v;
+}
+
 // Normalize compact object (per-zone) → common shape.
 function normalizeCompact(zoneId, raw) {
   const data = raw?.data && typeof raw.data === 'object' ? raw.data : raw;
@@ -50,14 +54,14 @@ function normalizeCompact(zoneId, raw) {
   const all  = num(data?.all) || num(data?.total) || num(data?.count) || 0;
   const used = num(data?.use) || num(data?.occupied) || (all - num(data?.free)) || 0;
   const free = num(data?.free) || num(data?.available) || Math.max(0, all - used);
-  const updatedAt = data?.updatedAt || data?.timestamp || new Date().toISOString();
+  const updatedAt = cleanStr(data?.updatedAt || data?.timestamp) || new Date().toISOString();
 
   // Unknown car/moto split here
-  const carOcc  = num(data?.['car-occ']);
-  const carFree = num(data?.['car-free']);
-  const motoOcc = num(data?.['motercycle-occ']);
-  const motoFree= num(data?.['motocycle-free']);
-  const snap    = data?.snap_link || data?.snapshot || '';
+  const carOcc   = num(data?.['car-occ']);
+  const carFree  = num(data?.['car-free']);
+  const motoOcc  = num(data?.['motercycle-occ']);
+  const motoFree = num(data?.['motocycle-free']);
+  const snap     = cleanStr(data?.snap_link || data?.snapshot || '');
 
   return {
     zoneId,
@@ -75,17 +79,17 @@ function normalizeCompact(zoneId, raw) {
 
 // Normalize "array-all-zones" record → common shape.
 function normalizeArrayRecord(rec) {
-  const zoneId = rec?.zone || rec?.id || '';
+  const zoneId = cleanStr(rec?.zone || rec?.id || '');
   const all    = num(rec?.total);
   const used   = num(rec?.occupied);
   const free   = num(rec?.free);
-  const ts     = rec?.timestamp || new Date().toISOString();
+  const ts     = cleanStr(rec?.timestamp) || new Date().toISOString();
 
-  const carOcc  = num(rec?.['car-occ']);
-  const carFree = num(rec?.['car-free']);
-  const motoOcc = num(rec?.['motercycle-occ']);
-  const motoFree= num(rec?.['motocycle-free']);
-  const snap    = rec?.snap_link || '';
+  const carOcc   = num(rec?.['car-occ']);
+  const carFree  = num(rec?.['car-free']);
+  const motoOcc  = num(rec?.['motercycle-occ']);
+  const motoFree = num(rec?.['motocycle-free']);
+  const snap     = cleanStr(rec?.snap_link || '');
 
   return {
     zoneId,
