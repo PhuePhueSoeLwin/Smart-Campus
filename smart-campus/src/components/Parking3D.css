@@ -6,7 +6,7 @@
   color:#fff; padding:6px 10px; border-radius:999px;
   box-shadow: 0 6px 18px rgba(0,0,0,.25);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  cursor: pointer;
+  cursor: default;
 }
 .parking-name{ font-weight: 800; font-size: 12px; letter-spacing:.2px; text-align:center; }
 .parking-row{

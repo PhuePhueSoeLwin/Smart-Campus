@@ -28,7 +28,9 @@ const SLOT_SPEC = {
 
 const ASPHALT = '#1b1c1f';
 const GREEN   = '#19c37d';
+const ORANGE  = '#f59e0b';
 const RED     = '#ef4444';
+const STATUS_COLOR = { green: GREEN, orange: ORANGE, red: RED };
 
 const deg2rad = (d) => (d * Math.PI) / 180;
 const rotY = (v, deg) => v.clone().applyMatrix4(new THREE.Matrix4().makeRotationY(deg2rad(deg || 0)));
@@ -136,6 +138,7 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
     vehiclesPerBay = 2,
     tightFit = false,
     showPad = true,
+    noSlots = false,
     gridJustify = 'center',
     rowGap = 0,
     forceExactTwoRows = false,
@@ -230,14 +233,15 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
   const chipDistanceFactor = Math.max(2.2, 10 * scale);
 
   const handleClick = (e) => {
+    if (isOccluded) { e?.stopPropagation?.(); return; }
     window.__mfuParkingClick = true;
     e.stopPropagation();
     onZoneClick?.(info.zoneId);
   };
 
-  const chipDot =
-    info.status === 'green' ? '#19c37d' :
-    info.status === 'orange' ? '#f59e0b' : '#ef4444';
+  const chipDot = STATUS_COLOR[info.status] || ORANGE;
+  const padFillColor = STATUS_COLOR[info.status] || ORANGE;
+  const [isOccluded, setIsOccluded] = useState(false);
 
   return (
     <group position={[worldPos.x, yBase, worldPos.z]} rotation={[0, THREE.MathUtils.degToRad(rotDeg), 0]} scale={[scale, scale, scale]}>
@@ -248,13 +252,12 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
             <meshStandardMaterial color={ASPHALT} roughness={0.95} />
           </mesh>
           <mesh position={[0, 0.03, 0]} rotation={[-Math.PI/2,0,0]}>
-            <planeGeometry args={[visualPadW * 0.96, 0.6]} />
-            <meshStandardMaterial color="#2a2b2f" roughness={0.9} />
+            <planeGeometry args={[noSlots ? visualPadW : (visualPadW * 0.96), noSlots ? visualPadD : 0.6]} />
+            <meshStandardMaterial color={noSlots ? padFillColor : "#2a2b2f"} roughness={0.85} opacity={noSlots ? 0.6 : 1} transparent={noSlots} />
           </mesh>
         </>
       )}
-
-      {renderSlots.map((s, i) => (
+      {!noSlots && renderSlots.map((s, i) => (
         <Bay
           key={i}
           x={s.x}
@@ -267,12 +270,18 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
         />
       ))}
 
-      <Html center position={[0, CHIP_POS_Y, 0]} transform distanceFactor={chipDistanceFactor}>
+      <Html
+        center
+        position={[0, CHIP_POS_Y, 0]}
+        transform
+        distanceFactor={chipDistanceFactor}
+        occlude
+        onOcclude={setIsOccluded}
+      >
         <div
           className="parking-chip"
           title={info.timestamp || ''}
-          onClick={(e)=>{ e.stopPropagation(); handleClick(e); }}
-          style={{ transform: `scale(${CHIP_SCALE})`, transformOrigin: 'center', padding: CHIP_PADDING, borderRadius: 16 }}
+          style={{ display: isOccluded ? 'none' : 'block', transform: `scale(${CHIP_SCALE})`, transformOrigin: 'center', padding: CHIP_PADDING, borderRadius: 16, pointerEvents: 'none', cursor: 'default' }}
         >
           <div className="parking-name" style={{ fontSize: CHIP_NAME_FS, fontWeight: 800, lineHeight: 1.1 }}>
             {info.zoneId ?? id}
@@ -291,9 +300,10 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
   );
 }
 
-export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZoneClick }) {
+export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZoneClick, zones: zonesProp, layouts: layoutsProp }) {
+  const initialIds = zonesProp && Array.isArray(zonesProp) && zonesProp.length > 0 ? zonesProp : ZONES_C2;
   const [zones, setZones] = useState(() =>
-    ZONES_C2.map((id) => ({ zoneId: id, total: 0, occupied: 0, free: 0, status: 'red', stale: true }))
+    initialIds.map((id) => ({ zoneId: id, total: 0, occupied: 0, free: 0, status: 'red', stale: true }))
   );
   const abortRef = useRef();
 
@@ -302,12 +312,13 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
     const ctl = new AbortController();
     abortRef.current = ctl;
     try {
-      const data = await fetchAllZones(ZONES_C2, { signal: ctl.signal });
+      const ids = initialIds;
+      const data = await fetchAllZones(ids, { signal: ctl.signal });
       setZones(data);
     } catch (e) {
       if (e?.name !== 'AbortError') console.error('[Parking3D] refresh failed', e);
     }
-  }, []);
+  }, [initialIds]);
 
   // Fetch once on mount
   useEffect(() => {
@@ -322,31 +333,34 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
 
   const byId = useMemo(() => new Map(zones.map((z) => [z.zoneId, z])), [zones]);
 
-  const PAD_LAYOUT = useMemo(() => ([
-    { id: 'C2-Parking-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
-      offset: CAR1_OFFSET_FROM_C2, rightNudge: 4.3, forwardNudge: -6.5,
-      yLift: CAR_Y_LIFT, vehiclesPerBay: 1, tightFit: true, showPad: false },
+  const PAD_LAYOUT = useMemo(() => {
+    if (Array.isArray(layoutsProp) && layoutsProp.length > 0) return layoutsProp;
+    return ([
+      { id: 'C2-Parking-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
+        offset: CAR1_OFFSET_FROM_C2, rightNudge: 4.3, forwardNudge: -6.5,
+        yLift: CAR_Y_LIFT, vehiclesPerBay: 1, tightFit: true, showPad: false },
 
-    { id: 'C2-Parking-02', kind: 'moto', w: 32, d: 14, rotDeg: 90, scale: 0.16,
-      offset: CAR2_OFFSET_FROM_C2, forwardNudge: -7.5, yLift: CAR_Y_LIFT + 0.34,
-      vehiclesPerBay: 1, tightFit: true, showPad: false, forceExactTwoRows: true, firstRowCount: 30, rowGap: 6.5 },
+      { id: 'C2-Parking-02', kind: 'moto', w: 32, d: 14, rotDeg: 90, scale: 0.16,
+        offset: CAR2_OFFSET_FROM_C2, forwardNudge: -7.5, yLift: CAR_Y_LIFT + 0.34,
+        vehiclesPerBay: 1, tightFit: true, showPad: false, forceExactTwoRows: true, firstRowCount: 30, rowGap: 6.5 },
 
-    { id: 'C2-Motorcycle-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
-      fromC2Local: MOTO1_LOCAL_OFFSET, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
+      { id: 'C2-Motorcycle-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
+        fromC2Local: MOTO1_LOCAL_OFFSET, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
 
-    { id: 'C2-Motorcycle-02', kind: 'moto', w: 32, d: 14, rotDeg: c2YawDeg, scale: 0.16,
-      sideOf: 'C2-Motorcycle-01', touchAxis: 'z', touch: 'forward',
-      extraPairGap: MOTO_PAIR_GAP_LOCAL, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
-  ]), [c2YawDeg]);
+      { id: 'C2-Motorcycle-02', kind: 'moto', w: 32, d: 14, rotDeg: c2YawDeg, scale: 0.16,
+        sideOf: 'C2-Motorcycle-01', touchAxis: 'z', touch: 'forward',
+        extraPairGap: MOTO_PAIR_GAP_LOCAL, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
+    ]);
+  }, [c2YawDeg, layoutsProp]);
 
   const posById = useMemo(() => {
-    const c2 = (anchor ?? new THREE.Vector3(165, 0, -95));
+    const baseAnchor = (anchor ?? new THREE.Vector3(165, 0, -95));
     const map = new Map();
 
     for (const pad of PAD_LAYOUT) {
       let basePos = null;
-      if (pad.offset) basePos = c2.clone().add(pad.offset);
-      else if (pad.fromC2Local) basePos = c2.clone().add(rotY(pad.fromC2Local, pad.rotDeg));
+      if (pad.offset) basePos = baseAnchor.clone().add(pad.offset);
+      else if (pad.fromC2Local) basePos = baseAnchor.clone().add(rotY(pad.fromC2Local, pad.rotDeg));
 
       if (basePos) {
         if (pad.rightNudge) basePos = basePos.add(rotY(new THREE.Vector3(1, 0, 0), pad.rotDeg).multiplyScalar(pad.rightNudge));

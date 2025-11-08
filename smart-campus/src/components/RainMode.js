@@ -27,9 +27,11 @@ function RainLayer({ enabled=false, intensity=0.6, hour=12, wind=new THREE.Vecto
   const BASE_SPEED = 92;
 
   const STREAK_COUNT = useMemo(() => {
-    const min = 4500, max = 18000;
+    // Reduced bounds to cut memory while keeping visual rain density
+    const min = 1200, max = 6000;
     const t = Math.pow(THREE.MathUtils.clamp(intensity,0,1), 0.9);
-    return Math.max(3000, Math.floor(THREE.MathUtils.lerp(min, max, t) / DPR));
+    const target = Math.floor(THREE.MathUtils.lerp(min, max, t) / DPR);
+    return Math.max(min, target);
   }, [intensity, DPR]);
 
   const { uniforms, mesh } = useMemo(() => {

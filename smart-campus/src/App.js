@@ -30,7 +30,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // realtime parking (API wrapper)
-import { fetchZoneInfoRich } from './components/parkingApi';
+import { fetchZoneInfoRich, ZONES_C2, ZONES_E1, ZONES_D1 } from './components/parkingApi';
 
 ChartJS.register(
   CategoryScale,
@@ -384,7 +384,6 @@ const MapApp = () => {
   const [parkingLoading, setParkingLoading] = useState(false);
   const [parkingError, setParkingError] = useState('');
   const parkingAbortRef = useRef(null);
-  const [parkingCache, setParkingCache] = useState(() => ({}));
 
   const setPopupFromMap = useCallback((d) => {
     if (parkingZoneId) return;      // parking popup has priority
@@ -398,40 +397,47 @@ const MapApp = () => {
   }, []);
 
   const openParkingPopup = useCallback(async (zoneId) => {
+    // Only allow opening when the click originated from a parking pad
+    if (!window.__mfuParkingClick) return;
+    window.__mfuParkingClick = false;
+    // And only for known parking zone IDs
+    const allowedZones = [...ZONES_C2, ...ZONES_E1, ...ZONES_D1];
+    if (!allowedZones.includes(zoneId)) return;
     setIsWeatherOpen(false);
     setPopupData(null);
     setPinned(false);
 
     setParkingZoneId(zoneId);
-    // Show cached data if available; otherwise fetch once
-    setParkingError('');
-    const cached = parkingCache[zoneId];
-    if (cached) {
-      setParkingInfo(cached);
-      setParkingLoading(false);
-      return;
-    }
     setParkingLoading(true);
+    setParkingError('');
     setParkingInfo(null);
 
     parkingAbortRef.current?.abort();
     const ctl = new AbortController();
     parkingAbortRef.current = ctl;
 
-    try {
-      const info = await pollClickedZone(zoneId, ctl.signal);
-      setParkingInfo(info);
-      setParkingCache((prev) => ({ ...prev, [zoneId]: info }));
-      setParkingError('');
-    } catch (e) {
-      if (e?.name !== 'AbortError') {
-        setParkingError(e?.message || 'Failed to load parking data');
-        setParkingInfo(null);
+    const load = async () => {
+      try {
+        const info = await pollClickedZone(zoneId, ctl.signal);
+        setParkingInfo(info);
+        setParkingError('');
+      } catch (e) {
+        if (e?.name !== 'AbortError') {
+          setParkingError(e?.message || 'Failed to load parking data');
+          setParkingInfo(null);
+        }
+      } finally {
+        setParkingLoading(false);
       }
-    } finally {
-      setParkingLoading(false);
-    }
-  }, [pollClickedZone, parkingCache]);
+    };
+    load();
+
+    const id = setInterval(() => {
+      pollClickedZone(zoneId, ctl.signal).then(setParkingInfo).catch(()=>{});
+    }, 8000);
+    openParkingPopup._intId && clearInterval(openParkingPopup._intId);
+    openParkingPopup._intId = id;
+  }, [pollClickedZone]);
 
   const closeParkingPopup = useCallback(() => {
     setParkingZoneId(null);
@@ -439,30 +445,8 @@ const MapApp = () => {
     setParkingError('');
     setParkingLoading(false);
     parkingAbortRef.current?.abort();
+    if (openParkingPopup._intId) clearInterval(openParkingPopup._intId);
   }, []);
-
-  // Manual refresh for parking info (no auto polling)
-  const refreshParkingInfo = useCallback(async () => {
-    if (!parkingZoneId) return;
-    setParkingLoading(true);
-    setParkingError('');
-    parkingAbortRef.current?.abort();
-    const ctl = new AbortController();
-    parkingAbortRef.current = ctl;
-    try {
-      const info = await pollClickedZone(parkingZoneId, ctl.signal);
-      setParkingInfo(info);
-      setParkingCache((prev) => ({ ...prev, [parkingZoneId]: info }));
-      setParkingError('');
-    } catch (e) {
-      if (e?.name !== 'AbortError') {
-        setParkingError(e?.message || 'Failed to load parking data');
-        setParkingInfo(null);
-      }
-    } finally {
-      setParkingLoading(false);
-    }
-  }, [parkingZoneId, pollClickedZone]);
 
   const [showInstructions, setShowInstructions] = useState(() => {
     const dontShow = localStorage.getItem('dontShowInstructions');
@@ -1109,15 +1093,6 @@ const MapApp = () => {
               <div className="subtitle">Realtime utilization</div>
             </div>
             <div className="toolbar">
-              <button
-                className="tool-btn label refresh"
-                title="Refresh"
-                onClick={refreshParkingInfo}
-                disabled={parkingLoading}
-                style={{ marginRight: 4 }}
-              >
-                Refresh
-              </button>
               <button className="tool-btn danger" title="Close" onClick={closeParkingPopup}>
                 <Icon name="x" />
               </button>

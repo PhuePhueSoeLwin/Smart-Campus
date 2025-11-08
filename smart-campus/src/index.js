@@ -1,10 +1,11 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 
-ReactDOM.render(
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(
   <React.StrictMode>
-    <App />   {/* This is your home page component */}
-  </React.StrictMode>,
-  document.getElementById('root')  // This loads App.js into the div in index.html
+    <App />
+  </React.StrictMode>
 );

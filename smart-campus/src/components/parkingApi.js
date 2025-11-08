@@ -30,6 +30,23 @@ export const ZONES_C2 = [
   'C2-Motorcycle-02',
 ];
 
+// Zones we render at E1
+export const ZONES_E1 = [
+  'E1-Parking-01',
+  'E1-Parking-02',
+  'E1-Parking-03',
+  'E1-Parking-04',
+  'E1-Motorcycle-01',
+  'E1-Motorcycle-02',
+];
+
+// Zones we render at D1
+export const ZONES_D1 = [
+  'D1-Parking-01',
+  'D1-Parking-02',
+  'D1-Motorcycle',
+];
+
 // Basic status colors from free/total ratio
 export function statusFromRatio(free, all) {
   const p = all > 0 ? free / all : 0;

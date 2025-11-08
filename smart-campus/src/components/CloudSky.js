@@ -393,25 +393,29 @@ function CloudGroup({
  */
 export function RealCloudField({
   hour = 12,
-  spread = 2400,
+  spread = 2200,
 
-  lowGroups = 14,
-  midGroups = 10,
-  highGroups = 7,
+  // Slightly reduced group counts for performance while keeping layered sky
+  lowGroups = 10,
+  midGroups = 7,
+  highGroups = 5,
 
   lowAlt = 520,
   midAlt = 620,
   highAlt = 720,
 
-  lowRadius = [170, 360],
-  midRadius = [230, 440],
-  highRadius = [270, 540],
+  // Reduced radius ranges to shrink per-group footprint
+  lowRadius = [160, 320],
+  midRadius = [210, 400],
+  highRadius = [250, 480],
 
-  lowPuffs = [80, 140],
-  midPuffs = [110, 180],
-  highPuffs = [130, 210],
+  // Reduced puff ranges to cut instance buffers
+  lowPuffs = [60, 100],
+  midPuffs = [85, 135],
+  highPuffs = [100, 150],
 
-  cloudBoost = 1.15,
+  // Lower boost to avoid exponential scaling under rain
+  cloudBoost = 0.9,
   rainFactor = 0,       // 0..1
   lightningFlash = 0,   // 0..1
 }) {

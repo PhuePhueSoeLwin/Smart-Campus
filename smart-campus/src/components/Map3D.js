@@ -13,6 +13,7 @@ import gsap from 'gsap';
 import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
 import Parking3D from './Parking3D';
+import { ZONES_E1, ZONES_D1 } from './parkingApi';
 import './Map3D.css';
 import './Parking3D.css';
 
@@ -436,15 +437,15 @@ const WALK = {
   eyeHeight: 1.7,
   clearance: 0.25,
   stepMetersDefault: 6,
-  moveSpeed: 6,
+  moveSpeed: 9, // faster walk movement
 };
-const DRONE = { speed: 18, defaultY: 320 };
-const ROTATE = { yaw: 1.0, pitch: 0.8 };
+const DRONE = { speed: 28, defaultY: 320 }; // faster drone movement
+const ROTATE = { yaw: 1.8, pitch: 1.4 };   // quicker yaw/pitch response
 const SMOOTH = {
-  accel: 5.0,
-  rot: 8.0,
-  mouseSens: 0.0013,
-  nudgeMs: 240,
+  accel: 9.0,        // faster acceleration smoothing
+  rot: 12.0,         // faster rotation smoothing
+  mouseSens: 0.0020, // higher mouse/touch sensitivity
+  nudgeMs: 160,      // quicker nudges for snappier feel
   yLock: 10.0,
 };
 
@@ -554,8 +555,8 @@ const Map3D = ({
       const dx = curr.x - prev.x;
       const dy = curr.y - prev.y;
       prev = curr;
-      yawTargetRef.current -= dx * 0.0013;
-      pitchTargetRef.current -= dy * 0.0013;
+      yawTargetRef.current -= dx * SMOOTH.mouseSens;
+      pitchTargetRef.current -= dy * SMOOTH.mouseSens;
       const HALF = Math.PI / 2;
       pitchTargetRef.current = Math.max(
         -HALF,
@@ -614,8 +615,8 @@ const Map3D = ({
         const dx = curr.x - prev.x;
         const dy = curr.y - prev.y;
         prevTouches = [curr];
-        yawTargetRef.current -= dx * 0.0013 * 1.2;
-        pitchTargetRef.current -= dy * 0.0013 * 1.2;
+        yawTargetRef.current -= dx * SMOOTH.mouseSens * 1.25;
+        pitchTargetRef.current -= dy * SMOOTH.mouseSens * 1.25;
         const HALF = Math.PI / 2;
         pitchTargetRef.current = Math.max(-HALF, Math.min(HALF, pitchTargetRef.current));
       } else if (touchMode === 'panzoom' && e.touches.length === 2) {
@@ -629,17 +630,17 @@ const Map3D = ({
         const right = new THREE.Vector3(1, 0, 0).applyEuler(yawOnly);
         const forward = new THREE.Vector3(0, 0, -1).applyEuler(yawOnly);
 
-        const panScale = 0.02 * (mode === 'drone' ? 1 : 0.3);
+        const panScale = 0.03 * (mode === 'drone' ? 1 : 0.33);
         camera.position.addScaledVector(right, -(centerCurr.x - centerPrev.x) * panScale);
 
         if (mode === 'drone') {
-          const altScale = 0.05;
+          const altScale = 0.08;
           camera.position.y += -(centerCurr.y - centerPrev.y) * altScale * -1;
         }
 
         const dist = Math.hypot(a.x - b.x, a.y - b.y);
         const dd = dist - (prevDist ?? dist);
-        const zoomScale = 0.04;
+        const zoomScale = 0.06;
         camera.position.addScaledVector(forward, -dd * zoomScale);
 
         prevTouches = currTouches;
@@ -670,7 +671,7 @@ const Map3D = ({
   useEffect(() => {
     const down = (e) => {
       keys.current[e.code] = true;
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code))
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code))
         e.preventDefault();
       if (e.code === 'Escape') {
         restoreIsolation();
@@ -919,8 +920,9 @@ const Map3D = ({
     if (keys.current['KeyD']) wish.x += 1;
 
     if (mode === 'drone') {
-      if (keys.current['Space']) wish.y += 1;
-      if (keys.current['ShiftLeft'] || keys.current['ShiftRight']) wish.y -= 1;
+      // Use Q/E for vertical movement; Space/Shift removed
+      if (keys.current['KeyQ']) wish.y += 1;
+      if (keys.current['KeyE']) wish.y -= 1;
     }
 
     if (controllerCommand) {
@@ -1154,7 +1156,10 @@ const Map3D = ({
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
 
-      const allHits = raycaster.intersectObjects(scene.children, true);
+      const candidates = (collidableMeshesRef.current && collidableMeshesRef.current.length)
+        ? collidableMeshesRef.current
+        : scene.children;
+      const allHits = raycaster.intersectObjects(candidates, true);
       const intersects = allHits.filter((h) => !isGroundNode(h.object));
 
       if (isIsolated()) {
@@ -1547,6 +1552,8 @@ const Map3D = ({
 
   /** ------- Smart Parking anchor near C2 building ------- */
   const [parkingAnchor, setParkingAnchor] = useState(null);
+  const [e1ParkingAnchor, setE1ParkingAnchor] = useState(null);
+  const [d1ParkingAnchor, setD1ParkingAnchor] = useState(null);
 
   useEffect(() => {
     // Try to find a node named like “C2” in the loaded scene.
@@ -1569,6 +1576,50 @@ const Map3D = ({
     const fx = 165, fz = -95;
     const gy = sampleGroundY(fx, fz);
     setParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // E1 Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^e1($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setE1ParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near E1 area
+    const fx = 120, fz = -60;
+    const gy = sampleGroundY(fx, fz);
+    setE1ParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // D1 Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^d1($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setD1ParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near D1 area (tweak if needed)
+    const fx = 80, fz = -40;
+    const gy = sampleGroundY(fx, fz);
+    setD1ParkingAnchor(new THREE.Vector3(fx, gy, fz));
   }, [scene, sampleGroundY]);
 
   // UPDATED: delegate parking clicks up to App via onZoneClick, and mark the click so buildings won't react
@@ -1598,6 +1649,37 @@ const Map3D = ({
         <Parking3D
           anchor={parkingAnchor}
           sampleGroundY={sampleGroundY}
+          onZoneClick={onParkingZoneClick}
+        />
+      )}
+
+      {e1ParkingAnchor && (
+        <Parking3D
+          anchor={e1ParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_E1}
+          layouts={[
+            { id: 'E1-Parking-02', kind: 'car', w: 9, d: 12, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-2, 0, 9), yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E1-Parking-03', kind: 'car', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Parking-02', touchAxis: 'x', touch: 'right', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E1-Parking-01', kind: 'car', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Parking-02', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E1-Parking-04', kind: 'car', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Parking-03', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E1-Motorcycle-02', kind: 'moto', w: 9, d: 12, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-3, 0, 2), forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E1-Motorcycle-01', kind: 'moto', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Motorcycle-02', touchAxis: 'z', touch: 'back', forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
+          ]}
+          onZoneClick={onParkingZoneClick}
+        />
+      )}
+
+      {d1ParkingAnchor && (
+        <Parking3D
+          anchor={d1ParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_D1}
+          layouts={[
+            { id: 'D1-Parking-01', kind: 'car', w: 24, d: 4.5, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(0, 0, 4), yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'D1-Parking-02', kind: 'car', w: 24, d: 4.5, rotDeg: 0, scale: 0.18, sideOf: 'D1-Parking-01', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'D1-Motorcycle', kind: 'moto', w: 12, d: 4.5, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-3, 0, 0.7), forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
+          ]}
           onZoneClick={onParkingZoneClick}
         />
       )}
