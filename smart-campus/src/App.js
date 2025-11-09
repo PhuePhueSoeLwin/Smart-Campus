@@ -30,7 +30,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // realtime parking (API wrapper)
-import { fetchZoneInfoRich, ZONES_C2, ZONES_E1, ZONES_D1 } from './components/parkingApi';
+import { fetchZoneInfoRich, ZONES_C2, ZONES_E1, ZONES_D1, ZONES_E2 } from './components/parkingApi';
 
 ChartJS.register(
   CategoryScale,
@@ -401,7 +401,7 @@ const MapApp = () => {
     if (!window.__mfuParkingClick) return;
     window.__mfuParkingClick = false;
     // And only for known parking zone IDs
-    const allowedZones = [...ZONES_C2, ...ZONES_E1, ...ZONES_D1];
+    const allowedZones = [...ZONES_C2, ...ZONES_E1, ...ZONES_D1, ...ZONES_E2];
     if (!allowedZones.includes(zoneId)) return;
     setIsWeatherOpen(false);
     setPopupData(null);
@@ -1287,35 +1287,64 @@ const MapApp = () => {
         </div>
       </Modal>
 
-      {showInstructions && (
-        <div className="instructions-popup">
-          <div className="close-button" onClick={() => setShowInstructions(false)}>×</div>
-          <h3 className="instruction-title">Map Controls</h3>
-          <div className="instruction-list">
-            <div className="instruction-item"><div className="key-badge">W</div><div>Move Forward</div></div>
-            <div className="instruction-item"><div className="key-badge">S</div><div>Move Backward</div></div>
-            <div className="instruction-item"><div className="key-badge">A</div><div>Move Left</div></div>
-            <div className="instruction-item"><div className="key-badge">D</div><div>Move Right</div></div>
-            <div className="instruction-item"><div className="key-badge">Space</div><div>Move Upward</div></div>
-            <div className="instruction-item"><div className="key-badge">Shift</div><div>Move Downward</div></div>
+      {/* Instructions modal (compact, side-by-side) */}
+      <Modal open={showInstructions} onClose={() => setShowInstructions(false)} size="sm" variant="smart-instructions">
+        <div className="instructions-content" role="dialog" aria-label="Smart Campus Instructions">
+          <div className="instructions-header">
+            <img className="instructions-logo" src="/assets/logo.png" alt="MFU Logo" />
+            <div className="eyebrow">SMART CAMPUS · MFU</div>
+            <h3 className="instructions-title" style={{margin:0}}>Welcome to Smart Campus</h3>
+            <p className="instructions-subtitle">Explore the interactive 3D campus, live parking, and dashboards.</p>
           </div>
-          <hr className="divider" />
-          <p className="tip-text">💡 The on-screen controller pad (visible when dashboards are hidden) moves faster than keyboard controls.</p>
-          <button className="dont-show-btn" onClick={() => {
-            localStorage.setItem('dontShowInstructions', 'true');
-            setShowInstructions(false);
-            setShowConfirmPopup(true);
-          }}>Do not show me again</button>
+
+          <div className="instructions-body">
+            <div className="card intro-card">
+              <div className="section-title">MFU Smart Campus</div>
+              <p className="intro-paragraph">Mae Fah Luang University’s Smart Campus provides an interactive 3D environment with up-to-date insights across facilities and parking. Engage with buildings to view analytics, access detailed information, and explore real-time parking utilization for key zones. Adjust time and weather using the clock bar to experience the campus under different environments.</p>
+            </div>
+
+            <div className="card keys-card">
+              <div className="section-title">Keyboard Controls</div>
+              <div className="key-grid">
+                <div className="key-row"><span className="key-badge">W</span><span>Forward</span></div>
+                <div className="key-row"><span className="key-badge">A</span><span>Left</span></div>
+                <div className="key-row"><span className="key-badge">S</span><span>Backward</span></div>
+                <div className="key-row"><span className="key-badge">D</span><span>Right</span></div>
+                <div className="key-row"><span className="key-badge">Q</span><span>Up</span></div>
+                <div className="key-row"><span className="key-badge">E</span><span>Down</span></div>
+              </div>
+            </div>
+
+            <div className="actions-row">
+              <button className="primary-btn" onClick={() => setShowInstructions(false)}>Got it</button>
+              <button className="text-btn" onClick={() => {
+                localStorage.setItem('dontShowInstructions', 'true');
+                setShowInstructions(false);
+                setShowConfirmPopup(true);
+              }}>Do not show again</button>
+            </div>
+          </div>
         </div>
-      )}
-      {showConfirmPopup && (
-        <div className="confirm-popup">
-          <div className="close-button" onClick={() => setShowConfirmPopup(false)}>×</div>
+      </Modal>
+
+      <Modal open={showConfirmPopup} onClose={() => setShowConfirmPopup(false)} size="sm" variant="smart-instructions">
+        <div className="confirm-content">
           <p className="confirm-text">
-            💡 This Instructions will be permanently closed after clicking 'Do not show me again' and will appear when you click the MFU Logo or the “?” button on the Navigation Bar.
+            💡 Instructions are hidden. You can open them anytime via the “?” button in the navbar.
           </p>
+          <div className="actions-row">
+            <button
+              className="text-btn"
+              onClick={() => {
+                localStorage.removeItem('dontShowInstructions');
+                setShowConfirmPopup(false);
+                setShowInstructions(true);
+              }}
+            >Not now</button>
+            <button className="primary-btn" onClick={() => setShowConfirmPopup(false)}>Close</button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

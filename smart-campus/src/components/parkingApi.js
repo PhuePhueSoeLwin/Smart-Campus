@@ -22,7 +22,6 @@ const API_SUMMARY =
   process.env.REACT_APP_PARKING_REALTIME_SUM ||
   'https://agent.wf.mfu.ac.th/webhook/01b1d376-c185-4e5a-9db3-a5617c4c7fc3';
 
-// Zones we render at C2
 export const ZONES_C2 = [
   'C2-Parking-01',
   'C2-Parking-02',
@@ -45,6 +44,14 @@ export const ZONES_D1 = [
   'D1-Parking-01',
   'D1-Parking-02',
   'D1-Motorcycle',
+];
+
+// Zones we render at E2 (new)
+export const ZONES_E2 = [
+  'E2-Motorcycle-01',
+  'E2-Motorcycle-02',
+  'E2-Parking-01',
+  'E2-Parking-02',
 ];
 
 // Basic status colors from free/total ratio

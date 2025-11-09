@@ -13,7 +13,7 @@ import gsap from 'gsap';
 import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
 import Parking3D from './Parking3D';
-import { ZONES_E1, ZONES_D1 } from './parkingApi';
+import { ZONES_E1, ZONES_D1, ZONES_E2 } from './parkingApi';
 import './Map3D.css';
 import './Parking3D.css';
 
@@ -1553,6 +1553,7 @@ const Map3D = ({
   /** ------- Smart Parking anchor near C2 building ------- */
   const [parkingAnchor, setParkingAnchor] = useState(null);
   const [e1ParkingAnchor, setE1ParkingAnchor] = useState(null);
+  const [e2ParkingAnchor, setE2ParkingAnchor] = useState(null);
   const [d1ParkingAnchor, setD1ParkingAnchor] = useState(null);
 
   useEffect(() => {
@@ -1598,6 +1599,28 @@ const Map3D = ({
     const fx = 120, fz = -60;
     const gy = sampleGroundY(fx, fz);
     setE1ParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // E2 Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^e2($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setE2ParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near E2 area (tweak if needed)
+    const fx = 140, fz = -80;
+    const gy = sampleGroundY(fx, fz);
+    setE2ParkingAnchor(new THREE.Vector3(fx, gy, fz));
   }, [scene, sampleGroundY]);
 
   // D1 Smart Parking anchor
@@ -1665,6 +1688,21 @@ const Map3D = ({
             { id: 'E1-Parking-04', kind: 'car', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Parking-03', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
             { id: 'E1-Motorcycle-02', kind: 'moto', w: 9, d: 12, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-3, 0, 2), forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
             { id: 'E1-Motorcycle-01', kind: 'moto', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Motorcycle-02', touchAxis: 'z', touch: 'back', forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
+          ]}
+          onZoneClick={onParkingZoneClick}
+        />
+      )}
+
+      {e2ParkingAnchor && (
+        <Parking3D
+          anchor={e2ParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_E2}
+          layouts={[
+            { id: 'E2-Parking-01',     kind: 'car',  w: 9,  d: 17, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-2, 0, 9), rightNudge: 1.0, yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'E2-Parking-02',     kind: 'car',  w: 9,  d: 17, rotDeg: 0, scale: 0.18, sideOf: 'E2-Parking-01', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+{ id: 'E2-Motorcycle-01',  kind: 'moto', w: 9,  d: 17, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-3, 0, 2), rightNudge: 6.0, forwardNudge: -5.0, yLift: 0.35, showPad: true, noSlots: true },
+{ id: 'E2-Motorcycle-02',  kind: 'moto', w: 9,  d: 17, rotDeg: 0, scale: 0.18, sideOf: 'E2-Motorcycle-01', touchAxis: 'z', touch: 'forward', forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
           ]}
           onZoneClick={onParkingZoneClick}
         />
