@@ -54,6 +54,27 @@ export const ZONES_E2 = [
   'E2-Parking-02',
 ];
 
+// Zones we render at C3 (requested)
+export const ZONES_C3 = [
+  // Using the exact ID spelling provided by API/user
+  'C3-Paking',
+];
+
+// Zones we render at M-Square (requested)
+export const ZONES_MSQUARE = [
+  'M-Square-Parking-02',
+  'M-Square-Parking-03',
+  'M-Square-Parking-04',
+  'M-Square-Parking-05',
+];
+
+// Zones we render at C5 (requested)
+export const ZONES_C5 = [
+  // Using the exact ID spelling provided by API/user
+  'C5-Paking-01',
+  'C5-Paking-02',
+];
+
 // Basic status colors from free/total ratio
 export function statusFromRatio(free, all) {
   const p = all > 0 ? free / all : 0;

@@ -13,7 +13,7 @@ import gsap from 'gsap';
 import { SkyDome, RealCloudField, skyColorsByHour } from './CloudSky';
 import RainMode from './RainMode';
 import Parking3D from './Parking3D';
-import { ZONES_E1, ZONES_D1, ZONES_E2 } from './parkingApi';
+import { ZONES_E1, ZONES_D1, ZONES_E2, ZONES_C3, ZONES_MSQUARE, ZONES_C5 } from './parkingApi';
 import './Map3D.css';
 import './Parking3D.css';
 
@@ -508,6 +508,7 @@ const Map3D = ({
   const velRef = useRef(new THREE.Vector3());
   const yawTargetRef = useRef(0);
   const pitchTargetRef = useRef(0);
+  const [c3ParkingAnchor, setC3ParkingAnchor] = useState(null);
   const suppressMoveUntilRef = useRef(0);
   const focusUntilRef = useRef(0);
   const nudgeTweenRef = useRef(null);
@@ -1555,6 +1556,8 @@ const Map3D = ({
   const [e1ParkingAnchor, setE1ParkingAnchor] = useState(null);
   const [e2ParkingAnchor, setE2ParkingAnchor] = useState(null);
   const [d1ParkingAnchor, setD1ParkingAnchor] = useState(null);
+  const [msquareParkingAnchor, setMsquareParkingAnchor] = useState(null);
+  const [c5ParkingAnchor, setC5ParkingAnchor] = useState(null);
 
   useEffect(() => {
     // Try to find a node named like “C2” in the loaded scene.
@@ -1645,6 +1648,73 @@ const Map3D = ({
     setD1ParkingAnchor(new THREE.Vector3(fx, gy, fz));
   }, [scene, sampleGroundY]);
 
+  // M-Square Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      // Match variants: "M-Square", "M Square", "Msquare"
+      if (!found && (/^m[- ]?square($|[^a-z0-9])/.test(nm) || /^msquare($|[^a-z0-9])/.test(nm))) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setMsquareParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near M-Square area (tweak if needed)
+    const fx = 100, fz = -100;
+    const gy = sampleGroundY(fx, fz);
+    setMsquareParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // C3 Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^c3($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setC3ParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near C3 area (tweak if needed)
+    const fx = 150, fz = -60;
+    const gy = sampleGroundY(fx, fz);
+    setC3ParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
+  // C5 Smart Parking anchor
+  useEffect(() => {
+    let found = null;
+    scene.traverse((o) => {
+      const nm = (o.userData?.name || o.name || '').toLowerCase();
+      if (!found && /^c5($|[^a-z0-9])/.test(nm)) found = o;
+    });
+    if (found) {
+      try {
+        const box = new THREE.Box3().setFromObject(found);
+        const c = box.getCenter(new THREE.Vector3());
+        const gy = sampleGroundY(c.x, c.z);
+        setC5ParkingAnchor(new THREE.Vector3(c.x, gy, c.z));
+        return;
+      } catch {}
+    }
+    // Fallback near C5 area (tweak if needed)
+    const fx = 160, fz = -40;
+    const gy = sampleGroundY(fx, fz);
+    setC5ParkingAnchor(new THREE.Vector3(fx, gy, fz));
+  }, [scene, sampleGroundY]);
+
   // UPDATED: delegate parking clicks up to App via onZoneClick, and mark the click so buildings won't react
   const onParkingZoneClick = useCallback((zone) => {
     if (!zone) return;
@@ -1673,6 +1743,7 @@ const Map3D = ({
           anchor={parkingAnchor}
           sampleGroundY={sampleGroundY}
           onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
         />
       )}
 
@@ -1690,6 +1761,7 @@ const Map3D = ({
             { id: 'E1-Motorcycle-01', kind: 'moto', w: 9, d: 12, rotDeg: 0, scale: 0.18, sideOf: 'E1-Motorcycle-02', touchAxis: 'z', touch: 'back', forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
           ]}
           onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
         />
       )}
 
@@ -1705,6 +1777,7 @@ const Map3D = ({
 { id: 'E2-Motorcycle-02',  kind: 'moto', w: 9,  d: 17, rotDeg: 0, scale: 0.18, sideOf: 'E2-Motorcycle-01', touchAxis: 'z', touch: 'forward', forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
           ]}
           onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
         />
       )}
 
@@ -1719,6 +1792,53 @@ const Map3D = ({
             { id: 'D1-Motorcycle', kind: 'moto', w: 12, d: 4.5, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-3, 0, 0.7), forwardNudge: 0.0, yLift: 0.35, showPad: true, noSlots: true },
           ]}
           onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
+        />
+      )}
+
+      {msquareParkingAnchor && (
+        <Parking3D
+          anchor={msquareParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_MSQUARE}
+          layouts={[
+            // Mirror E1/E2 car pad sizing and arrangement
+            { id: 'M-Square-Parking-02', kind: 'car', w: 9, d: 17, rotDeg: 90, scale: 0.09, offset: new THREE.Vector3(0, 0, 6), yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'M-Square-Parking-03', kind: 'car', w: 9, d: 17, rotDeg: 90, scale: 0.09, sideOf: 'M-Square-Parking-02', touchAxis: 'x', touch: 'right', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'M-Square-Parking-04', kind: 'car', w: 9, d: 17, rotDeg: 90, scale: 0.09, sideOf: 'M-Square-Parking-02', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'M-Square-Parking-05', kind: 'car', w: 9, d: 17, rotDeg: 90, scale: 0.09, sideOf: 'M-Square-Parking-03', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+          ]}
+          onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
+        />
+      )}
+
+      {(e2ParkingAnchor || c3ParkingAnchor) && (
+        <Parking3D
+          anchor={e2ParkingAnchor || c3ParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_C3}
+          layouts={[
+            // Match E2 car pad sizing; place near E2 by offsetting from its anchor
+            { id: 'C3-Paking', kind: 'car', w: 9, d: 17, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(12, 0, 28), forwardNudge: -43, rightNudge: -5, yLift: 0.35, showPad: true, noSlots: true },
+          ]}
+          onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
+        />
+      )}
+
+      {c5ParkingAnchor && (
+        <Parking3D
+          anchor={c5ParkingAnchor}
+          sampleGroundY={sampleGroundY}
+          zones={ZONES_C5}
+          layouts={[
+            // Match E2 car pad sizing and arrangement
+            { id: 'C5-Paking-01', kind: 'car', w: 9, d: 17, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-2, 0, 9), yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'C5-Paking-02', kind: 'car', w: 9, d: 17, rotDeg: 0, scale: 0.18, sideOf: 'C5-Paking-01', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+          ]}
+          onZoneClick={onParkingZoneClick}
+          showLabels={!isIsolated()}
         />
       )}
 

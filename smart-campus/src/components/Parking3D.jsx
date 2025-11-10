@@ -132,7 +132,7 @@ function Bay({ x, z, w, d, occupied, lineTex, onClick }) {
   );
 }
 
-function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
+function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY, showLabels = true }) {
   const {
     id, w: padW, d: padD, rotDeg, kind, scale = 1, yLift = 0,
     vehiclesPerBay = 2,
@@ -270,37 +270,39 @@ function ZonePad({ zone, layout, worldPos, onZoneClick, sampleGroundY }) {
         />
       ))}
 
-      <Html
-        center
-        position={[0, CHIP_POS_Y, 0]}
-        transform
-        distanceFactor={chipDistanceFactor}
-        occlude
-        onOcclude={setIsOccluded}
-      >
-        <div
-          className="parking-chip"
-          title={info.timestamp || ''}
-          style={{ display: isOccluded ? 'none' : 'block', transform: `scale(${CHIP_SCALE})`, transformOrigin: 'center', padding: CHIP_PADDING, borderRadius: 16, pointerEvents: 'none', cursor: 'default' }}
+      {showLabels && (
+        <Html
+          center
+          position={[0, CHIP_POS_Y, 0]}
+          transform
+          distanceFactor={chipDistanceFactor}
+          occlude
+          onOcclude={setIsOccluded}
         >
-          <div className="parking-name" style={{ fontSize: CHIP_NAME_FS, fontWeight: 800, lineHeight: 1.1 }}>
-            {info.zoneId ?? id}
-          </div>
+          <div
+            className="parking-chip"
+            title={info.timestamp || ''}
+            style={{ display: isOccluded ? 'none' : 'block', transform: `scale(${CHIP_SCALE})`, transformOrigin: 'center', padding: CHIP_PADDING, borderRadius: 16, pointerEvents: 'none', cursor: 'default' }}
+          >
+            <div className="parking-name" style={{ fontSize: CHIP_NAME_FS, fontWeight: 800, lineHeight: 1.1 }}>
+              {info.zoneId ?? id}
+            </div>
 
-          <div className="parking-row" style={{ fontSize: CHIP_ROW_FS, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="dot" style={{ background: chipDot, width: CHIP_DOT_SZ, height: CHIP_DOT_SZ, borderRadius: CHIP_DOT_SZ / 2, display: 'inline-block', marginRight: 8 }} />
-            <span className="txt">Free</span><strong>{info.free ?? '—'}</strong>
-            <span className="sep">•</span>
-            <span className="txt">Used</span><strong>{info.occupied ?? '—'}</strong>
-            <span className="sep">/</span><strong>{info.total ?? '—'}</strong>
+            <div className="parking-row" style={{ fontSize: CHIP_ROW_FS, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="dot" style={{ background: chipDot, width: CHIP_DOT_SZ, height: CHIP_DOT_SZ, borderRadius: CHIP_DOT_SZ / 2, display: 'inline-block', marginRight: 8 }} />
+              <span className="txt">Free</span><strong>{info.free ?? '—'}</strong>
+              <span className="sep">•</span>
+              <span className="txt">Used</span><strong>{info.occupied ?? '—'}</strong>
+              <span className="sep">/</span><strong>{info.total ?? '—'}</strong>
+            </div>
           </div>
-        </div>
-      </Html>
+        </Html>
+      )}
     </group>
   );
 }
 
-export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZoneClick, zones: zonesProp, layouts: layoutsProp }) {
+export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZoneClick, zones: zonesProp, layouts: layoutsProp, showLabels = true }) {
   const initialIds = zonesProp && Array.isArray(zonesProp) && zonesProp.length > 0 ? zonesProp : ZONES_C2;
   const [zones, setZones] = useState(() =>
     initialIds.map((id) => ({ zoneId: id, total: 0, occupied: 0, free: 0, status: 'red', stale: true }))
@@ -341,8 +343,8 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
         yLift: CAR_Y_LIFT, vehiclesPerBay: 1, tightFit: true, showPad: false },
 
       { id: 'C2-Parking-02', kind: 'moto', w: 32, d: 14, rotDeg: 90, scale: 0.16,
-        offset: CAR2_OFFSET_FROM_C2, forwardNudge: -7.5, yLift: CAR_Y_LIFT + 0.34,
-        vehiclesPerBay: 1, tightFit: true, showPad: false, forceExactTwoRows: true, firstRowCount: 30, rowGap: 6.5 },
+        offset: CAR2_OFFSET_FROM_C2, forwardNudge: -7.0, rightNudge: 0, yLift: CAR_Y_LIFT + 0.34,
+        vehiclesPerBay: 1, tightFit: true, showPad: false, forceExactTwoRows: true, firstRowCount: 30, rowGap: 13 },
 
       { id: 'C2-Motorcycle-01', kind: 'moto', w: 28, d: 14, rotDeg: c2YawDeg, scale: 0.16,
         fromC2Local: MOTO1_LOCAL_OFFSET, yLift: MOTO_Y_LIFT, vehiclesPerBay: 2, tightFit: true, showPad: false },
@@ -408,6 +410,7 @@ export default function Parking3D({ anchor, c2YawDeg = 45, sampleGroundY, onZone
             worldPos={base}
             sampleGroundY={sampleGroundY}
             onZoneClick={onZoneClick}
+            showLabels={showLabels}
           />
         );
       })}

@@ -30,7 +30,7 @@ import {
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // realtime parking (API wrapper)
-import { fetchZoneInfoRich, ZONES_C2, ZONES_E1, ZONES_D1, ZONES_E2 } from './components/parkingApi';
+import { fetchZoneInfoRich, ZONES_C2, ZONES_E1, ZONES_D1, ZONES_E2, ZONES_C3, ZONES_MSQUARE, ZONES_C5 } from './components/parkingApi';
 
 ChartJS.register(
   CategoryScale,
@@ -401,7 +401,7 @@ const MapApp = () => {
     if (!window.__mfuParkingClick) return;
     window.__mfuParkingClick = false;
     // And only for known parking zone IDs
-    const allowedZones = [...ZONES_C2, ...ZONES_E1, ...ZONES_D1, ...ZONES_E2];
+    const allowedZones = [...ZONES_C2, ...ZONES_E1, ...ZONES_D1, ...ZONES_E2, ...ZONES_C3, ...ZONES_MSQUARE, ...ZONES_C5];
     if (!allowedZones.includes(zoneId)) return;
     setIsWeatherOpen(false);
     setPopupData(null);
