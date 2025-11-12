@@ -1833,9 +1833,9 @@ const Map3D = ({
           sampleGroundY={sampleGroundY}
           zones={ZONES_C5}
           layouts={[
-            // Match E2 car pad sizing and arrangement
-            { id: 'C5-Paking-01', kind: 'car', w: 9, d: 17, rotDeg: 0, scale: 0.18, offset: new THREE.Vector3(-2, 0, 9), yLift: 0.35, showPad: true, noSlots: true },
-            { id: 'C5-Paking-02', kind: 'car', w: 9, d: 17, rotDeg: 0, scale: 0.18, sideOf: 'C5-Paking-01', touchAxis: 'z', touch: 'forward', yLift: 0.35, showPad: true, noSlots: true },
+            // Match D1 sizing; rotate both 180°; place 02 behind 01; move forward 1m
+            { id: 'C5-Paking-02', kind: 'car', w: 30, d: 6.0, rotDeg: -15, scale: 0.18, offset: new THREE.Vector3(0, 0, -7), rightNudge: 3.0, yLift: 0.35, showPad: true, noSlots: true },
+            { id: 'C5-Paking-01', kind: 'car', w: 30, d: 6.0, rotDeg: -15, scale: 0.18, sideOf: 'C5-Paking-02', touchAxis: 'z', touch: 'forward', extraPairGap: 1.0, yLift: 0.35, showPad: true, noSlots: true },
           ]}
           onZoneClick={onParkingZoneClick}
           showLabels={!isIsolated()}
